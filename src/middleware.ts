@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { UserRole } from "@prisma/client";
-import { getDashboardRoute } from "~/server/services/auth.service";
+import { getDashboardRoute, isPublicRoute, publicRoutes } from "~/server/auth";
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  const publicRoutes = ["/login", "/register", "/verify-email", "/reset-password"];
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET }); // Pass the secret here
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const isAuthenticated = !!token;
 
-  if (publicRoutes.some(route => path.startsWith(route)) && isAuthenticated) {
+  // Jika pengguna sudah login dan mencoba mengakses halaman publik, alihkan ke dashboard
+  if (isPublicRoute(path) && isAuthenticated) {
     const dashboardRoute = getDashboardRoute(token.role as UserRole);
     return NextResponse.redirect(new URL(dashboardRoute, req.url));
   }
 
-  if (!publicRoutes.some(route => path.startsWith(route)) && !isAuthenticated) {
+  // Jika pengguna belum login dan mencoba mengakses halaman yang memerlukan autentikasi, alihkan ke login
+  if (!isPublicRoute(path) && !isAuthenticated) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", encodeURI(req.url));
     return NextResponse.redirect(loginUrl);

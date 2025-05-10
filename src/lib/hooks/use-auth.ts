@@ -1,70 +1,95 @@
+"use client";
+
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { UserRole } from "@prisma/client";
-import { AuthState, LoginCredentials } from "~/lib/types";
-import { getDashboardRoute, getAuthErrorMessage } from "~/lib/auth-utils";
+import { getDashboardRoute } from "~/server/auth";
 
 /**
- * Hook untuk mengakses state dan metode autentikasi
- *
- * Menyediakan:
- * - Informasi pengguna saat ini
- * - Status autentikasi
- * - Pemeriksaan peran
- * - Metode login dan logout
+ * Hook untuk mengakses status autentikasi di sisi klien
+ * Menyediakan informasi user, status loading, dan fungsi-fungsi autentikasi
  */
-export function useAuth(): AuthState & {
-  login: (credentials?: LoginCredentials) => Promise<any>;
-  logout: () => Promise<any>;
-  redirectToDashboard: () => void;
-  getErrorMessage: (error?: string | null) => string;
-} {
-  const { data: session, status, update } = useSession();
+export const useAuth = () => {
+  const { data: session, status } = useSession();
   const router = useRouter();
 
+  const isLoading = status === "loading";
+  const isAuthenticated = status === "authenticated";
+  const user = session?.user;
+
   /**
-   * Mengalihkan pengguna ke dashboard yang sesuai dengan peran mereka
+   * Fungsi untuk login dengan kredensial (email/password)
    */
-  const redirectToDashboard = () => {
-    if (session?.user?.role) {
-      const dashboardRoute = getDashboardRoute(session.user.role);
-      router.push(dashboardRoute);
-    } else {
-      router.push("/");
+  const login = async (email: string, password: string, callbackUrl?: string) => {
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        return { success: false, error: result.error };
+      }
+
+      if (callbackUrl) {
+        router.push(callbackUrl);
+      } else {
+        redirectToDashboard();
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: "Terjadi kesalahan saat login" };
     }
   };
 
   /**
-   * Mendapatkan pesan error berdasarkan kode error
+   * Fungsi untuk login dengan Google
    */
-  const getErrorMessage = (error?: string | null) => {
-    return getAuthErrorMessage(error);
+  const loginWithGoogle = async (callbackUrl?: string) => {
+    await signIn("google", { callbackUrl });
+  };
+
+  /**
+   * Fungsi untuk logout
+   */
+  const logout = async () => {
+    await signOut({ redirect: false });
+    router.push("/login");
+  };
+
+  /**
+   * Fungsi untuk mengalihkan ke dashboard berdasarkan peran
+   */
+  const redirectToDashboard = () => {
+    if (!user?.role) return;
+
+    const dashboardRoute = getDashboardRoute(user.role);
+    router.push(dashboardRoute);
+  };
+
+  /**
+   * Memeriksa apakah pengguna memiliki peran tertentu
+   */
+  const hasRole = (role: UserRole | UserRole[]) => {
+    if (!user?.role) return false;
+
+    if (Array.isArray(role)) {
+      return role.includes(user.role);
+    }
+
+    return user.role === role;
   };
 
   return {
-    user: session?.user || null,
-    isAuthenticated: status === "authenticated",
-    isLoading: status === "loading",
-    // Pemeriksaan berbasis peran
-    isAdmin: session?.user?.role === UserRole.ADMIN,
-    isOrganizer: session?.user?.role === UserRole.ORGANIZER,
-    isBuyer: session?.user?.role === UserRole.BUYER,
-    // Tindakan autentikasi
-    login: async (credentials?: LoginCredentials) => {
-      if (credentials) {
-        return signIn("credentials", {
-          email: credentials.email,
-          password: credentials.password,
-          redirect: true,
-          callbackUrl: credentials.callbackUrl || "/",
-        });
-      }
-      return signIn("google", { redirect: true, callbackUrl: "/" });
-    },
-    logout: () => signOut({ callbackUrl: "/" }),
-    // Pengalihan dashboard
+    user,
+    isLoading,
+    isAuthenticated,
+    login,
+    loginWithGoogle,
+    logout,
     redirectToDashboard,
-    // Mendapatkan pesan error
-    getErrorMessage,
+    hasRole,
   };
-}
+};

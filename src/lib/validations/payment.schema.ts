@@ -1,32 +1,16 @@
-import { z } from "zod";
-import { PaymentStatus } from "@prisma/client";
+import { z } from 'zod';
 
-// Schema for creating a new payment
-export const createPaymentSchema = z.object({
-  orderId: z.string(),
-  gateway: z.string(),
-  amount: z.coerce.number().min(0, { message: "Amount cannot be negative" }),
+// Validation schema for Payment
+export const paymentSchema = z.object({
+  id: z.string().uuid({ message: 'Invalid UUID format for id' }),
+  userId: z.string().uuid({ message: 'Invalid UUID format for userId' }),
+  ticketId: z.string().uuid({ message: 'Invalid UUID format for ticketId' }),
+  amount: z.number().min(0, { message: 'Amount must be a positive number' }),
+  status: z.enum(['PENDING', 'COMPLETED', 'FAILED'], { message: 'Invalid payment status' }),
+  paymentMethod: z.enum(['CREDIT_CARD', 'PAYPAL', 'BANK_TRANSFER'], { message: 'Invalid payment method' }),
+  createdAt: z.string().datetime({ message: 'Invalid datetime format for createdAt' }),
+  updatedAt: z.string().datetime({ message: 'Invalid datetime format for updatedAt' }),
 });
 
-// Schema for updating a payment
-export const updatePaymentSchema = z.object({
-  status: z.nativeEnum(PaymentStatus).optional(),
-  paymentId: z.string().optional(),
-  hmacSignature: z.string().optional(),
-  callbackPayload: z.record(z.any()).optional(),
-  receivedAt: z.coerce.date().optional(),
-});
-
-// Schema for filtering payments
-export const paymentFilterSchema = z.object({
-  orderId: z.string().optional(),
-  status: z.nativeEnum(PaymentStatus).optional(),
-  gateway: z.string().optional(),
-  limit: z.number().min(1).max(100).optional(),
-  offset: z.number().min(0).optional(),
-});
-
-// Types derived from schemas
-export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
-export type UpdatePaymentInput = z.infer<typeof updatePaymentSchema>;
-export type PaymentFilterInput = z.infer<typeof paymentFilterSchema>;
+// Export TypeScript type from the schema
+export type PaymentSchema = z.infer<typeof paymentSchema>;

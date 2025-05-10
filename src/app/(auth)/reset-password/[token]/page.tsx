@@ -1,10 +1,32 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 
 export const metadata: Metadata = {
   title: "Reset Password - VBTix",
   description: "Reset password akun Anda",
 };
+
+// Schema validasi form reset password
+const resetPasswordSchema = z.object({
+  password: z.string().min(6, "Password minimal 6 karakter"),
+  confirmPassword: z.string().min(6, "Konfirmasi password minimal 6 karakter"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Password dan konfirmasi password tidak sama",
+  path: ["confirmPassword"],
+});
+
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPasswordPage({
   params,
@@ -12,6 +34,57 @@ export default function ResetPasswordPage({
   params: { token: string };
 }) {
   const { token } = params;
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  const onSubmit = async (data: ResetPasswordFormValues) => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token,
+          password: data.password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || "Terjadi kesalahan saat reset password");
+      } else {
+        setSuccess(result.message || "Password berhasil diubah. Silakan login dengan password baru.");
+        // Redirect ke halaman login setelah 3 detik
+        setTimeout(() => {
+          router.push("/login");
+        }, 3000);
+      }
+    } catch (err) {
+      setError("Terjadi kesalahan saat reset password");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
@@ -24,40 +97,60 @@ export default function ResetPasswordPage({
             Masukkan password baru Anda
           </p>
         </div>
+
+        {error && (
+          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="rounded-md bg-green-100 p-3 text-sm text-green-800">
+            {success}
+          </div>
+        )}
+
         <div className="grid gap-6">
-          <form>
+          <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <label htmlFor="password" className="sr-only">
-                  Password Baru
-                </label>
-                <input
+                <Label htmlFor="password">Password Baru</Label>
+                <Input
                   id="password"
                   type="password"
-                  placeholder="Password baru"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  disabled={isLoading}
+                  {...register("password")}
                 />
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                )}
               </div>
+
               <div className="grid gap-2">
-                <label htmlFor="confirmPassword" className="sr-only">
-                  Konfirmasi Password
-                </label>
-                <input
+                <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
+                <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="Konfirmasi password"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  disabled={isLoading}
+                  {...register("confirmPassword")}
                 />
+                {errors.confirmPassword && (
+                  <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+                )}
               </div>
-              <button
-                type="submit"
-                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-              >
+
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Reset Password
-              </button>
+              </Button>
             </div>
           </form>
         </div>
+
         <div className="text-center text-sm">
           <Link
             href="/login"
