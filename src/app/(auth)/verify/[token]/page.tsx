@@ -1,5 +1,11 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
+import { Button } from "~/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Verifikasi Email - VBTix",
@@ -12,6 +18,42 @@ export default function VerifyTokenPage({
   params: { token: string };
 }) {
   const { token } = params;
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    const verifyEmail = async () => {
+      try {
+        const response = await fetch("/api/auth/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          setError(result.error || "Terjadi kesalahan saat verifikasi email");
+        } else {
+          setSuccess(result.message || "Email berhasil diverifikasi. Silakan login.");
+          // Redirect ke halaman login setelah 3 detik
+          setTimeout(() => {
+            router.push("/login");
+          }, 3000);
+        }
+      } catch (err) {
+        setError("Terjadi kesalahan saat verifikasi email");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    verifyEmail();
+  }, [token, router]);
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
@@ -21,24 +63,50 @@ export default function VerifyTokenPage({
             Verifikasi Email
           </h1>
           <p className="text-sm text-muted-foreground">
-            Memverifikasi email Anda...
+            {isLoading ? "Memverifikasi email Anda..." : "Verifikasi email selesai"}
           </p>
         </div>
+
         <div className="grid gap-6">
-          <div className="rounded-lg border border-muted p-4 text-sm">
-            <p>
-              Kami sedang memverifikasi email Anda. Silakan tunggu sebentar...
-            </p>
-            <p className="mt-2">
-              Jika Anda tidak diarahkan secara otomatis, silakan klik tombol di bawah.
-            </p>
-          </div>
-          <Link
-            href="/login"
-            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">
+                Sedang memverifikasi email Anda...
+              </p>
+            </div>
+          ) : error ? (
+            <div className="rounded-md bg-destructive/15 p-4 text-sm text-destructive">
+              <p>{error}</p>
+              <p className="mt-2">
+                Silakan coba lagi atau hubungi dukungan pelanggan.
+              </p>
+            </div>
+          ) : success ? (
+            <div className="rounded-md bg-green-100 p-4 text-sm text-green-800">
+              <p>{success}</p>
+              <p className="mt-2">
+                Anda akan dialihkan ke halaman login dalam beberapa detik.
+              </p>
+            </div>
+          ) : null}
+
+          <Button
+            asChild
+            variant={error ? "destructive" : "default"}
+            disabled={isLoading}
           >
-            Lanjutkan ke Login
-          </Link>
+            <Link href="/login">
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Memverifikasi...
+                </>
+              ) : (
+                "Lanjutkan ke Login"
+              )}
+            </Link>
+          </Button>
         </div>
       </div>
     </div>

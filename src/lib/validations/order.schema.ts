@@ -1,18 +1,15 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-export const OrderItemSchema = z.object({
-  ticketTypeId: z.string().nonempty("Ticket Type ID is required"),
-  quantity: z.number().min(1, "Quantity must be at least 1"),
-  price: z.number().min(0, "Price must be a positive number"),
+// Validation schema for Order
+export const orderSchema = z.object({
+  id: z.string().uuid({ message: 'Invalid UUID format for id' }),
+  userId: z.string().uuid({ message: 'Invalid UUID format for userId' }),
+  ticketId: z.string().uuid({ message: 'Invalid UUID format for ticketId' }),
+  status: z.enum(['PENDING', 'CONFIRMED', 'CANCELLED'], { message: 'Invalid order status' }),
+  totalAmount: z.number().min(0, { message: 'Total amount must be a positive number' }),
+  createdAt: z.string().datetime({ message: 'Invalid datetime format for createdAt' }),
+  updatedAt: z.string().datetime({ message: 'Invalid datetime format for updatedAt' }),
 });
 
-export const OrderSchema = z.object({
-  userId: z.string().nonempty("User ID is required"),
-  eventId: z.string().nonempty("Event ID is required"),
-  amount: z.number().min(0, "Amount must be a positive number"),
-  currency: z.string().default("IDR"),
-  orderItems: z.array(OrderItemSchema).nonempty("Order must have at least one item"),
-});
-
-export type Order = z.infer<typeof OrderSchema>;
-export type OrderItem = z.infer<typeof OrderItemSchema>;
+// Export TypeScript type from the schema
+export type OrderSchema = z.infer<typeof orderSchema>;

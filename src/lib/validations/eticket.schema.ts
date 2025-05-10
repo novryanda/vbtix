@@ -1,21 +1,15 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-// Schema for validating an e-ticket by QR code
-export const validateETicketSchema = z.object({
-  qrCodeData: z.string(),
+// Validation schema for eTicket
+export const eTicketSchema = z.object({
+  id: z.string().uuid({ message: 'Invalid UUID format for id' }),
+  ticketId: z.string().uuid({ message: 'Invalid UUID format for ticketId' }),
+  userId: z.string().uuid({ message: 'Invalid UUID format for userId' }),
+  qrCode: z.string().min(1, { message: 'QR Code cannot be empty' }),
+  status: z.enum(['ACTIVE', 'USED', 'EXPIRED'], { message: 'Invalid eTicket status' }),
+  issuedAt: z.string().datetime({ message: 'Invalid datetime format for issuedAt' }),
+  expiresAt: z.string().datetime({ message: 'Invalid datetime format for expiresAt' }).optional(),
 });
 
-// Schema for generating e-tickets for an order
-export const generateETicketsSchema = z.object({
-  orderId: z.string(),
-});
-
-// Schema for updating e-ticket file URL
-export const updateETicketFileUrlSchema = z.object({
-  fileUrl: z.string().url({ message: "Invalid URL format" }),
-});
-
-// Types derived from schemas
-export type ValidateETicketInput = z.infer<typeof validateETicketSchema>;
-export type GenerateETicketsInput = z.infer<typeof generateETicketsSchema>;
-export type UpdateETicketFileUrlInput = z.infer<typeof updateETicketFileUrlSchema>;
+// Export TypeScript type from the schema
+export type eTicketSchema = z.infer<typeof eTicketSchema>;

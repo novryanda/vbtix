@@ -1,558 +1,193 @@
-import { UserRole, EventStatus, PaymentStatus, TicketStatus, ApprovalStatus, WithdrawalStatus, DiscountType } from "@prisma/client";
-import { DefaultSession } from "next-auth";
-
-// ===== NextAuth Types =====
-
-/**
- * Extend NextAuth User type to include role
- */
-declare module "next-auth" {
-  interface User {
-    id: string;
-    role: UserRole;
-  }
-
-  interface Session {
-    user: {
-      id: string;
-      role: UserRole;
-    } & DefaultSession["user"];
-  }
-}
-
-/**
- * Extend NextAuth JWT type
- */
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    role: UserRole;
-  }
-}
-
-/**
- * Auth Types for Client-Side Usage
- */
-
-// User type for client-side usage
-export interface AuthUser {
+// User type
+export interface User {
   id: string;
-  name?: string | null;
+  name?: string;
   email: string;
-  image?: string | null;
+  emailVerified?: string;
+  image?: string;
+  password?: string;
+  phone?: string;
   role: UserRole;
-  emailVerified?: Date | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// Auth state for client-side usage
-export interface AuthState {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  isAdmin: boolean;
-  isOrganizer: boolean;
-  isBuyer: boolean;
-}
+// Enum for user roles
+export type UserRole = 'ADMIN' | 'ORGANIZER' | 'BUYER';
 
-// Login credentials
-export interface LoginCredentials {
-  email: string;
-  password: string;
-  callbackUrl?: string;
-}
-
-// Registration data
-export interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  role?: UserRole;
-}
-
-// Password reset data
-export interface ResetPasswordData {
-  token: string;
-  password: string;
-}
-
-// Verification token data
-export interface VerificationTokenData {
-  token: string;
-}
-
-// ===== API Types =====
-
-/**
- * API Response type
- */
-export type ApiResponse<T = any> = {
-  success: boolean;
-  data?: T;
-  error?: string;
-  errors?: Array<{ message: string }>;
-  message?: string;
-};
-
-/**
- * Auth API responses
- */
-export interface LoginResponse extends ApiResponse {
-  data?: {
-    user: AuthUser;
-    redirectUrl?: string;
-  };
-}
-
-export interface RegisterResponse extends ApiResponse {
-  data?: {
-    user: {
-      id: string;
-      name: string;
-      email: string;
-    };
-  };
-}
-
-export interface VerifyResponse extends ApiResponse {
-  data?: {
-    verified: boolean;
-  };
-}
-
-export interface ResetPasswordResponse extends ApiResponse {
-  data?: {
-    success: boolean;
-  };
-}
-
-/**
- * API Request Options
- */
-export type RequestOptions = {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
-  body?: any;
-  headers?: Record<string, string>;
-  params?: Record<string, string | number | boolean | undefined>;
-};
-
-// ===== Event Types =====
-
-/**
- * Event Category
- */
-export type EventCategory = {
+// Organizer type
+export interface Organizer {
   id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  icon?: string;
-};
-
-/**
- * Event Create Input
- */
-export type EventCreateInput = {
-  title: string;
-  description?: string;
-  organizerId: string;
-  venue: string;
-  address?: string;
-  city?: string;
-  province: string;
-  country: string;
-  category?: string;
-  tags?: string[];
-  startDate: Date;
-  endDate: Date;
-  posterUrl?: string;
-  bannerUrl?: string;
-  images?: string[];
-  featured?: boolean;
-  published?: boolean;
-  seatingMap?: string;
-  maxAttendees?: number;
-  website?: string;
-  terms?: string;
-};
-
-/**
- * Event Update Input
- */
-export type EventUpdateInput = Partial<EventCreateInput> & {
-  status?: EventStatus;
-  slug?: string;
-};
-
-/**
- * Event with Tickets
- */
-export type EventWithTickets = {
-  id: string;
-  slug: string;
-  title: string;
-  description?: string | null;
-  venue: string;
-  address?: string | null;
-  city?: string | null;
-  province: string;
-  country: string;
-  category?: string | null;
-  tags: string[];
-  images: string[];
-  featured: boolean;
-  published: boolean;
-  seatingMap?: string | null;
-  maxAttendees?: number | null;
-  website?: string | null;
-  terms?: string | null;
-  startDate: Date;
-  endDate: Date;
-  posterUrl?: string | null;
-  bannerUrl?: string | null;
-  status: EventStatus;
-  createdAt: Date;
-  updatedAt: Date;
-  organizerId: string;
-  organizer: {
-    id: string;
-    orgName: string;
-    verified: boolean;
-    user: {
-      id: string;
-      name?: string | null;
-      email: string;
-    };
-  };
-  ticketTypes: Array<{
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    sold: number;
-  }>;
-};
-
-/**
- * Event Filter Input
- */
-export type EventFilterInput = {
-  status?: EventStatus;
-  organizerId?: string;
-  category?: string;
-  city?: string;
-  province?: string;
-  country?: string;
-  search?: string;
-  upcoming?: boolean;
-  featured?: boolean;
-  tags?: string[];
-  limit?: number;
-  offset?: number;
-};
-
-// ===== Ticket Types =====
-
-/**
- * Ticket Type Create Input
- */
-export type TicketTypeCreateInput = {
-  eventId: string;
-  name: string;
-  description?: string;
-  price: number;
-  currency?: string;
-  quantity: number;
-  maxPerPurchase?: number;
-  isVisible?: boolean;
-  allowTransfer?: boolean;
-  ticketFeatures?: string;
-  perks?: string;
-  earlyBirdDeadline?: Date;
-  saleStartDate?: Date;
-  saleEndDate?: Date;
-};
-
-/**
- * Ticket Type Update Input
- */
-export type TicketTypeUpdateInput = Partial<Omit<TicketTypeCreateInput, "eventId">> & {
-  sold?: number;
-};
-
-/**
- * Ticket Create Input
- */
-export type TicketCreateInput = {
-  ticketTypeId: string;
-  transactionId: string;
-  userId: string;
-  qrCode: string;
-  status?: TicketStatus;
-};
-
-/**
- * Ticket Update Input
- */
-export type TicketUpdateInput = {
-  status?: TicketStatus;
-  checkedIn?: boolean;
-  checkInTime?: Date;
-};
-
-/**
- * Ticket Validation Input
- */
-export type ValidateTicketInput = {
-  ticketId: string;
-  eventId?: string;
-};
-
-/**
- * Ticket Filter Input
- */
-export type TicketFilterInput = {
-  eventId?: string;
-  userId?: string;
-  ticketTypeId?: string;
-  status?: TicketStatus;
-  checkedIn?: boolean;
-  limit?: number;
-  offset?: number;
-};
-
-// ===== Transaction Types =====
-
-/**
- * Transaction Create Input
- */
-export type TransactionCreateInput = {
-  userId: string;
-  eventId: string;
-  amount: number;
-  currency?: string;
-  paymentMethod: string;
-  paymentReference?: string;
-  invoiceNumber: string;
-  status?: PaymentStatus;
-  details?: Record<string, any>;
-};
-
-/**
- * Transaction Update Input
- */
-export type TransactionUpdateInput = {
-  status?: PaymentStatus;
-  paymentReference?: string;
-  details?: Record<string, any>;
-};
-
-/**
- * Order Item Create Input
- */
-export type OrderItemCreateInput = {
-  orderId: string;
-  ticketTypeId: string;
-  quantity: number;
-  price: number;
-};
-
-/**
- * Transaction Filter Input
- */
-export type TransactionFilterInput = {
-  userId?: string;
-  eventId?: string;
-  status?: PaymentStatus;
-  paymentMethod?: string;
-  startDate?: Date;
-  endDate?: Date;
-  limit?: number;
-  offset?: number;
-};
-
-// ===== Payment Types =====
-
-/**
- * Payment Create Input
- */
-export type PaymentCreateInput = {
-  orderId: string;
-  gateway: string;
-  amount: number;
-  status?: PaymentStatus;
-};
-
-/**
- * Payment Update Input
- */
-export type PaymentUpdateInput = {
-  status?: PaymentStatus;
-  paymentId?: string;
-  hmacSignature?: string;
-  callbackPayload?: Record<string, any>;
-  receivedAt?: Date;
-};
-
-/**
- * Payment Filter Input
- */
-export type PaymentFilterInput = {
-  orderId?: string;
-  status?: PaymentStatus;
-  gateway?: string;
-  startDate?: Date;
-  endDate?: Date;
-  limit?: number;
-  offset?: number;
-};
-
-// ===== E-Ticket Types =====
-
-/**
- * E-Ticket Create Input
- */
-export type ETicketCreateInput = {
-  orderId: string;
-  qrCodeData: string;
-  fileUrl?: string;
-};
-
-/**
- * E-Ticket Update Input
- */
-export type ETicketUpdateInput = {
-  fileUrl?: string;
-  delivered?: boolean;
-  deliveredAt?: Date;
-  scannedAt?: Date;
-};
-
-/**
- * E-Ticket Validation Input
- */
-export type ValidateETicketInput = {
-  qrCodeData: string;
-};
-
-/**
- * E-Ticket Generation Input
- */
-export type GenerateETicketsInput = {
-  orderId: string;
-};
-
-/**
- * E-Ticket Filter Input
- */
-export type ETicketFilterInput = {
-  orderId?: string;
-  delivered?: boolean;
-  scanned?: boolean;
-  limit?: number;
-  offset?: number;
-};
-
-// ===== Organizer Types =====
-
-/**
- * Organizer Create Input
- */
-export type OrganizerCreateInput = {
   userId: string;
   orgName: string;
   legalName?: string;
   npwp?: string;
   socialMedia?: Record<string, any>;
   verificationDocs?: string;
-};
+  verified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
-/**
- * Organizer Update Input
- */
-export type OrganizerUpdateInput = {
-  orgName?: string;
-  legalName?: string;
-  npwp?: string;
-  socialMedia?: Record<string, any>;
-  verificationDocs?: string;
-  verified?: boolean;
-};
+// Event type
+export interface Event {
+  id: string;
+  slug: string;
+  organizerId: string;
+  title: string;
+  description?: string;
+  posterUrl?: string;
+  bannerUrl?: string;
+  category?: string;
+  venue: string;
+  address?: string;
+  city?: string;
+  province: string;
+  country: string;
+  tags: string[];
+  images: string[];
+  featured: boolean;
+  published: boolean;
+  seatingMap?: string;
+  maxAttendees?: number;
+  website?: string;
+  terms?: string;
+  startDate: string;
+  endDate: string;
+  status: EventStatus;
+  createdAt: string;
+  updatedAt: string;
+}
 
-/**
- * Organizer Filter Input
- */
-export type OrganizerFilterInput = {
+// Enum for event status
+export type EventStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED';
+
+// Ticket type
+export interface Ticket {
+  id: string;
+  ticketTypeId: string;
+  transactionId: string;
+  userId: string;
+  qrCode: string;
+  status: TicketStatus;
+  checkedIn: boolean;
+  checkInTime?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Enum for ticket status
+export type TicketStatus = 'ACTIVE' | 'USED' | 'CANCELLED' | 'EXPIRED' | 'REFUNDED';
+
+// Transaction type
+export interface Transaction {
+  id: string;
+  userId: string;
+  eventId: string;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
+  paymentReference?: string;
+  invoiceNumber: string;
+  status: PaymentStatus;
+  details?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Enum for payment status
+export type PaymentStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'EXPIRED' | 'REFUNDED';
+
+// TicketType type
+export interface TicketType {
+  id: string;
+  eventId: string;
+  name: string;
+  description?: string;
+  price: number;
+  currency: string;
+  quantity: number;
+  sold: number;
+  maxPerPurchase: number;
+  isVisible: boolean;
+  allowTransfer: boolean;
+  ticketFeatures?: string;
+  perks?: string;
+  earlyBirdDeadline?: string;
+  saleStartDate?: string;
+  saleEndDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Approval type
+export interface Approval {
+  id: string;
+  entityType: string;
+  entityId: string;
+  reviewerId?: string;
+  status: ApprovalStatus;
+  notes?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Enum for approval status
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+// Log type
+export interface Log {
+  id: string;
   userId?: string;
-  verified?: boolean;
-  search?: string;
-  limit?: number;
-  offset?: number;
-};
+  action: string;
+  entity?: string;
+  entityId?: string;
+  metadata?: Record<string, any>;
+  timestamp: string;
+}
 
-// ===== Bank Account Types =====
+// Validator type
+export interface Validator {
+  id: string;
+  userId: string;
+  eventIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
-/**
- * Bank Account Create Input
- */
-export type BankAccountCreateInput = {
+// BankAccount type
+export interface BankAccount {
+  id: string;
   organizerId: string;
   bankName: string;
   accountName: string;
   accountNumber: string;
   branch?: string;
-};
+  createdAt: string;
+  updatedAt: string;
+}
 
-/**
- * Bank Account Update Input
- */
-export type BankAccountUpdateInput = {
-  bankName?: string;
-  accountName?: string;
-  accountNumber?: string;
-  branch?: string;
-};
-
-// ===== Withdrawal Types =====
-
-/**
- * Withdrawal Create Input
- */
-export type WithdrawalCreateInput = {
+// Withdrawal type
+export interface Withdrawal {
+  id: string;
   organizerId: string;
   amount: number;
-  currency?: string;
+  currency: string;
+  status: WithdrawalStatus;
   reference?: string;
   notes?: string;
-};
+  processedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-/**
- * Withdrawal Update Input
- */
-export type WithdrawalUpdateInput = {
-  status?: WithdrawalStatus;
-  reference?: string;
-  notes?: string;
-  processedAt?: Date;
-};
+// Enum for withdrawal status
+export type WithdrawalStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
 
-/**
- * Withdrawal Filter Input
- */
-export type WithdrawalFilterInput = {
-  organizerId?: string;
-  status?: WithdrawalStatus;
-  startDate?: Date;
-  endDate?: Date;
-  limit?: number;
-  offset?: number;
-};
-
-// ===== Crew Types =====
-
-/**
- * Crew Create Input
- */
-export type CrewCreateInput = {
+// Crew type
+export interface Crew {
+  id: string;
   organizerId: string;
   eventId: string;
   name: string;
@@ -561,166 +196,44 @@ export type CrewCreateInput = {
   phone?: string;
   idCardNumber: string;
   barcode: string;
-  isActive?: boolean;
-};
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
-/**
- * Crew Update Input
- */
-export type CrewUpdateInput = {
-  name?: string;
-  role?: string;
-  email?: string;
-  phone?: string;
-  isActive?: boolean;
-};
-
-/**
- * Crew Filter Input
- */
-export type CrewFilterInput = {
-  organizerId?: string;
-  eventId?: string;
-  role?: string;
-  isActive?: boolean;
-  search?: string;
-  limit?: number;
-  offset?: number;
-};
-
-// ===== Voucher Types =====
-
-/**
- * Voucher Create Input
- */
-export type VoucherCreateInput = {
+// Voucher type
+export interface Voucher {
+  id: string;
   organizerId: string;
   eventId?: string;
   code: string;
   discountType: DiscountType;
   discountValue: number;
   maxUsage: number;
+  usedCount: number;
   minPurchaseAmount?: number;
-  startDate: Date;
-  endDate: Date;
-  isActive?: boolean;
-};
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
-/**
- * Voucher Update Input
- */
-export type VoucherUpdateInput = {
-  code?: string;
-  discountType?: DiscountType;
-  discountValue?: number;
-  maxUsage?: number;
-  usedCount?: number;
-  minPurchaseAmount?: number;
-  startDate?: Date;
-  endDate?: Date;
-  isActive?: boolean;
-};
+// Enum for discount type
+export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
 
-/**
- * Voucher Filter Input
- */
-export type VoucherFilterInput = {
-  organizerId?: string;
-  eventId?: string;
-  code?: string;
-  isActive?: boolean;
-  isValid?: boolean; // Checks if current date is between startDate and endDate
-  limit?: number;
-  offset?: number;
-};
+// ApiResponse type for generic API responses
+export interface ApiResponse<T> {
+  data: T;
+  message: string;
+  status: 'success' | 'error';
+}
 
-// ===== Validator Types =====
+import "next-auth/jwt";
 
-/**
- * Validator Create Input
- */
-export type ValidatorCreateInput = {
-  userId: string;
-  eventIds: string[];
-};
-
-/**
- * Validator Update Input
- */
-export type ValidatorUpdateInput = {
-  eventIds?: string[];
-};
-
-/**
- * Validator Filter Input
- */
-export type ValidatorFilterInput = {
-  userId?: string;
-  eventId?: string;
-  limit?: number;
-  offset?: number;
-};
-
-// ===== Approval Types =====
-
-/**
- * Approval Create Input
- */
-export type ApprovalCreateInput = {
-  entityType: string;
-  entityId: string;
-  reviewerId?: string;
-  status?: ApprovalStatus;
-  notes?: string;
-};
-
-/**
- * Approval Update Input
- */
-export type ApprovalUpdateInput = {
-  reviewerId?: string;
-  status?: ApprovalStatus;
-  notes?: string;
-  reviewedAt?: Date;
-};
-
-/**
- * Approval Filter Input
- */
-export type ApprovalFilterInput = {
-  entityType?: string;
-  entityId?: string;
-  reviewerId?: string;
-  status?: ApprovalStatus;
-  startDate?: Date;
-  endDate?: Date;
-  limit?: number;
-  offset?: number;
-};
-
-// ===== Log Types =====
-
-/**
- * Log Create Input
- */
-export type LogCreateInput = {
-  userId?: string;
-  action: string;
-  entity?: string;
-  entityId?: string;
-  metadata?: Record<string, any>;
-};
-
-/**
- * Log Filter Input
- */
-export type LogFilterInput = {
-  userId?: string;
-  action?: string;
-  entity?: string;
-  entityId?: string;
-  startDate?: Date;
-  endDate?: Date;
-  limit?: number;
-  offset?: number;
-};
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    role?: UserRole;
+  }
+}
