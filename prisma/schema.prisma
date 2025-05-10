@@ -1,0 +1,374 @@
+// Prisma schema for concert ticketing application
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// User Models
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  phone         String?
+  role          UserRole  @default(BUYER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  organizer    Organizer?
+  accounts     Account[]
+  sessions     Session[]
+  tickets      Ticket[] // Relasi ke Ticket
+  transactions Transaction[] // Relasi ke Transaction
+  validator    Validator?
+}
+
+enum UserRole {
+  ADMIN
+  ORGANIZER
+  BUYER
+}
+
+// Necessary for NextAuth
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String? @db.Text
+  access_token             String? @db.Text
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String? @db.Text
+  session_state            String?
+  refresh_token_expires_in Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Organizer {
+  id               String       @id @default(cuid())
+  userId           String       @unique
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgName          String
+  legalName        String?
+  npwp             String?
+  bankAccount      BankAccount?
+  socialMedia      Json?
+  verificationDocs String?
+  verified         Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  events      Event[] // Relasi ke Event
+  crew        Crew[] // Relasi ke Crew
+  vouchers    Voucher[] // Relasi ke Voucher
+  withdrawals Withdrawal[] // Relasi ke Withdrawal
+}
+
+// Event Models
+model Event {
+  id           String      @id @default(cuid())
+  slug         String      @unique
+  organizerId  String
+  organizer    Organizer   @relation(fields: [organizerId], references: [id])
+  title        String
+  description  String?     @db.Text
+  posterUrl    String?
+  bannerUrl    String?
+  category     String?
+  venue        String
+  address      String?     @db.Text
+  city         String?
+  province     String
+  country      String
+  tags         String[]
+  images       String[]
+  featured     Boolean     @default(false)
+  published    Boolean     @default(false)
+  seatingMap   String?
+  maxAttendees Int?
+  website      String?
+  terms        String?
+  startDate    DateTime
+  endDate      DateTime
+  status       EventStatus @default(DRAFT)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  ticketTypes  TicketType[] // Relasi ke TicketType
+  transactions Transaction[] // Relasi ke Transaction
+  crew         Crew[] // Relasi ke Crew
+  vouchers     Voucher[] // Relasi ke Voucher
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+model TicketType {
+  id                String    @id @default(cuid())
+  eventId           String
+  event             Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name              String
+  description       String?   @db.Text
+  price             Decimal   @db.Decimal(10, 2)
+  currency          String    @default("IDR")
+  quantity          Int
+  sold              Int       @default(0)
+  maxPerPurchase    Int       @default(10)
+  isVisible         Boolean   @default(true)
+  allowTransfer     Boolean   @default(false)
+  ticketFeatures    String?
+  perks             String?   @db.Text
+  earlyBirdDeadline DateTime?
+  saleStartDate     DateTime?
+  saleEndDate       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  orderItems OrderItem[] // Relasi ke OrderItem
+  tickets    Ticket[] // Relasi ke Ticket
+}
+
+// Transaction Models
+model Transaction {
+  id               String        @id @default(cuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id])
+  eventId          String
+  event            Event         @relation(fields: [eventId], references: [id])
+  amount           Decimal       @db.Decimal(10, 2)
+  currency         String        @default("IDR")
+  paymentMethod    String
+  paymentReference String?
+  invoiceNumber    String        @unique
+  status           PaymentStatus @default(PENDING)
+  details          Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  tickets    Ticket[] // Relasi ke Ticket
+  orderItems OrderItem[] // Relasi ke OrderItem
+  payments   Payment[] // Relasi ke Payment
+  eTickets   ETicket[] // Relasi ke ETicket
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+model OrderItem {
+  id           String      @id @default(cuid())
+  orderId      String
+  order        Transaction @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ticketTypeId String
+  ticketType   TicketType  @relation(fields: [ticketTypeId], references: [id])
+  quantity     Int
+  price        Decimal     @db.Decimal(10, 2)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  orderId         String
+  order           Transaction   @relation(fields: [orderId], references: [id])
+  gateway         String
+  amount          Decimal       @db.Decimal(10, 2)
+  status          PaymentStatus @default(PENDING)
+  paymentId       String?
+  hmacSignature   String?
+  callbackPayload Json?
+  receivedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model ETicket {
+  id          String      @id @default(cuid())
+  orderId     String
+  order       Transaction @relation(fields: [orderId], references: [id])
+  qrCodeData  String
+  fileUrl     String?
+  generatedAt DateTime    @default(now())
+  delivered   Boolean     @default(false)
+  deliveredAt DateTime?
+  scannedAt   DateTime?
+}
+
+// Admin Models
+model Approval {
+  id         String         @id @default(cuid())
+  entityType String
+  entityId   String
+  reviewerId String?
+  status     ApprovalStatus @default(PENDING)
+  notes      String?        @db.Text
+  reviewedAt DateTime?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// System Models
+model Log {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  timestamp DateTime @default(now())
+}
+
+// New Models
+model Validator {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  eventIds  String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BankAccount {
+  id            String    @id @default(cuid())
+  organizerId   String    @unique
+  bankName      String
+  accountName   String
+  accountNumber String
+  branch        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  organizer     Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+}
+
+model Withdrawal {
+  id          String           @id @default(cuid())
+  organizerId String
+  amount      Float
+  currency    String           @default("IDR")
+  status      WithdrawalStatus @default(PENDING)
+  reference   String?
+  notes       String?
+  processedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  organizer   Organizer        @relation(fields: [organizerId], references: [id])
+}
+
+model Crew {
+  id           String    @id @default(cuid())
+  organizerId  String
+  eventId      String
+  name         String
+  role         String
+  email        String?
+  phone        String?
+  idCardNumber String    @unique
+  barcode      String    @unique
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  organizer    Organizer @relation(fields: [organizerId], references: [id])
+  event        Event     @relation(fields: [eventId], references: [id]) // Relasi ke Event
+}
+
+model Voucher {
+  id                String       @id @default(cuid())
+  organizerId       String
+  eventId           String?
+  code              String       @unique
+  discountType      DiscountType
+  discountValue     Float
+  maxUsage          Int
+  usedCount         Int          @default(0)
+  minPurchaseAmount Float?
+  startDate         DateTime
+  endDate           DateTime
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  organizer         Organizer    @relation(fields: [organizerId], references: [id])
+  event             Event?       @relation(fields: [eventId], references: [id]) // Relasi ke Event
+}
+
+model Ticket {
+  id            String       @id @default(cuid())
+  ticketTypeId  String
+  ticketType    TicketType   @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+  transactionId String
+  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  qrCode        String       @unique
+  status        TicketStatus @default(ACTIVE)
+  checkedIn     Boolean      @default(false)
+  checkInTime   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+enum TicketStatus {
+  ACTIVE
+  USED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
