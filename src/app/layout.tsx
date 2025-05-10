@@ -1,14 +1,20 @@
 // src/app/layout.tsx
 import { Providers } from './providers';
+import '~/styles/globals.css';
 
-export default function RootLayout({ children }) {
-    return (
-        <html lang="en">
-        <body>
+export const metadata = {
+  title: 'VBTix - Tiket Konser Online',
+  description: 'Platform penjualan tiket konser online',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-background">
         <Providers>
-            {children}
+          {children}
         </Providers>
-        </body>
-        </html>
-    );
+      </body>
+    </html>
+  );
 }
