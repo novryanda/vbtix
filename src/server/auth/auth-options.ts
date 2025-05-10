@@ -4,11 +4,11 @@ import { UserRole } from "@prisma/client";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
+import type { JWT } from "next-auth/jwt";
 
 import { env } from "~/env";
 import { prisma } from "~/server/db/client";
 import { validateCredentials } from "~/server/services/auth.service";
-import { JWT } from "~/lib/types"; // Import JWT type
 
 /**
  * Opsi untuk NextAuth.js yang digunakan untuk mengonfigurasi
@@ -115,19 +115,19 @@ export const authOptions = {
     async jwt({ token, user, account }) {
       // Tambahkan data user ke token saat login pertama kali
       if (user) {
-        (token as JWT).id = user.id;
-        (token as JWT).role = user.role;
+        token.id = user.id;
+        token.role = user.role;
       }
 
       // Jika token sudah ada tapi tidak memiliki role, ambil dari database
-      if (!(token as JWT).role) {
+      if (!token.role) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email as string },
         });
 
         if (dbUser) {
-          (token as JWT).id = dbUser.id;
-          (token as JWT).role = dbUser.role;
+          token.id = dbUser.id;
+          token.role = dbUser.role;
         }
       }
 
@@ -136,8 +136,8 @@ export const authOptions = {
     async session({ session, token }) {
       // Tambahkan data dari token ke session
       if (token) {
-        session.user.id = (token as JWT).id;
-        session.user.role = (token as JWT).role;
+        session.user.id = token.id as string;
+        session.user.role = token.role as UserRole;
       }
 
       return session;

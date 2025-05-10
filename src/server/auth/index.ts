@@ -1,23 +1,13 @@
-import NextAuth from "next-auth";
+import { getServerSession } from "next-auth";
 import { authOptions } from "./auth-options";
 import { UserRole } from "@prisma/client";
-
-/**
- * Konfigurasi NextAuth untuk digunakan di seluruh aplikasi
- */
-const nextAuth = NextAuth(authOptions);
 
 /**
  * Wrapper untuk `getServerSession` agar tidak perlu mengimpor authOptions di setiap file.
  *
  * @see https://next-auth.js.org/configuration/nextjs
  */
-export const auth = nextAuth.auth;
-
-/**
- * Export handlers untuk route handler
- */
-export const { handlers, signIn, signOut } = nextAuth;
+export const auth = () => getServerSession(authOptions);
 
 /**
  * Mendapatkan rute dashboard berdasarkan peran pengguna

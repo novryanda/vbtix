@@ -11,7 +11,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { useAuth } from "~/lib/hooks/use-auth";
-import {error} from "next/dist/build/output/log";
+
 
 // Schema validasi form login
 const loginSchema = z.object({
@@ -28,6 +28,7 @@ export default function LoginPage() {
 
   const { login, loginWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
     register,
@@ -43,15 +44,16 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
+    setErrorMessage(null);
 
     try {
       const result = await login(data.email, data.password, callbackUrl);
 
       if (!result.success) {
-
+        setErrorMessage(result.error || "Login gagal. Silakan coba lagi.");
       }
     } catch (err) {
-
+      setErrorMessage("Terjadi kesalahan saat login. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -59,10 +61,12 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
+    setErrorMessage(null);
+
     try {
       await loginWithGoogle(callbackUrl);
     } catch (err) {
-
+      setErrorMessage("Terjadi kesalahan saat login dengan Google. Silakan coba lagi.");
       setIsLoading(false);
     }
   };
@@ -77,9 +81,9 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {error && (
+        {errorMessage && (
           <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-            {error}
+            {errorMessage}
           </div>
         )}
 
