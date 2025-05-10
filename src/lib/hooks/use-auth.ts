@@ -3,7 +3,7 @@
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { UserRole } from "@prisma/client";
-import { getDashboardRoute } from "~/server/auth";
+import { getDashboardRoute } from "~/lib/auth";
 
 /**
  * Hook untuk mengakses status autentikasi di sisi klien
