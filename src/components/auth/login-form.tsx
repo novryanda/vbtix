@@ -48,9 +48,9 @@ export function LoginForm({
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const { login } = useAuth();
+  const { login, getErrorMessage } = useAuth();
 
   // Initialize form with react-hook-form
   const form = useForm<LoginFormValues>({
@@ -74,24 +74,41 @@ export function LoginForm({
       });
 
       if (result?.error) {
+        // Gunakan fungsi getErrorMessage dari useAuth hook
+        const errorMessage = getErrorMessage(result.error);
+
         toast({
-          title: "Error",
-          description: "Email atau password salah",
+          title: "Gagal Login",
+          description: errorMessage,
           variant: "destructive",
         });
         setIsLoading(false);
         return;
       }
 
+      // Tampilkan toast sukses
+      toast({
+        title: "Login Berhasil",
+        description: "Anda berhasil login. Mengalihkan ke dashboard...",
+        variant: "default",
+      });
+
       // Redirect to dashboard or callback URL
       // The redirect will be handled by NextAuth based on the user's role
       router.refresh();
-      window.location.href = callbackUrl;
+
+      // Use the dashboard route as the default redirect
+      if (callbackUrl === "/dashboard") {
+        // This will trigger the middleware to redirect based on role
+        window.location.href = "/";
+      } else {
+        window.location.href = callbackUrl;
+      }
     } catch (error) {
       console.error("Login error:", error);
       toast({
         title: "Error",
-        description: "Terjadi kesalahan saat login",
+        description: "Terjadi kesalahan saat login. Silakan coba lagi.",
         variant: "destructive",
       });
       setIsLoading(false);
@@ -102,13 +119,22 @@ export function LoginForm({
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
+      // Tampilkan toast informasi
+      toast({
+        title: "Login dengan Google",
+        description: "Mengalihkan ke halaman login Google...",
+        variant: "default",
+      });
+
       // Use redirect: true to let NextAuth handle the redirect
-      await signIn("google", { callbackUrl, redirect: true });
+      // For Google login, we'll use the root path to trigger middleware redirect
+      const redirectUrl = callbackUrl === "/dashboard" ? "/" : callbackUrl;
+      await signIn("google", { callbackUrl: redirectUrl, redirect: true });
     } catch (error) {
       console.error("Google login error:", error);
       toast({
         title: "Error",
-        description: "Terjadi kesalahan saat login dengan Google",
+        description: "Terjadi kesalahan saat login dengan Google. Silakan coba lagi.",
         variant: "destructive",
       });
       setIsLoading(false);

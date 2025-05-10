@@ -1,5 +1,3 @@
-// Prisma schema for concert ticketing application
-
 generator client {
   provider = "prisma-client-js"
 }
