@@ -1,3 +1,4 @@
+'use client';
 
 import useSWR from 'swr';
 import { ADMIN_ENDPOINTS } from '../endpoints';
@@ -5,14 +6,35 @@ import { fetcher } from '../client'; // Import fetcher from client
 
 // Hook to fetch admin dashboard data
 export const useAdminDashboard = () => {
-  const { data, error, isLoading, mutate } = useSWR(ADMIN_ENDPOINTS.DASHBOARD, fetcher);
-  return { data, error, isLoading, mutate };
+  // Tambahkan parameter limit untuk menghindari error validasi
+  const { data, error, isLoading, mutate } = useSWR(`${ADMIN_ENDPOINTS.DASHBOARD}?limit=5`, fetcher);
+
+  // Ekstrak data stats dari respons API
+  const dashboardData = data?.data?.stats;
+
+  return {
+    data: dashboardData,
+    error,
+    isLoading,
+    mutate
+  };
 };
 
 // Hook to fetch all admin events
 export const useAdminEvents = () => {
   const { data, error, isLoading, mutate } = useSWR(ADMIN_ENDPOINTS.EVENTS, fetcher);
-  return { data, error, isLoading, mutate };
+
+  // Tambahkan penanganan error
+  if (error) {
+    console.error("Error fetching admin events:", error);
+  }
+
+  return {
+    data,
+    error,
+    isLoading,
+    mutate
+  };
 };
 
 // Hook to fetch a specific admin event by ID

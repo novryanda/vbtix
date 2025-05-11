@@ -1,3 +1,4 @@
+'use client';
 
 import useSWR from 'swr';
 import { BUYER_ENDPOINTS } from '../endpoints';

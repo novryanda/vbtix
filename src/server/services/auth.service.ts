@@ -1,5 +1,6 @@
 import { UserRole } from "@prisma/client";
 import { hash, compare } from "bcryptjs";
+import { randomBytes } from "crypto";
 import { prisma } from "~/server/db/client";
 
 /**

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { UserRole } from '@prisma/client';
 
 // Validation schema for User
 export const userSchema = z.object({
@@ -17,3 +16,29 @@ export const userSchema = z.object({
 
 // Export TypeScript type from the schema
 export type UserSchema = z.infer<typeof userSchema>;
+
+// Schema for creating a new user
+export const createUserSchema = userSchema.pick({
+  name: true,
+  email: true,
+  password: true,
+  phone: true,
+  role: true,
+});
+
+// Schema for updating an existing user
+export const updateUserSchema = userSchema.partial().omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schema for deleting a user
+export const deleteUserSchema = z.object({
+  id: z.string().uuid({ message: 'Invalid UUID format for id' }),
+});
+
+// Export TypeScript types for the new schemas
+export type CreateUserSchema = z.infer<typeof createUserSchema>;
+export type UpdateUserSchema = z.infer<typeof updateUserSchema>;
+export type DeleteUserSchema = z.infer<typeof deleteUserSchema>;

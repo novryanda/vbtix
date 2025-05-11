@@ -55,8 +55,7 @@ export const useAuth = () => {
    * Fungsi untuk logout
    */
   const logout = async () => {
-    await signOut({ redirect: false });
-    router.push("/login");
+    await signOut({ callbackUrl: "/login" });
   };
 
   /**

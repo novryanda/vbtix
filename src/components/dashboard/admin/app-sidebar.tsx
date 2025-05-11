@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSession } from "next-auth/react"
 import {
     ArrowUpCircleIcon,
     BarChartIcon,
@@ -151,6 +152,15 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+    const { data: session } = useSession();
+
+    // Gunakan data user dari session jika tersedia
+    const userData = {
+        name: session?.user?.name || "Guest",
+        email: session?.user?.email || "guest@example.com",
+        avatar: session?.user?.image || "/avatars/default.jpg",
+    };
+
     return (
         <Sidebar collapsible="offcanvas" {...props}>
             <SidebarHeader>
@@ -162,7 +172,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         >
                             <a href="#">
                                 <ArrowUpCircleIcon className="h-5 w-5" />
-                                <span className="text-base font-semibold">Acme Inc.</span>
+                                <span className="text-base font-semibold">VBTix Admin</span>
                             </a>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -174,7 +184,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <NavSecondary items={data.navSecondary} className="mt-auto" />
             </SidebarContent>
             <SidebarFooter>
-                <NavUser user={data.user} />
+                <NavUser user={userData} />
             </SidebarFooter>
         </Sidebar>
     )

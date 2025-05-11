@@ -14,3 +14,28 @@ export const paymentSchema = z.object({
 
 // Export TypeScript type from the schema
 export type PaymentSchema = z.infer<typeof paymentSchema>;
+
+// Schema for creating a new payment
+export const createPaymentSchema = paymentSchema.pick({
+  userId: true,
+  ticketId: true,
+  amount: true,
+  paymentMethod: true,
+});
+
+// Schema for updating an existing payment
+export const updatePaymentSchema = paymentSchema.partial().omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Schema for deleting a payment
+export const deletePaymentSchema = z.object({
+  id: z.string().uuid({ message: 'Invalid UUID format for id' }),
+});
+
+// Export TypeScript types for the new schemas
+export type CreatePaymentSchema = z.infer<typeof createPaymentSchema>;
+export type UpdatePaymentSchema = z.infer<typeof updatePaymentSchema>;
+export type DeletePaymentSchema = z.infer<typeof deletePaymentSchema>;
