@@ -1,3 +1,4 @@
+'use client';
 
 import useSWR from 'swr';
 import { ORGANIZER_ENDPOINTS } from '../endpoints';

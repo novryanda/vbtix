@@ -5,12 +5,13 @@ import { UserRole } from "@prisma/client";
 
 /**
  * GET /api/admin/events/[id]/statistics
- * Get detailed statistics for an event
+ * Get event statistics
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = params;
-
     // Check authentication and authorization
     const session = await auth();
     if (!session?.user) {
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    // Only admins can access this endpoint
+    // Only admins can access statistics
     if (session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
@@ -28,22 +29,21 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    // Handle the request
-    const result = await handleGetEventStatistics(id);
-
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: result.error === "Event not found" ? 404 : 400 }
-      );
-    }
-
-    return NextResponse.json({ success: true, data: result.data });
-  } catch (error) {
-    console.error(`Error in GET /api/admin/events/${params.id}/statistics:`, error);
+    const { id } = params;
+    const statistics = await handleGetEventStatistics(id);
+    
+    return NextResponse.json({
+      success: true,
+      data: statistics
+    });
+  } catch (error: any) {
+    console.error(`Error getting statistics for event ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
+      { 
+        success: false, 
+        error: error.message || "Failed to get event statistics" 
+      },
+      { status: error.message === "Event not found" ? 404 : 500 }
     );
   }
 }

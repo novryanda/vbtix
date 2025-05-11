@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleSetEventFeatured } from "~/server/api/events";
+import { handleReviewEvent } from "~/server/api/events";
 import { auth } from "~/server/auth";
-import { UserRole } from "@prisma/client";
+import { UserRole, ApprovalStatus } from "@prisma/client";
 import { z } from "zod";
 
-const featuredSchema = z.object({
-  featured: z.boolean()
+const reviewSchema = z.object({
+  status: z.enum([ApprovalStatus.APPROVED, ApprovalStatus.REJECTED]),
+  feedback: z.string().optional()
 });
 
 /**
- * POST /api/admin/events/[id]/featured
- * Set event as featured/unfeatured
+ * POST /api/admin/events/[id]/review
+ * Review (approve/reject) an event
  */
 export async function POST(
   request: NextRequest,
@@ -26,7 +27,7 @@ export async function POST(
       );
     }
 
-    // Only admins can set featured status
+    // Only admins can review events
     if (session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
@@ -39,10 +40,10 @@ export async function POST(
     
     try {
       // Validate input
-      const { featured } = featuredSchema.parse(body);
+      const { status, feedback } = reviewSchema.parse(body);
       
-      // Update featured status
-      const result = await handleSetEventFeatured(id, featured);
+      // Review event
+      const result = await handleReviewEvent(id, status, feedback, session.user.id);
       
       return NextResponse.json({
         success: true,
@@ -55,11 +56,11 @@ export async function POST(
       );
     }
   } catch (error: any) {
-    console.error(`Error setting featured status for event ${params.id}:`, error);
+    console.error(`Error reviewing event ${params.id}:`, error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error.message || "Failed to update featured status" 
+        error: error.message || "Failed to review event" 
       },
       { status: error.message === "Event not found" ? 404 : 500 }
     );

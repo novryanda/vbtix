@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { 
-  handleGetEventById, 
-  handleUpdateEvent, 
-  handleDeleteEvent,
-  handleSetEventFeatured
-} from "~/server/api/events";
+import { handleGetEventById, handleUpdateEvent, handleDeleteEvent } from "~/server/api/events";
 import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
+import { updateEventSchema } from "~/lib/validations/event.schema";
 
 /**
  * GET /api/admin/events/[id]
- * Get a single event by ID (admin view with detailed statistics)
+ * Get event by ID
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = params;
-
     // Check authentication and authorization
     const session = await auth();
     if (!session?.user) {
@@ -33,34 +30,34 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    // Handle the request
-    const result = await handleGetEventById(id);
-
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: result.error === "Event not found" ? 404 : 400 }
-      );
-    }
-
-    return NextResponse.json({ success: true, data: result.data });
-  } catch (error) {
-    console.error(`Error in GET /api/admin/events/${params.id}:`, error);
+    const { id } = params;
+    const event = await handleGetEventById(id);
+    
+    return NextResponse.json({
+      success: true,
+      data: event
+    });
+  } catch (error: any) {
+    console.error(`Error getting event ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
+      { 
+        success: false, 
+        error: error.message || "Failed to get event" 
+      },
+      { status: error.message === "Event not found" ? 404 : 500 }
     );
   }
 }
 
 /**
  * PUT /api/admin/events/[id]
- * Update an event (admin can update any event)
+ * Update event by ID
  */
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = params;
-
     // Check authentication and authorization
     const session = await auth();
     if (!session?.user) {
@@ -70,7 +67,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    // Only admins can access this endpoint
+    // Only admins can update events
     if (session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
@@ -78,41 +75,47 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    // Parse request body
+    const { id } = params;
     const body = await request.json();
-
-    // Handle the request
-    const result = await handleUpdateEvent(id, body);
-
-    if (!result.success) {
+    
+    try {
+      // Validate input using Zod schema
+      const validatedData = updateEventSchema.parse(body);
+      
+      // Update event
+      const updatedEvent = await handleUpdateEvent(id, validatedData);
+      
+      return NextResponse.json({
+        success: true,
+        data: updatedEvent
+      });
+    } catch (validationError) {
       return NextResponse.json(
-        { success: false, error: result.error, errors: result.errors },
-        { status: result.error === "Event not found" ? 404 : 400 }
+        { success: false, error: "Validation error", details: validationError },
+        { status: 400 }
       );
     }
-
-    return NextResponse.json({ 
-      success: true, 
-      data: result.data,
-      message: "Event updated successfully" 
-    });
-  } catch (error) {
-    console.error(`Error in PUT /api/admin/events/${params.id}:`, error);
+  } catch (error: any) {
+    console.error(`Error updating event ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
+      { 
+        success: false, 
+        error: error.message || "Failed to update event" 
+      },
+      { status: error.message === "Event not found" ? 404 : 500 }
     );
   }
 }
 
 /**
  * DELETE /api/admin/events/[id]
- * Delete an event (admin can delete any event)
+ * Delete event by ID
  */
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = params;
-
     // Check authentication and authorization
     const session = await auth();
     if (!session?.user) {
@@ -122,7 +125,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
 
-    // Only admins can access this endpoint
+    // Only admins can delete events
     if (session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
@@ -130,26 +133,21 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
 
-    // Handle the request
-    const result = await handleDeleteEvent(id);
-
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: result.error === "Event not found" ? 404 : 400 }
-      );
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      data: { id },
-      message: "Event deleted successfully" 
+    const { id } = params;
+    await handleDeleteEvent(id);
+    
+    return NextResponse.json({
+      success: true,
+      message: "Event deleted successfully"
     });
-  } catch (error) {
-    console.error(`Error in DELETE /api/admin/events/${params.id}:`, error);
+  } catch (error: any) {
+    console.error(`Error deleting event ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
+      { 
+        success: false, 
+        error: error.message || "Failed to delete event" 
+      },
+      { status: error.message === "Event not found" ? 404 : 500 }
     );
   }
 }
