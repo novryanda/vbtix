@@ -53,3 +53,19 @@ export function formatPrice(price: number): string {
     minimumFractionDigits: 0,
   }).format(price);
 }
+
+/**
+ * Format currency to a specific locale and currency
+ * Example: 100000 -> "$100,000.00"
+ */
+export function formatCurrency(
+  amount: number,
+  currency: string = "USD",
+  locale: string = "en-US",
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
