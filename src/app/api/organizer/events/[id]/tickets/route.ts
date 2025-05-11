@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  handleGetOrganizerEvents,
-  handleCreateOrganizerEvent,
-} from "~/server/api/organizer-events";
+  handleGetTicketTypes,
+  handleCreateTicketType,
+} from "~/server/api/tickets";
 import { auth } from "~/server/auth";
-import { UserRole, EventStatus } from "@prisma/client";
-import { createEventSchema } from "~/lib/validations/event.schema";
+import { UserRole } from "@prisma/client";
+import { createTicketTypeSchema } from "~/lib/validations/ticket.schema";
 
 /**
- * GET /api/organizer/events
- * Get all events for the authenticated organizer with pagination
+ * GET /api/organizer/events/[id]/tickets
+ * Get all tickets for a specific event
  */
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
   try {
     // Check authentication and authorization
     const session = await auth();
@@ -33,42 +36,52 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { id: eventId } = params;
+
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
     const page = searchParams.get("page") || undefined;
     const limit = searchParams.get("limit") || undefined;
-    const status = searchParams.get("status") as EventStatus | undefined;
-    const search = searchParams.get("search") || undefined;
 
     // Call business logic
-    const result = await handleGetOrganizerEvents({
-      userId: session.user.id,
+    const result = await handleGetTicketTypes({
+      eventId,
       page,
       limit,
-      status,
-      search,
     });
 
     // Return response
     return NextResponse.json({
       success: true,
-      data: result.events,
+      data: result.ticketTypes,
       meta: result.meta,
     });
   } catch (error: any) {
-    console.error("Error getting organizer events:", error);
+    console.error(`Error getting tickets for event ${params.id}:`, error);
+
+    // Handle specific errors
+    if (error.message === "Event not found") {
+      return NextResponse.json(
+        { success: false, error: "Event not found" },
+        { status: 404 },
+      );
+    }
+
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to get events" },
+      { success: false, error: error.message || "Failed to get tickets" },
       { status: 500 },
     );
   }
 }
 
 /**
- * POST /api/organizer/events
- * Create a new event for the authenticated organizer
+ * POST /api/organizer/events/[id]/tickets
+ * Create a new ticket type for a specific event
  */
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
   try {
     // Check authentication and authorization
     const session = await auth();
@@ -79,7 +92,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Only organizers and admins can create events
+    // Only organizers and admins can create ticket types
     if (
       session.user.role !== UserRole.ORGANIZER &&
       session.user.role !== UserRole.ADMIN
@@ -90,23 +103,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse and validate request body
+    const { id: eventId } = params;
     const body = await request.json();
 
     try {
       // Validate input using Zod schema
-      const validatedData = createEventSchema.parse(body);
+      const validatedData = createTicketTypeSchema.parse(body);
 
       // Call business logic
-      const event = await handleCreateOrganizerEvent({
+      const ticketType = await handleCreateTicketType({
         userId: session.user.id,
-        eventData: validatedData,
+        eventId,
+        ticketTypeData: {
+          ...validatedData,
+          event: { connect: { id: eventId } },
+        },
       });
 
       // Return response
       return NextResponse.json({
         success: true,
-        data: event,
+        data: ticketType,
       });
     } catch (validationError: any) {
       return NextResponse.json(
@@ -119,9 +136,31 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error("Error creating event:", error);
+    console.error(`Error creating ticket type for event ${params.id}:`, error);
+
+    // Handle specific errors
+    if (error.message === "Event not found") {
+      return NextResponse.json(
+        { success: false, error: "Event not found" },
+        { status: 404 },
+      );
+    }
+
+    if (error.message === "Event does not belong to this organizer") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "You don't have permission to add tickets to this event",
+        },
+        { status: 403 },
+      );
+    }
+
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to create event" },
+      {
+        success: false,
+        error: error.message || "Failed to create ticket type",
+      },
       { status: 500 },
     );
   }

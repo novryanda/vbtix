@@ -5,6 +5,8 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import type { JWT } from "next-auth/jwt";
+import type { NextAuthOptions } from "next-auth";
+import type { AdapterUser } from "next-auth/adapters";
 
 import { env } from "~/env";
 import { prisma } from "~/server/db/client";
@@ -16,7 +18,8 @@ import { validateCredentials } from "~/server/services/auth.service";
  *
  * @see https://next-auth.js.org/configuration/options
  */
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
+  // @ts-expect-error - PrismaAdapter has compatibility issues with NextAuthOptions type
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
@@ -55,9 +58,14 @@ export const authOptions = {
 
         try {
           // Validasi input
+          if (!credentials) {
+            throw new Error("Kredensial tidak diberikan");
+          }
+
           const result = credentialsSchema.safeParse(credentials);
           if (!result.success) {
-            throw new Error(result.error.errors[0].message);
+            // Use a simpler error message to avoid potential undefined errors
+            throw new Error("Validasi gagal: Email atau password tidak valid");
           }
 
           const { email, password } = result.data;
@@ -84,7 +92,7 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       // Hanya izinkan pengguna dengan email terverifikasi
       if (!user.email) {
         return false;
@@ -112,7 +120,7 @@ export const authOptions = {
 
       return true;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       // Tambahkan data user ke token saat login pertama kali
       if (user) {
         token.id = user.id;

@@ -22,12 +22,42 @@ export const ADMIN_ENDPOINTS = {
 
 // Organizer endpoints
 export const ORGANIZER_ENDPOINTS = {
+  // Dashboard
   DASHBOARD: `${API_BASE}/organizer/dashboard`,
+
+  // Events
   EVENTS: `${API_BASE}/organizer/events`,
   EVENT_DETAIL: (id: string) => `${API_BASE}/organizer/events/${id}`,
   CREATE_EVENT: `${API_BASE}/organizer/events/create`,
   UPDATE_EVENT: (id: string) => `${API_BASE}/organizer/events/${id}/update`,
   DELETE_EVENT: (id: string) => `${API_BASE}/organizer/events/${id}/delete`,
+
+  // Event Tickets
+  EVENT_TICKETS: (eventId: string) =>
+    `${API_BASE}/organizer/events/${eventId}/tickets`,
+
+  // Tickets
+  TICKETS: `${API_BASE}/organizer/tickets`,
+  TICKET_DETAIL: (id: string) => `${API_BASE}/organizer/tickets/${id}`,
+  CREATE_TICKET: `${API_BASE}/organizer/tickets/create`,
+  UPDATE_TICKET: (id: string) => `${API_BASE}/organizer/tickets/${id}/update`,
+  DELETE_TICKET: (id: string) => `${API_BASE}/organizer/tickets/${id}/delete`,
+
+  // Inventory
+  INVENTORY: `${API_BASE}/organizer/inventory`,
+
+  // Orders
+  ORDERS: `${API_BASE}/organizer/orders`,
+  ORDER_DETAIL: (id: string) => `${API_BASE}/organizer/orders/${id}`,
+
+  // Sales
+  SALES: `${API_BASE}/organizer/sales`,
+  SALES_BY_EVENT: (eventId: string) =>
+    `${API_BASE}/organizer/sales/events/${eventId}`,
+
+  // Settings
+  SETTINGS: `${API_BASE}/organizer/settings`,
+  UPDATE_SETTINGS: `${API_BASE}/organizer/settings/update`,
 };
 
 // Buyer endpoints
