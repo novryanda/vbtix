@@ -23,41 +23,57 @@ export const ADMIN_ENDPOINTS = {
 // Organizer endpoints
 export const ORGANIZER_ENDPOINTS = {
   // Dashboard
-  DASHBOARD: `${API_BASE}/organizer/dashboard`,
+  DASHBOARD: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/dashboard`,
 
   // Events
-  EVENTS: `${API_BASE}/organizer/events`,
-  EVENT_DETAIL: (id: string) => `${API_BASE}/organizer/events/${id}`,
-  CREATE_EVENT: `${API_BASE}/organizer/events/create`,
-  UPDATE_EVENT: (id: string) => `${API_BASE}/organizer/events/${id}/update`,
-  DELETE_EVENT: (id: string) => `${API_BASE}/organizer/events/${id}/delete`,
+  EVENTS: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/events`,
+  EVENT_DETAIL: (organizerId: string, id: string) =>
+    `${API_BASE}/organizer/${organizerId}/events/${id}`,
+  CREATE_EVENT: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/events`,
+  UPDATE_EVENT: (organizerId: string, id: string) =>
+    `${API_BASE}/organizer/${organizerId}/events/${id}`,
+  DELETE_EVENT: (organizerId: string, id: string) =>
+    `${API_BASE}/organizer/${organizerId}/events/${id}`,
 
   // Event Tickets
-  EVENT_TICKETS: (eventId: string) =>
-    `${API_BASE}/organizer/events/${eventId}/tickets`,
+  EVENT_TICKETS: (organizerId: string, eventId: string) =>
+    `${API_BASE}/organizer/${organizerId}/events/${eventId}/tickets`,
 
   // Tickets
-  TICKETS: `${API_BASE}/organizer/tickets`,
-  TICKET_DETAIL: (id: string) => `${API_BASE}/organizer/tickets/${id}`,
-  CREATE_TICKET: `${API_BASE}/organizer/tickets/create`,
-  UPDATE_TICKET: (id: string) => `${API_BASE}/organizer/tickets/${id}/update`,
-  DELETE_TICKET: (id: string) => `${API_BASE}/organizer/tickets/${id}/delete`,
+  TICKETS: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/tickets`,
+  TICKET_DETAIL: (organizerId: string, id: string) =>
+    `${API_BASE}/organizer/${organizerId}/tickets/${id}`,
+  CREATE_TICKET: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/tickets/create`,
+  UPDATE_TICKET: (organizerId: string, id: string) =>
+    `${API_BASE}/organizer/${organizerId}/tickets/${id}/update`,
+  DELETE_TICKET: (organizerId: string, id: string) =>
+    `${API_BASE}/organizer/${organizerId}/tickets/${id}/delete`,
 
   // Inventory
-  INVENTORY: `${API_BASE}/organizer/inventory`,
+  INVENTORY: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/inventory`,
 
   // Orders
-  ORDERS: `${API_BASE}/organizer/orders`,
-  ORDER_DETAIL: (id: string) => `${API_BASE}/organizer/orders/${id}`,
+  ORDERS: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/orders`,
+  ORDER_DETAIL: (organizerId: string, id: string) =>
+    `${API_BASE}/organizer/${organizerId}/orders/${id}`,
 
   // Sales
-  SALES: `${API_BASE}/organizer/sales`,
-  SALES_BY_EVENT: (eventId: string) =>
-    `${API_BASE}/organizer/sales/events/${eventId}`,
+  SALES: (organizerId: string) => `${API_BASE}/organizer/${organizerId}/sales`,
+  SALES_BY_EVENT: (organizerId: string, eventId: string) =>
+    `${API_BASE}/organizer/${organizerId}/sales/events/${eventId}`,
 
   // Settings
-  SETTINGS: `${API_BASE}/organizer/settings`,
-  UPDATE_SETTINGS: `${API_BASE}/organizer/settings/update`,
+  SETTINGS: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/settings`,
+  UPDATE_SETTINGS: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/settings/update`,
 };
 
 // Buyer endpoints

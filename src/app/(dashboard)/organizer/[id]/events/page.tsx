@@ -22,7 +22,8 @@ import {
 import { EventsTable } from "~/components/dashboard/organizer/events-table";
 import { PaginationControls } from "~/components/dashboard/organizer/pagination";
 
-export default function EventsPage() {
+export default function EventsPage({ params }: { params: { id: string } }) {
+  const organizerId = params.id;
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -36,12 +37,26 @@ export default function EventsPage() {
   const [searchInput, setSearchInput] = useState(search);
 
   // Fetch events data with query parameters
-  const { data, isLoading, error } = useOrganizerEvents({
+  const { data, isLoading, error } = useOrganizerEvents(organizerId, {
     page: parseInt(page, 10),
     limit: parseInt(limit, 10),
     status: status || undefined,
     search: search || undefined,
   });
+
+  // Type assertion for TypeScript
+  const eventsData = data as
+    | {
+        success: boolean;
+        data: any[];
+        meta: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      }
+    | undefined;
 
   // Handle search form submission
   const handleSearch = (e: React.FormEvent) => {
@@ -49,7 +64,7 @@ export default function EventsPage() {
     const params = new URLSearchParams(searchParams.toString());
     params.set("search", searchInput);
     params.set("page", "1"); // Reset to first page on new search
-    router.push(`/organizer/events?${params.toString()}`);
+    router.push(`/organizer/${organizerId}/events?${params.toString()}`);
   };
 
   // Handle status filter change
@@ -61,24 +76,24 @@ export default function EventsPage() {
       params.delete("status");
     }
     params.set("page", "1"); // Reset to first page on filter change
-    router.push(`/organizer/events?${params.toString()}`);
+    router.push(`/organizer/${organizerId}/events?${params.toString()}`);
   };
 
   // Handle pagination
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", newPage.toString());
-    router.push(`/organizer/events?${params.toString()}`);
+    router.push(`/organizer/${organizerId}/events?${params.toString()}`);
   };
 
   // Calculate pagination values
   const currentPage = parseInt(page, 10);
-  const totalPages = data?.meta?.totalPages || 1;
+  const totalPages = eventsData?.meta?.totalPages || 1;
 
   return (
     <OrganizerRoute>
       <SidebarProvider>
-        <AppSidebar variant="inset" />
+        <AppSidebar organizerId={organizerId} variant="inset" />
         <SidebarInset>
           <SiteHeader />
           <div className="flex flex-1 flex-col">
@@ -88,7 +103,9 @@ export default function EventsPage() {
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <h1 className="text-2xl font-semibold">Events</h1>
                     <Button
-                      onClick={() => router.push("/organizer/events/new")}
+                      onClick={() =>
+                        router.push(`/organizer/${organizerId}/events/new`)
+                      }
                     >
                       <PlusIcon className="mr-2 h-4 w-4" />
                       Create Event
@@ -160,7 +177,7 @@ export default function EventsPage() {
                         Try Again
                       </Button>
                     </div>
-                  ) : data?.data?.length === 0 ? (
+                  ) : eventsData?.data?.length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                       <h3 className="mb-2 text-lg font-semibold">
                         No events found
@@ -171,7 +188,9 @@ export default function EventsPage() {
                       </p>
                       <Button
                         className="mt-4"
-                        onClick={() => router.push("/organizer/events/new")}
+                        onClick={() =>
+                          router.push(`/organizer/${organizerId}/events/new`)
+                        }
                       >
                         <PlusIcon className="mr-2 h-4 w-4" />
                         Create Your First Event
@@ -180,7 +199,7 @@ export default function EventsPage() {
                   ) : (
                     <>
                       <div className="rounded-md border">
-                        <EventsTable data={data?.data || []} />
+                        <EventsTable data={eventsData?.data || []} />
                       </div>
 
                       {totalPages > 1 && (

@@ -19,13 +19,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
-import {
-  ArrowLeft,
-  CalendarDays,
-  Clock,
-  MapPin,
-  Save,
-} from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, MapPin, Save } from "lucide-react";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { EventStatus } from "@prisma/client";
 import {
@@ -36,15 +30,12 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 
-export default function EditEventPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function EditEventPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { data, isLoading, error, mutate } = useOrganizerEventDetail(params.id);
   const event = data?.data;
 
+  // Initialize form data with default values
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -64,27 +55,82 @@ export default function EditEventPage({
   // Populate form with event data when it's loaded
   useEffect(() => {
     if (event) {
-      const startDate = new Date(event.startDate);
-      const endDate = new Date(event.endDate);
+      try {
+        // Format dates safely
+        let startDateStr = "";
+        let startTimeStr = "";
+        let endDateStr = "";
+        let endTimeStr = "";
 
-      setFormData({
-        title: event.title || "",
-        description: event.description || "",
-        startDate: startDate.toISOString().split("T")[0],
-        startTime: startDate.toTimeString().split(" ")[0].substring(0, 5),
-        endDate: endDate.toISOString().split("T")[0],
-        endTime: endDate.toTimeString().split(" ")[0].substring(0, 5),
-        venue: event.venue || "",
-        city: event.city || "",
-        province: event.province || "",
-        category: event.category || "",
-        status: event.status || EventStatus.DRAFT,
-      });
+        if (event.startDate) {
+          const date = new Date(event.startDate);
+          const isoString = date.toISOString();
+          startDateStr = isoString.substring(0, 10); // YYYY-MM-DD
+
+          const hours = date.getHours().toString().padStart(2, "0");
+          const minutes = date.getMinutes().toString().padStart(2, "0");
+          startTimeStr = `${hours}:${minutes}`;
+        } else {
+          const now = new Date();
+          startDateStr = now.toISOString().substring(0, 10);
+          startTimeStr = "00:00";
+        }
+
+        if (event.endDate) {
+          const date = new Date(event.endDate);
+          const isoString = date.toISOString();
+          endDateStr = isoString.substring(0, 10); // YYYY-MM-DD
+
+          const hours = date.getHours().toString().padStart(2, "0");
+          const minutes = date.getMinutes().toString().padStart(2, "0");
+          endTimeStr = `${hours}:${minutes}`;
+        } else {
+          const now = new Date();
+          endDateStr = now.toISOString().substring(0, 10);
+          endTimeStr = "23:59";
+        }
+
+        // Update form data
+        setFormData({
+          title: event.title || "",
+          description: event.description || "",
+          startDate: startDateStr,
+          startTime: startTimeStr,
+          endDate: endDateStr,
+          endTime: endTimeStr,
+          venue: event.venue || "",
+          city: event.city || "",
+          province: event.province || "",
+          category: event.category || "",
+          status: event.status || EventStatus.DRAFT,
+        });
+      } catch (error) {
+        console.error("Error formatting event dates:", error);
+        // Set default values if there's an error
+        const now = new Date();
+        const defaultDate = now.toISOString().substring(0, 10);
+
+        setFormData({
+          title: event.title || "",
+          description: event.description || "",
+          startDate: defaultDate,
+          startTime: "00:00",
+          endDate: defaultDate,
+          endTime: "23:59",
+          venue: event.venue || "",
+          city: event.city || "",
+          province: event.province || "",
+          category: event.category || "",
+          status: event.status || EventStatus.DRAFT,
+        });
+      }
     }
   }, [event]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -107,7 +153,9 @@ export default function EditEventPage({
 
     try {
       // Combine date and time
-      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
+      const startDateTime = new Date(
+        `${formData.startDate}T${formData.startTime}`,
+      );
       const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
 
       // Validate dates
@@ -128,13 +176,16 @@ export default function EditEventPage({
       };
 
       // Send request to update event
-      const response = await fetch(ORGANIZER_ENDPOINTS.EVENT_DETAIL(params.id), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        ORGANIZER_ENDPOINTS.EVENT_DETAIL(params.id),
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
         },
-        body: JSON.stringify(data),
-      });
+      );
 
       const result = await response.json();
 
@@ -454,3 +505,4 @@ export default function EditEventPage({
       </SidebarProvider>
     </OrganizerRoute>
   );
+}

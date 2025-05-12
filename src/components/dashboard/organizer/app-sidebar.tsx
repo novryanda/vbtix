@@ -33,7 +33,8 @@ import {
   SidebarMenuItem,
 } from "~/components/ui/sidebar";
 
-const data = {
+// Function to generate navigation data with organizerId
+const getNavigationData = (organizerId: string) => ({
   user: {
     name: "organizer",
     email: "organizer@example.com",
@@ -42,34 +43,34 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/organizer",
+      url: `/organizer/${organizerId}`,
       icon: LayoutDashboardIcon,
     },
     {
       title: "Events",
-      url: "/organizer/events",
+      url: `/organizer/${organizerId}/events`,
       icon: CalendarIcon,
     },
     {
       title: "Tickets",
-      url: "/organizer/tickets",
+      url: `/organizer/${organizerId}/tickets`,
       icon: TicketIcon,
     },
     {
       title: "Orders",
-      url: "/organizer/orders",
+      url: `/organizer/${organizerId}/orders`,
       icon: ListIcon,
     },
     {
       title: "Analytics",
-      url: "/organizer/analytics",
+      url: `/organizer/${organizerId}/analytics`,
       icon: BarChartIcon,
     },
   ],
   navSecondary: [
     {
       title: "Settings",
-      url: "/organizer/settings",
+      url: `/organizer/${organizerId}/settings`,
       icon: SettingsIcon,
     },
     {
@@ -86,23 +87,26 @@ const data = {
   documents: [
     {
       name: "Sales Reports",
-      url: "/organizer/reports/sales",
+      url: `/organizer/${organizerId}/reports/sales`,
       icon: DatabaseIcon,
     },
     {
       name: "Attendee Lists",
-      url: "/organizer/reports/attendees",
+      url: `/organizer/${organizerId}/reports/attendees`,
       icon: ClipboardListIcon,
     },
     {
       name: "Inventory",
-      url: "/organizer/inventory",
+      url: `/organizer/${organizerId}/inventory`,
       icon: FileIcon,
     },
   ],
-};
+});
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  organizerId,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { organizerId: string }) {
   const { data: session } = useSession();
 
   // Use user data from session if available
@@ -111,6 +115,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     email: session?.user?.email || "organizer@example.com",
     avatar: session?.user?.image || "/avatars/default.jpg",
   };
+
+  // Generate navigation data with organizerId
+  const navData = getNavigationData(organizerId);
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -121,7 +128,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="/organizer">
+              <a href={`/organizer/${organizerId}`}>
                 <ArrowUpCircleIcon className="h-5 w-5" />
                 <span className="text-base font-semibold">VBTix Organizer</span>
               </a>
@@ -130,9 +137,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={navData.navMain} />
+        <NavDocuments items={navData.documents} />
+        <NavSecondary items={navData.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={userData} />

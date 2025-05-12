@@ -50,7 +50,8 @@ export async function GET(
       data: event,
     });
   } catch (error: any) {
-    console.error(`Error fetching event with ID ${params.id}:`, error);
+    const { id } = params;
+    console.error(`Error fetching event with ID ${id}:`, error);
 
     // Handle specific errors
     if (error.message === "Event not found") {
@@ -138,7 +139,8 @@ export async function PUT(
       );
     }
   } catch (error: any) {
-    console.error(`Error updating event with ID ${params.id}:`, error);
+    const { id } = params;
+    console.error(`Error updating event with ID ${id}:`, error);
 
     // Handle specific errors
     if (error.message === "Event not found") {
@@ -207,7 +209,8 @@ export async function DELETE(
       message: "Event deleted successfully",
     });
   } catch (error: any) {
-    console.error(`Error deleting event with ID ${params.id}:`, error);
+    const { id } = params;
+    console.error(`Error deleting event with ID ${id}:`, error);
 
     // Handle specific errors
     if (error.message === "Event not found") {

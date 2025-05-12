@@ -3,26 +3,44 @@
 import useSWR from "swr";
 import { ORGANIZER_ENDPOINTS } from "../endpoints";
 import { fetcher } from "../client"; // Import fetcher from client
+import { Event, PaginatedResponse, TicketType } from "~/lib/types";
 
 // Hook to fetch organizer dashboard data
-export const useOrganizerDashboard = () => {
-  const { data, error, isLoading, mutate } = useSWR(
-    ORGANIZER_ENDPOINTS.DASHBOARD,
-    fetcher,
-  );
+export const useOrganizerDashboard = (organizerId: string) => {
+  // Define a type for dashboard data
+  type DashboardData = {
+    stats: {
+      totalEvents: number;
+      totalTicketsSold: number;
+      totalRevenue: number;
+      upcomingEventsCount: number;
+    };
+    upcomingEvents: Event[];
+    recentTransactions?: any[];
+    eventPerformance?: any[];
+  };
+
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    data: DashboardData;
+    error?: string;
+  }>(organizerId ? ORGANIZER_ENDPOINTS.DASHBOARD(organizerId) : null, fetcher);
   return { data, error, isLoading, mutate };
 };
 
 // Hook to fetch all organizer events
-export const useOrganizerEvents = (params?: {
-  page?: number;
-  limit?: number;
-  status?: string;
-  search?: string;
-}) => {
+export const useOrganizerEvents = (
+  organizerId: string,
+  params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+  },
+) => {
   // Build query string
-  let url = ORGANIZER_ENDPOINTS.EVENTS;
-  if (params) {
+  let url = organizerId ? ORGANIZER_ENDPOINTS.EVENTS(organizerId) : null;
+  if (url && params) {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append("page", params.page.toString());
     if (params.limit) queryParams.append("limit", params.limit.toString());
@@ -35,41 +53,77 @@ export const useOrganizerEvents = (params?: {
     }
   }
 
-  const { data, error, isLoading, mutate } = useSWR(url, fetcher);
+  const { data, error, isLoading, mutate } = useSWR<PaginatedResponse<Event>>(
+    url,
+    fetcher,
+  );
   return { data, error, isLoading, mutate };
 };
 
 // Hook to fetch a specific organizer event by ID
-export const useOrganizerEventDetail = (id: string) => {
-  const { data, error, isLoading, mutate } = useSWR(
-    id ? ORGANIZER_ENDPOINTS.EVENT_DETAIL(id) : null,
+export const useOrganizerEventDetail = (organizerId: string, id: string) => {
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    data: Event;
+    error?: string;
+  }>(
+    organizerId && id
+      ? ORGANIZER_ENDPOINTS.EVENT_DETAIL(organizerId, id)
+      : null,
     fetcher,
   );
   return { data, error, isLoading, mutate };
 };
 
 // Hook to create a new event
-export const useCreateEvent = () => {
-  const { data, error, isLoading, mutate } = useSWR(
-    ORGANIZER_ENDPOINTS.CREATE_EVENT,
-    fetcher,
-  );
-  return { data, error, isLoading, mutate };
+export const useCreateEvent = (organizerId: string) => {
+  // We don't need to fetch data for this hook, it's just for creating events
+  // The actual creation will be done with a POST request to ORGANIZER_ENDPOINTS.EVENTS
+  return {
+    createEvent: async (eventData: any) => {
+      const url = organizerId
+        ? ORGANIZER_ENDPOINTS.CREATE_EVENT(organizerId)
+        : null;
+
+      if (!url) {
+        throw new Error("Organizer ID is required");
+      }
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(eventData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create event");
+      }
+
+      return await response.json();
+    },
+  };
 };
 
 // Hook to update an event by ID
-export const useUpdateEvent = (id: string) => {
+export const useUpdateEvent = (organizerId: string, id: string) => {
   const { data, error, isLoading, mutate } = useSWR(
-    id ? ORGANIZER_ENDPOINTS.UPDATE_EVENT(id) : null,
+    organizerId && id
+      ? ORGANIZER_ENDPOINTS.UPDATE_EVENT(organizerId, id)
+      : null,
     fetcher,
   );
   return { data, error, isLoading, mutate };
 };
 
 // Hook to delete an event by ID
-export const useDeleteEvent = (id: string) => {
+export const useDeleteEvent = (organizerId: string, id: string) => {
   const { data, error, isLoading, mutate } = useSWR(
-    id ? ORGANIZER_ENDPOINTS.DELETE_EVENT(id) : null,
+    organizerId && id
+      ? ORGANIZER_ENDPOINTS.DELETE_EVENT(organizerId, id)
+      : null,
     fetcher,
   );
   return { data, error, isLoading, mutate };
@@ -77,6 +131,7 @@ export const useDeleteEvent = (id: string) => {
 
 // Hook to fetch tickets for a specific event
 export const useEventTickets = (
+  organizerId: string,
   eventId: string,
   params?: {
     page?: number;
@@ -84,7 +139,11 @@ export const useEventTickets = (
   },
 ) => {
   // Build query string
-  let url = eventId ? ORGANIZER_ENDPOINTS.EVENT_TICKETS(eventId) : null;
+  let url =
+    organizerId && eventId
+      ? ORGANIZER_ENDPOINTS.EVENT_TICKETS(organizerId, eventId)
+      : null;
+
   if (url && params) {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append("page", params.page.toString());
@@ -96,20 +155,25 @@ export const useEventTickets = (
     }
   }
 
-  const { data, error, isLoading, mutate } = useSWR(url, fetcher);
+  const { data, error, isLoading, mutate } = useSWR<
+    PaginatedResponse<TicketType>
+  >(url, fetcher);
   return { data, error, isLoading, mutate };
 };
 
 // Hook to fetch sales data for a specific event
-export const useEventSales = (params?: {
-  eventId?: string;
-  startDate?: string;
-  endDate?: string;
-  groupBy?: "day" | "week" | "month";
-}) => {
+export const useEventSales = (
+  organizerId: string,
+  params?: {
+    eventId?: string;
+    startDate?: string;
+    endDate?: string;
+    groupBy?: "day" | "week" | "month";
+  },
+) => {
   // Build query string
-  let url = ORGANIZER_ENDPOINTS.SALES;
-  if (params) {
+  let url = organizerId ? ORGANIZER_ENDPOINTS.SALES(organizerId) : null;
+  if (url && params) {
     const queryParams = new URLSearchParams();
     if (params.eventId) queryParams.append("eventId", params.eventId);
     if (params.startDate) queryParams.append("startDate", params.startDate);
@@ -122,6 +186,26 @@ export const useEventSales = (params?: {
     }
   }
 
-  const { data, error, isLoading, mutate } = useSWR(url, fetcher);
+  // Define a type for sales data item
+  type SalesDataItem = {
+    date: string;
+    count: number;
+    ticketsSold: number;
+    revenue: number;
+  };
+
+  // Define a type for the complete sales response
+  type SalesResponse = {
+    salesData: SalesDataItem[];
+    totalRevenue: number;
+    totalTicketsSold: number;
+    totalSales: number;
+  };
+
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    data: SalesResponse;
+    error?: string;
+  }>(url, fetcher);
   return { data, error, isLoading, mutate };
 };

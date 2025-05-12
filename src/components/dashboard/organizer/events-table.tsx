@@ -11,11 +11,13 @@ import {
   TrashIcon,
   EyeIcon,
 } from "lucide-react";
-import {
+import type {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
   VisibilityState,
+} from "@tanstack/react-table";
+import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -44,7 +46,7 @@ import {
 } from "~/components/ui/table";
 import { Badge } from "~/components/ui/badge";
 import { formatDate } from "~/lib/utils";
-import { Event } from "~/lib/types";
+import type { Event } from "~/lib/types";
 
 // Define the columns for the events table
 const columns: ColumnDef<Event>[] = [
@@ -54,7 +56,7 @@ const columns: ColumnDef<Event>[] = [
     cell: ({ row }) => (
       <div className="flex flex-col">
         <span className="font-medium">{row.getValue("title")}</span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-muted-foreground text-xs">
           {formatDate(row.original.startDate)}
         </span>
       </div>
@@ -65,7 +67,7 @@ const columns: ColumnDef<Event>[] = [
     header: "Location",
     cell: ({ row }) => (
       <div className="flex items-center">
-        <MapPinIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+        <MapPinIcon className="text-muted-foreground mr-2 h-4 w-4" />
         <span>{row.getValue("venue")}</span>
       </div>
     ),
@@ -75,22 +77,22 @@ const columns: ColumnDef<Event>[] = [
     header: "Status",
     cell: ({ row }) => {
       const status = row.getValue("status") as EventStatus;
-      
+
       return (
         <Badge
           variant={
             status === EventStatus.PUBLISHED
               ? "success"
               : status === EventStatus.DRAFT
-              ? "outline"
-              : "destructive"
+                ? "outline"
+                : "destructive"
           }
         >
           {status === EventStatus.PUBLISHED
             ? "Published"
             : status === EventStatus.DRAFT
-            ? "Draft"
-            : "Cancelled"}
+              ? "Draft"
+              : "Cancelled"}
         </Badge>
       );
     },
@@ -100,7 +102,7 @@ const columns: ColumnDef<Event>[] = [
     cell: ({ row }) => {
       const router = useRouter();
       const event = row.original;
-      
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -111,11 +113,15 @@ const columns: ColumnDef<Event>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => router.push(`/organizer/events/${event.id}`)}>
+            <DropdownMenuItem
+              onClick={() => router.push(`/organizer/events/${event.id}`)}
+            >
               <EyeIcon className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push(`/organizer/events/${event.id}/edit`)}>
+            <DropdownMenuItem
+              onClick={() => router.push(`/organizer/events/${event.id}/edit`)}
+            >
               <PencilIcon className="mr-2 h-4 w-4" />
               Edit Event
             </DropdownMenuItem>
@@ -145,8 +151,11 @@ interface EventsTableProps {
 
 export function EventsTable({ data }: EventsTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
@@ -180,7 +189,7 @@ export function EventsTable({ data }: EventsTableProps) {
                     ? null
                     : flexRender(
                         header.column.columnDef.header,
-                        header.getContext()
+                        header.getContext(),
                       )}
                 </TableHead>
               ))}

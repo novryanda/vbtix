@@ -9,14 +9,16 @@ import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import { OrganizerRoute } from "~/components/auth/organizer-route";
 import { useOrganizerEvents } from "~/lib/api/hooks/organizer";
 
-export default function Page() {
+export default function Page({ params }: { params: { id: string } }) {
+  const organizerId = params.id;
+
   // Fetch events data for the table
-  const { data, isLoading, error } = useOrganizerEvents();
+  const { data, isLoading, error } = useOrganizerEvents(organizerId);
 
   return (
     <OrganizerRoute>
       <SidebarProvider>
-        <AppSidebar variant="inset" />
+        <AppSidebar organizerId={organizerId} variant="inset" />
         <SidebarInset>
           <SiteHeader />
           <div className="flex flex-1 flex-col">

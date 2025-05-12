@@ -26,7 +26,7 @@ export function PaginationControls({
   const getPageNumbers = () => {
     const maxPagesToShow = 5;
     const pageNumbers = [];
-    
+
     if (totalPages <= maxPagesToShow) {
       // If total pages is less than or equal to maxPagesToShow, show all pages
       for (let i = 1; i <= totalPages; i++) {
@@ -35,37 +35,37 @@ export function PaginationControls({
     } else {
       // Always include first page
       pageNumbers.push(1);
-      
+
       // Calculate start and end of the middle section
       let start = Math.max(2, currentPage - 1);
       let end = Math.min(totalPages - 1, currentPage + 1);
-      
+
       // Adjust if we're at the beginning or end
       if (currentPage <= 2) {
         end = Math.min(totalPages - 1, 4);
       } else if (currentPage >= totalPages - 1) {
         start = Math.max(2, totalPages - 3);
       }
-      
+
       // Add ellipsis if needed before middle section
       if (start > 2) {
         pageNumbers.push(-1); // -1 represents ellipsis
       }
-      
+
       // Add middle section
       for (let i = start; i <= end; i++) {
         pageNumbers.push(i);
       }
-      
+
       // Add ellipsis if needed after middle section
       if (end < totalPages - 1) {
         pageNumbers.push(-2); // -2 represents ellipsis
       }
-      
+
       // Always include last page
       pageNumbers.push(totalPages);
     }
-    
+
     return pageNumbers;
   };
 
@@ -73,18 +73,21 @@ export function PaginationControls({
     <Pagination>
       <PaginationContent>
         <PaginationItem>
-          <PaginationPrevious 
-            href="#" 
+          <PaginationPrevious
+            href="#"
+            size="default"
             onClick={(e) => {
               e.preventDefault();
               if (currentPage > 1) {
                 onPageChange(currentPage - 1);
               }
             }}
-            className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+            className={
+              currentPage === 1 ? "pointer-events-none opacity-50" : ""
+            }
           />
         </PaginationItem>
-        
+
         {getPageNumbers().map((pageNumber, index) => {
           // Render ellipsis
           if (pageNumber < 0) {
@@ -94,12 +97,13 @@ export function PaginationControls({
               </PaginationItem>
             );
           }
-          
+
           // Render page number
           return (
             <PaginationItem key={pageNumber}>
-              <PaginationLink 
-                href="#" 
+              <PaginationLink
+                href="#"
+                size="icon"
                 isActive={currentPage === pageNumber}
                 onClick={(e) => {
                   e.preventDefault();
@@ -111,17 +115,20 @@ export function PaginationControls({
             </PaginationItem>
           );
         })}
-        
+
         <PaginationItem>
-          <PaginationNext 
-            href="#" 
+          <PaginationNext
+            href="#"
+            size="default"
             onClick={(e) => {
               e.preventDefault();
               if (currentPage < totalPages) {
                 onPageChange(currentPage + 1);
               }
             }}
-            className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+            className={
+              currentPage === totalPages ? "pointer-events-none opacity-50" : ""
+            }
           />
         </PaginationItem>
       </PaginationContent>

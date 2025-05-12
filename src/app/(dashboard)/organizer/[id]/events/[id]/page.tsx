@@ -35,13 +35,10 @@ import {
   Trash,
   Share2,
   Plus,
-  Edit,
   BarChart,
-  DollarSign,
-  Users,
+  Edit,
 } from "lucide-react";
-import Link from "next/link";
-import { formatDate, formatDateTime, formatCurrency } from "~/lib/utils";
+import { formatDate, formatCurrency } from "~/lib/utils";
 import { EventStatus } from "@prisma/client";
 import {
   Table,
@@ -68,8 +65,11 @@ import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 export default function EventDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: { id: string; eventId: string };
 }) {
+  const organizerId = params.id;
+  const eventId = params.eventId;
+
   const router = useRouter();
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [ticketFormData, setTicketFormData] = useState({
@@ -82,7 +82,10 @@ export default function EventDetailPage({
   const [formError, setFormError] = useState("");
 
   // Fetch event details
-  const { data, isLoading, error } = useOrganizerEventDetail(params.id);
+  const { data, isLoading, error } = useOrganizerEventDetail(
+    organizerId,
+    eventId,
+  );
   const event = data?.data;
 
   // Fetch event tickets
@@ -91,14 +94,34 @@ export default function EventDetailPage({
     isLoading: isTicketsLoading,
     error: ticketsError,
     mutate: mutateTickets,
-  } = useEventTickets(params.id);
+  } = useEventTickets(organizerId, eventId);
 
   // Fetch event sales data
   const {
     data: salesData,
     isLoading: isSalesLoading,
     error: salesError,
-  } = useEventSales({ eventId: params.id });
+  } = useEventSales(organizerId, { eventId: eventId });
+
+  // Type assertion for sales data
+  type SalesDataItem = {
+    date: string;
+    count: number;
+    ticketsSold: number;
+    revenue: number;
+  };
+
+  type SalesResponse = {
+    salesData: SalesDataItem[];
+    totalRevenue: number;
+    totalTicketsSold: number;
+    totalSales: number;
+  };
+
+  // Type assertion for the sales data
+  const typedSalesData = salesData as
+    | { success: boolean; data: SalesResponse; error?: string }
+    | undefined;
 
   // Handle ticket form change
   const handleTicketFormChange = (
@@ -126,7 +149,7 @@ export default function EventDetailPage({
       };
 
       const response = await fetch(
-        ORGANIZER_ENDPOINTS.EVENT_TICKETS(params.id),
+        ORGANIZER_ENDPOINTS.EVENT_TICKETS(organizerId, eventId),
         {
           method: "POST",
           headers: {
@@ -164,7 +187,7 @@ export default function EventDetailPage({
   // Handle edit ticket
   const handleEditTicket = (ticketId: string) => {
     // For now, just navigate to the ticket edit page
-    router.push(`/organizer/tickets/${ticketId}`);
+    router.push(`/organizer/${organizerId}/tickets/${ticketId}`);
   };
 
   // Handle delete event
@@ -172,8 +195,8 @@ export default function EventDetailPage({
     if (confirm("Are you sure you want to delete this event?")) {
       try {
         // Delete event logic will be implemented later
-        console.log("Delete event:", params.id);
-        router.push("/organizer/events");
+        console.log("Delete event:", eventId);
+        router.push(`/organizer/${organizerId}/events`);
       } catch (error) {
         console.error("Error deleting event:", error);
       }
@@ -185,7 +208,7 @@ export default function EventDetailPage({
     return (
       <OrganizerRoute>
         <SidebarProvider>
-          <AppSidebar variant="inset" />
+          <AppSidebar organizerId={organizerId} variant="inset" />
           <SidebarInset>
             <SiteHeader />
             <div className="flex flex-1 flex-col">
@@ -220,7 +243,7 @@ export default function EventDetailPage({
     return (
       <OrganizerRoute>
         <SidebarProvider>
-          <AppSidebar variant="inset" />
+          <AppSidebar organizerId={organizerId} variant="inset" />
           <SidebarInset>
             <SiteHeader />
             <div className="flex flex-1 flex-col">
@@ -253,7 +276,11 @@ export default function EventDetailPage({
                       >
                         Try Again
                       </Button>
-                      <Button onClick={() => router.push("/organizer/events")}>
+                      <Button
+                        onClick={() =>
+                          router.push(`/organizer/${organizerId}/events`)
+                        }
+                      >
                         Back to Events
                       </Button>
                     </div>
@@ -270,7 +297,7 @@ export default function EventDetailPage({
   return (
     <OrganizerRoute>
       <SidebarProvider>
-        <AppSidebar variant="inset" />
+        <AppSidebar organizerId={organizerId} variant="inset" />
         <SidebarInset>
           <SiteHeader />
           <div className="flex flex-1 flex-col">
@@ -292,7 +319,9 @@ export default function EventDetailPage({
                       <Button
                         variant="outline"
                         onClick={() =>
-                          router.push(`/organizer/events/${params.id}/edit`)
+                          router.push(
+                            `/organizer/${organizerId}/events/${eventId}/edit`,
+                          )
                         }
                       >
                         <Pencil className="mr-2 h-4 w-4" />
@@ -407,7 +436,7 @@ export default function EventDetailPage({
                               variant="outline"
                               onClick={() =>
                                 router.push(
-                                  `/organizer/events/${params.id}/edit`,
+                                  `/organizer/${organizerId}/events/${eventId}/edit`,
                                 )
                               }
                             >
@@ -693,9 +722,9 @@ export default function EventDetailPage({
                             <div className="rounded-md bg-red-50 p-4 text-sm text-red-500">
                               Error loading sales data: {salesError.message}
                             </div>
-                          ) : !salesData?.data ||
-                            !salesData.data.salesData ||
-                            salesData.data.salesData.length === 0 ? (
+                          ) : !typedSalesData?.data ||
+                            !typedSalesData.data.salesData ||
+                            typedSalesData.data.salesData.length === 0 ? (
                             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                               <BarChart className="text-muted-foreground mb-2 h-8 w-8" />
                               <h3 className="mb-2 text-lg font-semibold">
@@ -714,7 +743,7 @@ export default function EventDetailPage({
                                   </h3>
                                   <p className="text-2xl font-bold">
                                     {formatCurrency(
-                                      salesData.data.totalRevenue,
+                                      typedSalesData?.data.totalRevenue || 0,
                                     )}
                                   </p>
                                 </div>
@@ -723,7 +752,7 @@ export default function EventDetailPage({
                                     Tickets Sold
                                   </h3>
                                   <p className="text-2xl font-bold">
-                                    {salesData.data.totalTicketsSold}
+                                    {typedSalesData?.data.totalTicketsSold || 0}
                                   </p>
                                 </div>
                                 <div className="rounded-lg border p-4">
@@ -731,7 +760,7 @@ export default function EventDetailPage({
                                     Orders
                                   </h3>
                                   <p className="text-2xl font-bold">
-                                    {salesData.data.totalSales}
+                                    {typedSalesData?.data.totalSales || 0}
                                   </p>
                                 </div>
                               </div>
@@ -753,7 +782,7 @@ export default function EventDetailPage({
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {salesData.data.salesData.map(
+                                      {typedSalesData?.data.salesData.map(
                                         (item: any) => (
                                           <TableRow key={item.date}>
                                             <TableCell>{item.date}</TableCell>
