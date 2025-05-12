@@ -13,7 +13,7 @@ export interface User {
 }
 
 // Enum for user roles
-export type UserRole = 'ADMIN' | 'ORGANIZER' | 'BUYER';
+export type UserRole = "ADMIN" | "ORGANIZER" | "BUYER";
 
 // Organizer type
 export interface Organizer {
@@ -60,7 +60,13 @@ export interface Event {
 }
 
 // Enum for event status
-export type EventStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED';
+export type EventStatus =
+  | "DRAFT"
+  | "PENDING_REVIEW"
+  | "PUBLISHED"
+  | "REJECTED"
+  | "COMPLETED"
+  | "CANCELLED";
 
 // Ticket type
 export interface Ticket {
@@ -77,7 +83,12 @@ export interface Ticket {
 }
 
 // Enum for ticket status
-export type TicketStatus = 'ACTIVE' | 'USED' | 'CANCELLED' | 'EXPIRED' | 'REFUNDED';
+export type TicketStatus =
+  | "ACTIVE"
+  | "USED"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "REFUNDED";
 
 // Transaction type
 export interface Transaction {
@@ -96,7 +107,12 @@ export interface Transaction {
 }
 
 // Enum for payment status
-export type PaymentStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'EXPIRED' | 'REFUNDED';
+export type PaymentStatus =
+  | "PENDING"
+  | "SUCCESS"
+  | "FAILED"
+  | "EXPIRED"
+  | "REFUNDED";
 
 // TicketType type
 export interface TicketType {
@@ -134,7 +150,7 @@ export interface Approval {
 }
 
 // Enum for approval status
-export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 // Log type
 export interface Log {
@@ -183,7 +199,12 @@ export interface Withdrawal {
 }
 
 // Enum for withdrawal status
-export type WithdrawalStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
+export type WithdrawalStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "FAILED";
 
 // Crew type
 export interface Crew {
@@ -220,13 +241,26 @@ export interface Voucher {
 }
 
 // Enum for discount type
-export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
+export type DiscountType = "PERCENTAGE" | "FIXED_AMOUNT";
 
 // ApiResponse type for generic API responses
 export interface ApiResponse<T> {
   data: T;
   message: string;
-  status: 'success' | 'error';
+  status: "success" | "error";
+}
+
+// PaginatedResponse type for paginated API responses
+export interface PaginatedResponse<T> {
+  success: boolean;
+  data: T[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  error?: string;
 }
 
 // JWT type definitions moved to src/types/next-auth.d.ts
