@@ -402,7 +402,7 @@ export async function POST(request: NextRequest) {
 Untuk operasi mutasi data (create, update, delete), kita menggunakan fungsi mutate dari SWR:
 
 ```typescript
-// src/app/(dashboard)/admin/events/[id]/page.tsx
+// src/app/(dashboard)/admin/events/[eventid]/page.tsx
 export default function AdminEventDetailPage({ params }: { params: { id: string } }) {
   const { data: event, isLoading: isEventLoading, error: eventError } = useAdminEventDetail(params.id);
   const reviewEventMutation = useReviewEvent();
@@ -506,7 +506,7 @@ export function SectionCardsSkeleton() {
 Untuk menangani error, kita menggunakan error states:
 
 ```tsx
-// src/app/(dashboard)/admin/events/[id]/page.tsx
+// src/app/(dashboard)/admin/events/[eventid]/page.tsx
 if (eventError || !event) {
   return (
     <AdminRoute>

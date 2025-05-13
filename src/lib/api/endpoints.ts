@@ -13,9 +13,25 @@ export const AUTH_ENDPOINTS = {
 
 // Admin endpoints
 export const ADMIN_ENDPOINTS = {
+  // Dashboard
   DASHBOARD: `${API_BASE}/admin/dashboard`,
+  DASHBOARD_ORGANIZERS: `${API_BASE}/admin/dashboard/organizers`,
+  DASHBOARD_EVENTS: `${API_BASE}/admin/dashboard/events`,
+
+  // Events
   EVENTS: `${API_BASE}/admin/events`,
   EVENT_DETAIL: (id: string) => `${API_BASE}/admin/events/${id}`,
+  PENDING_EVENTS: `${API_BASE}/admin/events/pending`,
+  EVENT_STATUS: (id: string) => `${API_BASE}/admin/events/${id}/status`,
+  EVENT_FEATURED: (id: string) => `${API_BASE}/admin/events/${id}/featured`,
+
+  // Organizers
+  ORGANIZERS: `${API_BASE}/admin/organizers`,
+  ORGANIZER_DETAIL: (id: string) => `${API_BASE}/admin/organizers/${id}`,
+  ORGANIZER_VERIFY: (id: string) => `${API_BASE}/admin/organizers/${id}/verify`,
+  ORGANIZER_STATS: `${API_BASE}/admin/organizers/stats`,
+
+  // Users
   USERS: `${API_BASE}/admin/users`,
   USER_DETAIL: (id: string) => `${API_BASE}/admin/users/${id}`,
 };

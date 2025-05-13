@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
-import { 
-  handleGetDashboardStats, 
+import {
+  handleGetDashboardStats,
   handleGetRecentEvents,
   handleGetRecentOrganizers,
   handleGetRecentUsers,
-  handleGetSalesOverview 
+  handleGetSalesOverview,
+  handleGetPendingEvents,
+  handleGetPendingOrganizers
 } from "~/server/api/admin";
 import { z } from "zod";
 
@@ -46,10 +48,10 @@ export async function GET(request: NextRequest) {
 
     if (!parsedParams.success) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: "Invalid parameters", 
-          details: parsedParams.error.format() 
+        {
+          success: false,
+          error: "Invalid parameters",
+          details: parsedParams.error.format()
         },
         { status: 400 }
       );
@@ -58,12 +60,14 @@ export async function GET(request: NextRequest) {
     const { limit } = parsedParams.data;
 
     // Fetch all required dashboard data in parallel for better performance
-    const [stats, recentEvents, recentOrganizers, recentUsers, salesOverview] = await Promise.all([
+    const [stats, recentEvents, recentOrganizers, recentUsers, salesOverview, pendingEvents, pendingOrganizers] = await Promise.all([
       handleGetDashboardStats(),
       handleGetRecentEvents(limit),
       handleGetRecentOrganizers(limit),
       handleGetRecentUsers(limit),
-      handleGetSalesOverview()
+      handleGetSalesOverview(),
+      handleGetPendingEvents(limit),
+      handleGetPendingOrganizers(limit)
     ]);
 
     // Return response
@@ -74,7 +78,9 @@ export async function GET(request: NextRequest) {
         recentEvents,
         recentOrganizers,
         recentUsers,
-        salesOverview
+        salesOverview,
+        pendingEvents,
+        pendingOrganizers
       }
     });
   } catch (error) {

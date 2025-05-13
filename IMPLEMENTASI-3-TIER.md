@@ -452,14 +452,14 @@ export type EventSchema = z.infer<typeof eventSchema>;
 ### Route Handler (Tier 1)
 
 ```typescript
-// src/app/api/admin/events/[id]/route.ts
+// src/app/api/admin/events/[eventid]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { handleGetEventById } from "~/server/api/events";
 import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
 
 /**
- * GET /api/admin/events/[id]
+ * GET /api/admin/events/[eventid]
  * Get a single event by ID (admin view with detailed statistics)
  */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
