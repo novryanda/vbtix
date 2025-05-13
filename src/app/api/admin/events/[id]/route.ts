@@ -5,7 +5,7 @@ import { UserRole } from "@prisma/client";
 import { updateEventSchema } from "~/lib/validations/event.schema";
 
 /**
- * GET /api/admin/events/[id]
+ * GET /api/admin/events/[eventid]
  * Get event by ID
  */
 export async function GET(
@@ -32,7 +32,7 @@ export async function GET(
 
     const { id } = params;
     const event = await handleGetEventById(id);
-    
+
     return NextResponse.json({
       success: true,
       data: event
@@ -40,9 +40,9 @@ export async function GET(
   } catch (error: any) {
     console.error(`Error getting event ${params.id}:`, error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || "Failed to get event" 
+      {
+        success: false,
+        error: error.message || "Failed to get event"
       },
       { status: error.message === "Event not found" ? 404 : 500 }
     );
@@ -50,7 +50,7 @@ export async function GET(
 }
 
 /**
- * PUT /api/admin/events/[id]
+ * PUT /api/admin/events/[eventid]
  * Update event by ID
  */
 export async function PUT(
@@ -77,14 +77,14 @@ export async function PUT(
 
     const { id } = params;
     const body = await request.json();
-    
+
     try {
       // Validate input using Zod schema
       const validatedData = updateEventSchema.parse(body);
-      
+
       // Update event
-      const updatedEvent = await handleUpdateEvent(id, validatedData);
-      
+      const updatedEvent = await handleUpdateEvent(id, validatedData, session.user.id);
+
       return NextResponse.json({
         success: true,
         data: updatedEvent
@@ -98,9 +98,9 @@ export async function PUT(
   } catch (error: any) {
     console.error(`Error updating event ${params.id}:`, error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || "Failed to update event" 
+      {
+        success: false,
+        error: error.message || "Failed to update event"
       },
       { status: error.message === "Event not found" ? 404 : 500 }
     );
@@ -108,7 +108,7 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/admin/events/[id]
+ * DELETE /api/admin/events/[eventid]
  * Delete event by ID
  */
 export async function DELETE(
@@ -134,8 +134,8 @@ export async function DELETE(
     }
 
     const { id } = params;
-    await handleDeleteEvent(id);
-    
+    await handleDeleteEvent(id, session.user.id);
+
     return NextResponse.json({
       success: true,
       message: "Event deleted successfully"
@@ -143,9 +143,9 @@ export async function DELETE(
   } catch (error: any) {
     console.error(`Error deleting event ${params.id}:`, error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || "Failed to delete event" 
+      {
+        success: false,
+        error: error.message || "Failed to delete event"
       },
       { status: error.message === "Event not found" ? 404 : 500 }
     );

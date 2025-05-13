@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleReviewEvent } from "~/server/api/events";
+import { handleVerifyOrganizer } from "~/server/api/admin-organizers";
 import { auth } from "~/server/auth";
-import { UserRole, ApprovalStatus } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { z } from "zod";
 
-const reviewSchema = z.object({
-  status: z.enum([ApprovalStatus.APPROVED, ApprovalStatus.REJECTED]),
-  feedback: z.string().optional()
+const verifySchema = z.object({
+  verified: z.boolean(),
+  notes: z.string().optional()
 });
 
 /**
- * POST /api/admin/events/[eventid]/review
- * Review (approve/reject) an event
+ * PUT /api/admin/organizers/[id]/verify
+ * Verify or reject an organizer
  */
-export async function POST(
+export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -27,7 +27,7 @@ export async function POST(
       );
     }
 
-    // Only admins can review events
+    // Only admins can verify organizers
     if (session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
@@ -40,10 +40,10 @@ export async function POST(
     
     try {
       // Validate input
-      const { status, feedback } = reviewSchema.parse(body);
+      const { verified, notes } = verifySchema.parse(body);
       
-      // Review event
-      const result = await handleReviewEvent(id, status, feedback, session.user.id);
+      // Update verification status
+      const result = await handleVerifyOrganizer(id, verified, notes, session.user.id);
       
       return NextResponse.json({
         success: true,
@@ -56,13 +56,13 @@ export async function POST(
       );
     }
   } catch (error: any) {
-    console.error(`Error reviewing event ${params.id}:`, error);
+    console.error(`Error verifying organizer ${params.id}:`, error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error.message || "Failed to review event" 
+        error: error.message || "Failed to verify organizer" 
       },
-      { status: error.message === "Event not found" ? 404 : 500 }
+      { status: error.message === "Organizer not found" ? 404 : 500 }
     );
   }
 }

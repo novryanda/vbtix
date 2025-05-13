@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
-import {
-  handleGetDashboardStats,
-  handleGetRecentEvents,
+import { 
+  handleGetOrganizerStats,
   handleGetRecentOrganizers,
-  handleGetRecentUsers,
-  handleGetSalesOverview,
-  handleGetPendingEvents,
   handleGetPendingOrganizers
 } from "~/server/api/admin";
 import { z } from "zod";
@@ -18,8 +14,8 @@ const dashboardQuerySchema = z.object({
 });
 
 /**
- * GET /api/admin/dashboard
- * Get admin dashboard statistics and data
+ * GET /api/admin/dashboard/organizers
+ * Get organizer data for admin dashboard
  */
 export async function GET(request: NextRequest) {
   try {
@@ -40,18 +36,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Parse query parameters
+    // Parse and validate query parameters
     const searchParams = request.nextUrl.searchParams;
     const parsedParams = dashboardQuerySchema.safeParse({
-      limit: searchParams.get("limit"),
+      limit: searchParams.get("limit")
     });
 
     if (!parsedParams.success) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid parameters",
-          details: parsedParams.error.format()
+        { 
+          success: false, 
+          error: "Invalid parameters", 
+          details: parsedParams.error.format() 
         },
         { status: 400 }
       );
@@ -59,14 +55,10 @@ export async function GET(request: NextRequest) {
 
     const { limit } = parsedParams.data;
 
-    // Fetch all required dashboard data in parallel for better performance
-    const [stats, recentEvents, recentOrganizers, recentUsers, salesOverview, pendingEvents, pendingOrganizers] = await Promise.all([
-      handleGetDashboardStats(),
-      handleGetRecentEvents(limit),
+    // Fetch all required organizer data in parallel for better performance
+    const [stats, recentOrganizers, pendingOrganizers] = await Promise.all([
+      handleGetOrganizerStats(),
       handleGetRecentOrganizers(limit),
-      handleGetRecentUsers(limit),
-      handleGetSalesOverview(),
-      handleGetPendingEvents(limit),
       handleGetPendingOrganizers(limit)
     ]);
 
@@ -75,18 +67,14 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         stats,
-        recentEvents,
         recentOrganizers,
-        recentUsers,
-        salesOverview,
-        pendingEvents,
         pendingOrganizers
       }
     });
-  } catch (error) {
-    console.error("Error fetching dashboard data:", error);
+  } catch (error: any) {
+    console.error("Error getting organizer dashboard data:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch dashboard data" },
+      { success: false, error: error.message || "Failed to get organizer dashboard data" },
       { status: 500 }
     );
   }

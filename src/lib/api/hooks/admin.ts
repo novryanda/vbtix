@@ -2,18 +2,96 @@
 
 import useSWR from 'swr';
 import { ADMIN_ENDPOINTS } from '../endpoints';
-import { fetcher } from '../client'; // Import fetcher from client
+import { fetcher, postData, putData, deleteData } from '../client';
+
+// Types for dashboard data
+export interface AdminDashboardData {
+  stats: {
+    totalEvents: number;
+    totalOrganizers: number;
+    totalUsers: number;
+    totalSales: number;
+    pendingEvents: number;
+    verifiedOrganizers: number;
+    pendingOrganizers: number;
+    organizerVerificationRate: number;
+  };
+  recentEvents: any[];
+  recentOrganizers: any[];
+  recentUsers: any[];
+  salesOverview: any[];
+  pendingEvents: any[];
+  pendingOrganizers: any[];
+}
+
+export interface AdminOrganizerDashboardData {
+  stats: {
+    totalOrganizers: number;
+    verifiedOrganizers: number;
+    pendingOrganizers: number;
+    verificationRate: number;
+    avgEventsPerOrganizer: number;
+    topOrganizer: {
+      id: string;
+      name: string;
+      eventCount: number;
+    } | null;
+  };
+  recentOrganizers: any[];
+  pendingOrganizers: any[];
+}
+
+export interface AdminEventDashboardData {
+  stats: {
+    totalEvents: number;
+    pendingEvents: number;
+    publishedEvents: number;
+    rejectedEvents: number;
+    approvalRate: number;
+  };
+  recentEvents: any[];
+  pendingEvents: any[];
+}
 
 // Hook to fetch admin dashboard data
-export const useAdminDashboard = () => {
-  // Tambahkan parameter limit untuk menghindari error validasi
-  const { data, error, isLoading, mutate } = useSWR(`${ADMIN_ENDPOINTS.DASHBOARD}?limit=5`, fetcher);
-
-  // Ekstrak data stats dari respons API
-  const dashboardData = data?.data?.stats;
+export const useAdminDashboard = (limit: number = 5) => {
+  const { data, error, isLoading, mutate } = useSWR<{success: boolean, data: AdminDashboardData}>(
+    `${ADMIN_ENDPOINTS.DASHBOARD}?limit=${limit}`,
+    fetcher
+  );
 
   return {
-    data: dashboardData,
+    dashboardData: data?.data,
+    error,
+    isLoading,
+    mutate
+  };
+};
+
+// Hook to fetch admin organizer dashboard data
+export const useAdminOrganizerDashboard = (limit: number = 5) => {
+  const { data, error, isLoading, mutate } = useSWR<{success: boolean, data: AdminOrganizerDashboardData}>(
+    `${ADMIN_ENDPOINTS.DASHBOARD_ORGANIZERS}?limit=${limit}`,
+    fetcher
+  );
+
+  return {
+    organizerData: data?.data,
+    error,
+    isLoading,
+    mutate
+  };
+};
+
+// Hook to fetch admin event dashboard data
+export const useAdminEventDashboard = (limit: number = 5) => {
+  const { data, error, isLoading, mutate } = useSWR<{success: boolean, data: AdminEventDashboardData}>(
+    `${ADMIN_ENDPOINTS.DASHBOARD_EVENTS}?limit=${limit}`,
+    fetcher
+  );
+
+  return {
+    eventData: data?.data,
     error,
     isLoading,
     mutate
@@ -21,16 +99,55 @@ export const useAdminDashboard = () => {
 };
 
 // Hook to fetch all admin events
-export const useAdminEvents = () => {
-  const { data, error, isLoading, mutate } = useSWR(ADMIN_ENDPOINTS.EVENTS, fetcher);
+export const useAdminEvents = (params?: { page?: number, limit?: number, status?: string, search?: string, featured?: boolean }) => {
+  // Build query string
+  let url = ADMIN_ENDPOINTS.EVENTS;
+  if (params) {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.status) queryParams.append('status', params.status);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.featured !== undefined) queryParams.append('featured', params.featured.toString());
 
-  // Tambahkan penanganan error
-  if (error) {
-    console.error("Error fetching admin events:", error);
+    const queryString = queryParams.toString();
+    if (queryString) {
+      url = `${url}?${queryString}`;
+    }
   }
 
+  const { data, error, isLoading, mutate } = useSWR(url, fetcher);
+
   return {
-    data,
+    events: data?.data,
+    meta: data?.meta,
+    error,
+    isLoading,
+    mutate
+  };
+};
+
+// Hook to fetch pending events
+export const useAdminPendingEvents = (params?: { page?: number, limit?: number, search?: string }) => {
+  // Build query string
+  let url = ADMIN_ENDPOINTS.PENDING_EVENTS;
+  if (params) {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+
+    const queryString = queryParams.toString();
+    if (queryString) {
+      url = `${url}?${queryString}`;
+    }
+  }
+
+  const { data, error, isLoading, mutate } = useSWR(url, fetcher);
+
+  return {
+    pendingEvents: data?.data,
+    meta: data?.meta,
     error,
     isLoading,
     mutate
@@ -39,18 +156,140 @@ export const useAdminEvents = () => {
 
 // Hook to fetch a specific admin event by ID
 export const useAdminEventDetail = (id: string) => {
-  const { data, error, isLoading, mutate } = useSWR(id ? ADMIN_ENDPOINTS.EVENT_DETAIL(id) : null, fetcher);
-  return { data, error, isLoading, mutate };
+  const { data, error, isLoading, mutate } = useSWR(
+    id ? ADMIN_ENDPOINTS.EVENT_DETAIL(id) : null,
+    fetcher
+  );
+
+  return {
+    event: data?.data,
+    error,
+    isLoading,
+    mutate
+  };
+};
+
+// Hook to update event status (approve/reject)
+export const useUpdateEventStatus = () => {
+  const updateStatus = async (id: string, status: string, notes?: string) => {
+    return await putData(ADMIN_ENDPOINTS.EVENT_STATUS(id), { status, notes });
+  };
+
+  return { updateStatus };
+};
+
+// Hook to set event as featured
+export const useSetEventFeatured = () => {
+  const setFeatured = async (id: string, featured: boolean) => {
+    return await putData(ADMIN_ENDPOINTS.EVENT_FEATURED(id), { featured });
+  };
+
+  return { setFeatured };
+};
+
+// Hook to fetch all admin organizers
+export const useAdminOrganizers = (params?: { page?: number, limit?: number, verified?: boolean, search?: string }) => {
+  // Build query string
+  let url = ADMIN_ENDPOINTS.ORGANIZERS;
+  if (params) {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.verified !== undefined) queryParams.append('verified', params.verified.toString());
+    if (params.search) queryParams.append('search', params.search);
+
+    const queryString = queryParams.toString();
+    if (queryString) {
+      url = `${url}?${queryString}`;
+    }
+  }
+
+  const { data, error, isLoading, mutate } = useSWR(url, fetcher);
+
+  return {
+    organizers: data?.data,
+    meta: data?.meta,
+    error,
+    isLoading,
+    mutate
+  };
+};
+
+// Hook to fetch a specific admin organizer by ID
+export const useAdminOrganizerDetail = (id: string) => {
+  const { data, error, isLoading, mutate } = useSWR(
+    id ? ADMIN_ENDPOINTS.ORGANIZER_DETAIL(id) : null,
+    fetcher
+  );
+
+  return {
+    organizer: data?.data,
+    error,
+    isLoading,
+    mutate
+  };
+};
+
+// Hook to verify organizer
+export const useVerifyOrganizer = () => {
+  const verifyOrganizer = async (id: string, verified: boolean, notes?: string) => {
+    return await putData(ADMIN_ENDPOINTS.ORGANIZER_VERIFY(id), { verified, notes });
+  };
+
+  return { verifyOrganizer };
+};
+
+// Hook to fetch organizer statistics
+export const useOrganizerStats = () => {
+  const { data, error, isLoading, mutate } = useSWR(ADMIN_ENDPOINTS.ORGANIZER_STATS, fetcher);
+
+  return {
+    stats: data?.data,
+    error,
+    isLoading,
+    mutate
+  };
 };
 
 // Hook to fetch all admin users
-export const useAdminUsers = () => {
-  const { data, error, isLoading, mutate } = useSWR(ADMIN_ENDPOINTS.USERS, fetcher);
-  return { data, error, isLoading, mutate };
+export const useAdminUsers = (params?: { page?: number, limit?: number, role?: string, search?: string }) => {
+  // Build query string
+  let url = ADMIN_ENDPOINTS.USERS;
+  if (params) {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.role) queryParams.append('role', params.role);
+    if (params.search) queryParams.append('search', params.search);
+
+    const queryString = queryParams.toString();
+    if (queryString) {
+      url = `${url}?${queryString}`;
+    }
+  }
+
+  const { data, error, isLoading, mutate } = useSWR(url, fetcher);
+
+  return {
+    users: data?.data,
+    meta: data?.meta,
+    error,
+    isLoading,
+    mutate
+  };
 };
 
 // Hook to fetch a specific admin user by ID
 export const useAdminUserDetail = (id: string) => {
-  const { data, error, isLoading, mutate } = useSWR(id ? ADMIN_ENDPOINTS.USER_DETAIL(id) : null, fetcher);
-  return { data, error, isLoading, mutate };
+  const { data, error, isLoading, mutate } = useSWR(
+    id ? ADMIN_ENDPOINTS.USER_DETAIL(id) : null,
+    fetcher
+  );
+
+  return {
+    user: data?.data,
+    error,
+    isLoading,
+    mutate
+  };
 };
