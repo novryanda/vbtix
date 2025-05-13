@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         {
           success: false,
           error: "Invalid query parameters",
-          details: validatedParams.error.format()
+          details: validatedParams.error.format(),
         },
         { status: 400 }
       );
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: result.events,
-      meta: result.meta
+      meta: result.meta,
     });
   } catch (error) {
     console.error("Error getting events:", error);
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       // Return response
       return NextResponse.json({
         success: true,
-        data: event
+        data: event,
       });
     } catch (validationError) {
       return NextResponse.json(
