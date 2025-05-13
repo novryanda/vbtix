@@ -457,7 +457,7 @@ export async function handleGetEventById(id: string) {
 #### API Route (Tier 1)
 
 ```typescript
-// src/app/api/admin/events/[id]/route.ts
+// src/app/api/admin/events/[eventid]/route.ts
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -562,7 +562,7 @@ export function useAdminEvent(id) {
 #### React Component
 
 ```tsx
-// src/app/(dashboard)/admin/events/[id]/page.tsx
+// src/app/(dashboard)/admin/events/[eventid]/page.tsx
 "use client";
 
 import { useAdminEvent } from "~/lib/api/hooks/admin";

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleGetEvents, handleCreateEvent } from "~/server/api/events";
 import { auth } from "~/server/auth";
-import { UserRole, EventStatus } from "@prisma/client";
-import { createEventSchema } from "~/lib/validations/event.schema";
+import { UserRole } from "@prisma/client";
+import { createEventSchema, eventQuerySchema } from "~/lib/validations/event.schema";
 
 /**
  * GET /api/admin/events
@@ -29,20 +29,34 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
-    const page = searchParams.get("page");
-    const limit = searchParams.get("limit");
-    const status = searchParams.get("status") as EventStatus | undefined;
-    const organizerId = searchParams.get("organizerId");
-    const search = searchParams.get("search");
+    const queryParams = {
+      page: searchParams.get("page"),
+      limit: searchParams.get("limit"),
+      status: searchParams.get("status"),
+      organizerId: searchParams.get("organizerId"),
+      search: searchParams.get("search"),
+      featured: searchParams.has("featured") ? searchParams.get("featured") : undefined,
+    };
+
+    console.log("Query params:", queryParams);
+
+    // Validate query parameters
+    const validatedParams = eventQuerySchema.safeParse(queryParams);
+
+    if (!validatedParams.success) {
+      console.error("Validation error:", validatedParams.error.format());
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid query parameters",
+          details: validatedParams.error.format()
+        },
+        { status: 400 }
+      );
+    }
 
     // Call business logic
-    const result = await handleGetEvents({
-      page,
-      limit,
-      status,
-      organizerId,
-      search
-    });
+    const result = await handleGetEvents(validatedParams.data);
 
     // Return response
     return NextResponse.json({
@@ -84,14 +98,14 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request body
     const body = await request.json();
-    
+
     try {
       // Validate input using Zod schema
       const validatedData = createEventSchema.parse(body);
-      
+
       // Call business logic
       const event = await handleCreateEvent(validatedData, session.user.id);
-      
+
       // Return response
       return NextResponse.json({
         success: true,

@@ -408,7 +408,7 @@ Berikut adalah alur lengkap dari request client hingga response:
 #### Route Handler (Tier 1)
 
 ```typescript
-// src/app/api/admin/events/[id]/route.ts
+// src/app/api/admin/events/[eventid]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { handleGetEventById } from "~/server/api/events";
 import { auth } from "~/server/auth";

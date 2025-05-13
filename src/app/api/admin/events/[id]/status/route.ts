@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleReviewEvent } from "~/server/api/events";
 import { auth } from "~/server/auth";
-import { UserRole, ApprovalStatus } from "@prisma/client";
-import { z } from "zod";
-
-const reviewSchema = z.object({
-  status: z.enum([ApprovalStatus.APPROVED, ApprovalStatus.REJECTED]),
-  feedback: z.string().optional()
-});
+import { UserRole } from "@prisma/client";
+import { eventApprovalSchema } from "~/lib/validations/event.schema";
 
 /**
- * POST /api/admin/events/[eventid]/review
- * Review (approve/reject) an event
+ * PUT /api/admin/events/[id]/status
+ * Approve or reject an event
  */
-export async function POST(
+export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -27,7 +22,7 @@ export async function POST(
       );
     }
 
-    // Only admins can review events
+    // Only admins can approve/reject events
     if (session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
@@ -39,15 +34,22 @@ export async function POST(
     const body = await request.json();
     
     try {
-      // Validate input
-      const { status, feedback } = reviewSchema.parse(body);
+      // Validate input using Zod schema
+      const validatedData = eventApprovalSchema.parse({
+        id,
+        ...body
+      });
       
-      // Review event
-      const result = await handleReviewEvent(id, status, feedback, session.user.id);
+      // Update event status
+      const updatedEvent = await handleReviewEvent(
+        validatedData.id,
+        validatedData.status,
+        validatedData.notes
+      );
       
       return NextResponse.json({
         success: true,
-        data: result
+        data: updatedEvent
       });
     } catch (validationError) {
       return NextResponse.json(
@@ -62,7 +64,13 @@ export async function POST(
         success: false, 
         error: error.message || "Failed to review event" 
       },
-      { status: error.message === "Event not found" ? 404 : 500 }
+      { 
+        status: error.message === "Event not found" 
+          ? 404 
+          : error.message === "Event is not pending review"
+            ? 400
+            : 500 
+      }
     );
   }
 }

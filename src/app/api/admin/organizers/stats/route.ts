@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleGetEventStatistics } from "~/server/api/events";
+import { handleGetOrganizerStatistics } from "~/server/api/admin-organizers";
 import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
 
 /**
- * GET /api/admin/events/[eventid]/statistics
- * Get event statistics
+ * GET /api/admin/organizers/stats
+ * Get organizer statistics
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
     // Check authentication and authorization
     const session = await auth();
@@ -21,7 +18,7 @@ export async function GET(
       );
     }
 
-    // Only admins can access statistics
+    // Only admins can access this endpoint
     if (session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
@@ -29,21 +26,19 @@ export async function GET(
       );
     }
 
-    const { id } = params;
-    const statistics = await handleGetEventStatistics(id);
-    
+    // Call business logic
+    const stats = await handleGetOrganizerStatistics();
+
+    // Return response
     return NextResponse.json({
       success: true,
-      data: statistics
+      data: stats
     });
   } catch (error: any) {
-    console.error(`Error getting statistics for event ${params.id}:`, error);
+    console.error("Error getting organizer statistics:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || "Failed to get event statistics" 
-      },
-      { status: error.message === "Event not found" ? 404 : 500 }
+      { success: false, error: error.message || "Failed to get organizer statistics" },
+      { status: 500 }
     );
   }
 }

@@ -1,44 +1,100 @@
-import { z } from 'zod';
+import { z } from "zod";
+import type {Enums} from "~/types/supabase";
 
-// Validation schema for User
-export const userSchema = z.object({
-  id: z.string().uuid({ message: 'Invalid UUID format for id' }),
-  name: z.string().min(1, { message: 'Name cannot be empty' }).optional(),
-  email: z.string().email({ message: 'Invalid email format' }),
-  emailVerified: z.string().datetime({ message: 'Invalid datetime format for emailVerified' }).optional(),
-  image: z.string().url({ message: 'Invalid URL format for image' }).optional(),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters long' }).optional(),
-  phone: z.string().regex(/^\+?[1-9]\d{1,14}$/, { message: 'Invalid phone number format' }).optional(),
-  role: z.enum(['ADMIN', 'ORGANIZER', 'BUYER'], { message: 'Invalid user role' }),
-  createdAt: z.string().datetime({ message: 'Invalid datetime format for createdAt' }),
-  updatedAt: z.string().datetime({ message: 'Invalid datetime format for updatedAt' }),
+// Menggunakan tipe UserRole dari Supabase
+type UserRole = Enums<"user_role">;
+
+// Schema untuk validasi pembuatan user
+export const createUserSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  email: z.string().email("Invalid email format"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .optional(),
+  phone: z
+    .string()
+    .regex(/^[0-9+\-\s]+$/, "Invalid phone number format")
+    .min(10, "Phone number must be at least 10 digits")
+    .max(20)
+    .optional(),
+  role: z.enum(["ADMIN", "ORGANIZER", "BUYER"] as const).optional(),
 });
 
-// Export TypeScript type from the schema
-export type UserSchema = z.infer<typeof userSchema>;
-
-// Schema for creating a new user
-export const createUserSchema = userSchema.pick({
-  name: true,
-  email: true,
-  password: true,
-  phone: true,
-  role: true,
+// Schema untuk validasi update user
+export const updateUserSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100).optional(),
+  email: z.string().email("Invalid email format").optional(),
+  phone: z
+    .string()
+    .regex(/^[0-9+\-\s]+$/, "Invalid phone number format")
+    .min(10, "Phone number must be at least 10 digits")
+    .max(20)
+    .optional(),
+  image: z.string().url("Invalid image URL").optional().nullable(),
 });
 
-// Schema for updating an existing user
-export const updateUserSchema = userSchema.partial().omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+// Schema untuk validasi perubahan role
+export const changeRoleSchema = z.object({
+  role: z.enum(["ADMIN", "ORGANIZER", "BUYER"] as const, {
+    errorMap: () => ({ message: "Invalid role" }),
+  }),
 });
 
-// Schema for deleting a user
-export const deleteUserSchema = z.object({
-  id: z.string().uuid({ message: 'Invalid UUID format for id' }),
+// Schema untuk validasi aktivasi/deaktivasi
+export const toggleStatusSchema = z.object({
+  isActive: z.boolean({
+    required_error: "isActive status is required",
+    invalid_type_error: "isActive must be a boolean",
+  }),
 });
 
-// Export TypeScript types for the new schemas
+// Schema untuk validasi reset password
+export const resetPasswordSchema = z.object({
+  sendEmail: z.boolean().optional().default(true),
+  customPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .optional(),
+});
+
+// Schema untuk validasi query parameters
+export const userQuerySchema = z.object({
+  page: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 1)),
+  limit: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 10)),
+  role: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      if (["ADMIN", "ORGANIZER", "BUYER"].includes(val)) {
+        return val as UserRole;
+      }
+      return undefined;
+    }),
+  search: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((val) => val || undefined),
+  isActive: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((val) => {
+      if (val === null || val === undefined || val === "") return undefined;
+      return val.toLowerCase() === "true";
+    }),
+});
+
+// Export TypeScript types dari schema
 export type CreateUserSchema = z.infer<typeof createUserSchema>;
 export type UpdateUserSchema = z.infer<typeof updateUserSchema>;
-export type DeleteUserSchema = z.infer<typeof deleteUserSchema>;
+export type ChangeRoleSchema = z.infer<typeof changeRoleSchema>;
+export type ToggleStatusSchema = z.infer<typeof toggleStatusSchema>;
+export type ResetPasswordSchema = z.infer<typeof resetPasswordSchema>;
+export type UserQuerySchema = z.infer<typeof userQuerySchema>;
