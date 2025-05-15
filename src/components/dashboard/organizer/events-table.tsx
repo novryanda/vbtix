@@ -114,13 +114,25 @@ const columns: ColumnDef<Event>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => router.push(`/organizer/events/${event.id}`)}
+              onClick={() => {
+                // Get the organizerId from the URL
+                const pathParts = window.location.pathname.split("/");
+                const organizerId = pathParts[2]; // Assuming URL is /organizer/[id]/events
+                router.push(`/organizer/${organizerId}/events/${event.id}`);
+              }}
             >
               <EyeIcon className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => router.push(`/organizer/events/${event.id}/edit`)}
+              onClick={() => {
+                // Get the organizerId from the URL
+                const pathParts = window.location.pathname.split("/");
+                const organizerId = pathParts[2]; // Assuming URL is /organizer/[id]/events
+                router.push(
+                  `/organizer/${organizerId}/events/${event.id}/edit`,
+                );
+              }}
             >
               <PencilIcon className="mr-2 h-4 w-4" />
               Edit Event
@@ -130,8 +142,17 @@ const columns: ColumnDef<Event>[] = [
               className="text-destructive focus:text-destructive"
               onClick={() => {
                 if (confirm("Are you sure you want to delete this event?")) {
+                  // Get the organizerId from the URL
+                  const pathParts = window.location.pathname.split("/");
+                  const organizerId = pathParts[2]; // Assuming URL is /organizer/[id]/events
+
                   // Delete event logic will be implemented later
-                  console.log("Delete event:", event.id);
+                  console.log(
+                    "Delete event:",
+                    event.id,
+                    "for organizer:",
+                    organizerId,
+                  );
                 }
               }}
             >

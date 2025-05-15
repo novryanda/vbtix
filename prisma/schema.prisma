@@ -102,6 +102,8 @@ model Event {
   description  String?     @db.Text
   posterUrl    String?
   bannerUrl    String?
+  posterPublicId String?   // Cloudinary public ID for poster image
+  bannerPublicId String?   // Cloudinary public ID for banner image
   category     String?
   venue        String
   address      String?     @db.Text
@@ -109,7 +111,8 @@ model Event {
   province     String
   country      String
   tags         String[]
-  images       String[]
+  images       String[]    // URLs of additional images
+  imagePublicIds String[]  // Cloudinary public IDs for additional images
   featured     Boolean     @default(false)
   published    Boolean     @default(false)
   seatingMap   String?

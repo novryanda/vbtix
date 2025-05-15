@@ -1,26 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
+import { handleGetETicketById, handleMarkETicketDelivered } from "~/server/api/etickets";
+import { auth } from "~/server/auth";
 
+/**
+ * GET /api/buyer/etickets/[id]
+ * Get a specific e-ticket by ID
+ */
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { eticketsId: string } },
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { eticketsId } = params;
+    // Check authentication
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
-    // Implementasi untuk mendapatkan detail e-ticket berdasarkan ID
+    const { id } = params;
+
+    // Get e-ticket by ID
+    const eticket = await handleGetETicketById({
+      eticketId: id,
+      userId: session.user.id,
+    });
+
+    // Mark e-ticket as delivered if not already
+    if (!eticket.delivered) {
+      await handleMarkETicketDelivered({
+        eticketId: id,
+      });
+    }
+
+    // Return response
     return NextResponse.json({
       success: true,
-      message: "E-ticket details retrieved successfully",
-      data: { id: eticketsId },
+      data: eticket,
     });
-  } catch (error) {
-    console.error(
-      `Error fetching e-ticket with ID ${params.eticketsId}:`,
-      error,
-    );
+  } catch (error: any) {
+    console.error(`Error getting e-ticket with ID ${params.id}:`, error);
     return NextResponse.json(
-      { success: false, message: "Failed to fetch e-ticket details" },
-      { status: 500 },
+      { 
+        success: false, 
+        error: error.message || "Failed to get e-ticket details" 
+      },
+      { 
+        status: error.message === "E-ticket not found" ? 404 : 500 
+      },
     );
   }
 }

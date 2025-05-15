@@ -1,16 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
 import {
   useOrganizerEventDetail,
   useEventTickets,
   useEventSales,
 } from "~/lib/api/hooks/organizer";
-import { AppSidebar } from "~/components/dashboard/organizer/app-sidebar";
-import { SiteHeader } from "~/components/dashboard/organizer/site-header";
-import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
-import { OrganizerRoute } from "~/components/auth/organizer-route";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -37,6 +34,7 @@ import {
   Plus,
   BarChart,
   Edit,
+  ImageIcon,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "~/lib/utils";
 import { EventStatus } from "@prisma/client";
@@ -62,13 +60,11 @@ import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 
-export default function EventDetailPage({
-  params,
-}: {
-  params: { id: string; eventId: string };
-}) {
-  const organizerId = params.id;
-  const eventId = params.eventId;
+export default function EventDetailPage() {
+  // Use the useParams hook to get route parameters
+  const params = useParams();
+  const organizerId = params.id as string;
+  const eventId = params.eventId as string;
 
   const router = useRouter();
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
@@ -206,143 +202,108 @@ export default function EventDetailPage({
   // Loading state
   if (isLoading) {
     return (
-      <OrganizerRoute>
-        <SidebarProvider>
-          <AppSidebar organizerId={organizerId} variant="inset" />
-          <SidebarInset>
-            <SiteHeader />
-            <div className="flex flex-1 flex-col">
-              <div className="@container/main flex flex-1 flex-col gap-2">
-                <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                  <div className="px-4 lg:px-6">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.back()}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <h1 className="text-2xl font-semibold">Event Details</h1>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center p-8">
-                    <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
-      </OrganizerRoute>
+      <div className="px-4 lg:px-6">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-semibold">Event Details</h1>
+        </div>
+        <div className="flex items-center justify-center p-8">
+          <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
+        </div>
+      </div>
     );
   }
 
   // Error state
   if (error || !event) {
     return (
-      <OrganizerRoute>
-        <SidebarProvider>
-          <AppSidebar organizerId={organizerId} variant="inset" />
-          <SidebarInset>
-            <SiteHeader />
-            <div className="flex flex-1 flex-col">
-              <div className="@container/main flex flex-1 flex-col gap-2">
-                <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                  <div className="px-4 lg:px-6">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.back()}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <h1 className="text-2xl font-semibold">Event Details</h1>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                    <h3 className="mb-2 text-lg font-semibold">
-                      Error loading event
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      {error?.message ||
-                        "Failed to load event details. Please try again."}
-                    </p>
-                    <div className="mt-4 flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => router.refresh()}
-                      >
-                        Try Again
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          router.push(`/organizer/${organizerId}/events`)
-                        }
-                      >
-                        Back to Events
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
-      </OrganizerRoute>
+      <div className="px-4 lg:px-6">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-semibold">Event Details</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+          <h3 className="mb-2 text-lg font-semibold">
+            Error loading event
+          </h3>
+          <p className="text-muted-foreground text-sm">
+            {error?.message ||
+              "Failed to load event details. Please try again."}
+          </p>
+          <div className="mt-4 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.refresh()}
+            >
+              Try Again
+            </Button>
+            <Button
+              onClick={() =>
+                router.push(`/organizer/${organizerId}/events`)
+              }
+            >
+              Back to Events
+            </Button>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <OrganizerRoute>
-      <SidebarProvider>
-        <AppSidebar organizerId={organizerId} variant="inset" />
-        <SidebarInset>
-          <SiteHeader />
-          <div className="flex flex-1 flex-col">
-            <div className="@container/main flex flex-1 flex-col gap-2">
-              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                <div className="px-4 lg:px-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.back()}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <h1 className="text-2xl font-semibold">{event.title}</h1>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          router.push(
-                            `/organizer/${organizerId}/events/${eventId}/edit`,
-                          )
-                        }
-                      >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit Event
-                      </Button>
-                      <Button variant="destructive" onClick={handleDeleteEvent}>
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+      <div className="px-4 lg:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.back()}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl font-semibold">{event.title}</h1>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                router.push(
+                  `/organizer/${organizerId}/events/${eventId}/edit`,
+                )
+              }
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Event
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteEvent}>
+              <Trash className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          </div>
+        </div>
+      </div>
 
-                <div className="px-4 lg:px-6">
-                  <Tabs defaultValue="details">
-                    <TabsList className="mb-4">
-                      <TabsTrigger value="details">Details</TabsTrigger>
-                      <TabsTrigger value="tickets">Tickets</TabsTrigger>
-                      <TabsTrigger value="attendees">Attendees</TabsTrigger>
-                      <TabsTrigger value="sales">Sales</TabsTrigger>
-                    </TabsList>
+      <div className="px-4 lg:px-6">
+        <Tabs defaultValue="details">
+          <TabsList className="mb-4">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="tickets">Tickets</TabsTrigger>
+            <TabsTrigger value="attendees">Attendees</TabsTrigger>
+            <TabsTrigger value="sales">Sales</TabsTrigger>
+          </TabsList>
 
                     <TabsContent value="details">
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -354,6 +315,71 @@ export default function EventDetailPage({
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="space-y-4">
+                            {/* Event Images */}
+                            <div className="mb-6 space-y-4">
+                              {event.posterUrl && (
+                                <div>
+                                  <h3 className="flex items-center font-medium">
+                                    <ImageIcon className="text-muted-foreground mr-2 h-4 w-4" />
+                                    Event Poster
+                                  </h3>
+                                  <div className="mt-2 overflow-hidden rounded-md">
+                                    <div className="relative h-[200px] w-full">
+                                      <Image
+                                        src={event.posterUrl}
+                                        alt={event.title}
+                                        fill
+                                        className="object-cover"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {event.bannerUrl && (
+                                <div>
+                                  <h3 className="flex items-center font-medium">
+                                    <ImageIcon className="text-muted-foreground mr-2 h-4 w-4" />
+                                    Event Banner
+                                  </h3>
+                                  <div className="mt-2 overflow-hidden rounded-md">
+                                    <div className="relative h-[200px] w-full">
+                                      <Image
+                                        src={event.bannerUrl}
+                                        alt={event.title}
+                                        fill
+                                        className="object-cover"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {event.images && event.images.length > 0 && (
+                                <div>
+                                  <h3 className="flex items-center font-medium">
+                                    <ImageIcon className="text-muted-foreground mr-2 h-4 w-4" />
+                                    Additional Images
+                                  </h3>
+                                  <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
+                                    {event.images.map((image, index) => (
+                                      <div
+                                        key={index}
+                                        className="relative h-[120px] overflow-hidden rounded-md"
+                                      >
+                                        <Image
+                                          src={image}
+                                          alt={`${event.title} - Image ${index + 1}`}
+                                          fill
+                                          className="object-cover"
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
                             <div>
                               <h3 className="font-medium">Status</h3>
                               <Badge
@@ -805,13 +831,8 @@ export default function EventDetailPage({
                         </CardContent>
                       </Card>
                     </TabsContent>
-                  </Tabs>
-                </div>
-              </div>
-            </div>
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-    </OrganizerRoute>
+          </Tabs>
+        </div>
+      </div>
   );
 }
