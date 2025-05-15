@@ -9,14 +9,12 @@ import {
   ClipboardListIcon,
   DatabaseIcon,
   FileIcon,
-  FolderIcon,
   HelpCircleIcon,
   LayoutDashboardIcon,
   ListIcon,
   SearchIcon,
   SettingsIcon,
   TicketIcon,
-  UsersIcon,
 } from "lucide-react";
 
 import { NavDocuments } from "~/components/dashboard/organizer/nav-document";
@@ -43,7 +41,7 @@ const getNavigationData = (organizerId: string) => ({
   navMain: [
     {
       title: "Dashboard",
-      url: `/organizer/${organizerId}`,
+      url: `/organizer/${organizerId}/dashboard`,
       icon: LayoutDashboardIcon,
     },
     {
@@ -128,7 +126,7 @@ export function AppSidebar({
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href={`/organizer/${organizerId}`}>
+              <a href={`/organizer/${organizerId}/dashboard`}>
                 <ArrowUpCircleIcon className="h-5 w-5" />
                 <span className="text-base font-semibold">VBTix Organizer</span>
               </a>

@@ -32,14 +32,15 @@ function isPublicRoute(path: string) {
 }
 
 // Mendapatkan rute dashboard berdasarkan peran pengguna
-function getDashboardRoute(role?: UserRole | string | null) {
+function getDashboardRoute(role?: UserRole | string | null, userId?: string) {
   if (!role) return "/";
 
   switch (role) {
     case UserRole.ADMIN:
       return "/admin";
     case UserRole.ORGANIZER:
-      return "/organizer";
+      // If userId is available, redirect to the organizer's dashboard
+      return userId ? `/organizer/${userId}/dashboard` : "/organizer";
     case UserRole.BUYER:
     default:
       return "/buyer";
@@ -50,35 +51,64 @@ function getDashboardRoute(role?: UserRole | string | null) {
  * Middleware untuk memeriksa autentikasi dan otorisasi
  */
 export async function authMiddleware(req: NextRequest) {
-  const path = req.nextUrl.pathname;
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  const isAuthenticated = !!token;
+  try {
+    const path = req.nextUrl.pathname;
 
-  // Jika pengguna sudah login dan mencoba mengakses halaman publik, alihkan ke dashboard
-  if (isPublicRoute(path) && isAuthenticated && token && token.role) {
-    const dashboardRoute = getDashboardRoute(token.role as UserRole);
-    return NextResponse.redirect(new URL(dashboardRoute, req.url));
-  }
-
-  // Jika pengguna belum login dan mencoba mengakses halaman yang memerlukan autentikasi, alihkan ke login
-  if (!isPublicRoute(path) && !isAuthenticated) {
-    const loginUrl = new URL("/login", req.url);
-    // Tambahkan callbackUrl sebagai query parameter untuk redirect kembali setelah login
-    loginUrl.searchParams.set("callbackUrl", path);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  if (path === "/" || path === "/dashboard") {
-    if (isAuthenticated && token && token.role) {
-      const dashboardRoute = getDashboardRoute(token.role as UserRole);
-      return NextResponse.redirect(new URL(dashboardRoute, req.url));
-    } else {
-      // Redirect ke halaman login jika belum login
-      return NextResponse.redirect(new URL("/login", req.url));
+    // Tambahkan pengecekan untuk NEXTAUTH_SECRET
+    if (!process.env.NEXTAUTH_SECRET) {
+      console.error("NEXTAUTH_SECRET is not defined");
+      return NextResponse.next();
     }
-  }
 
-  return NextResponse.next();
+    // Gunakan try/catch untuk getToken
+    let token;
+    try {
+      token = await getToken({
+        req,
+        secret: process.env.NEXTAUTH_SECRET,
+      });
+    } catch (error) {
+      console.error("Error getting token:", error);
+      return NextResponse.next();
+    }
+
+    const isAuthenticated = !!token;
+
+    // Jika pengguna sudah login dan mencoba mengakses halaman publik, alihkan ke dashboard
+    if (isPublicRoute(path) && isAuthenticated && token && token.role) {
+      const dashboardRoute = getDashboardRoute(
+        token.role as UserRole,
+        token.id as string,
+      );
+      return NextResponse.redirect(new URL(dashboardRoute, req.url));
+    }
+
+    // Jika pengguna belum login dan mencoba mengakses halaman yang memerlukan autentikasi, alihkan ke login
+    if (!isPublicRoute(path) && !isAuthenticated) {
+      const loginUrl = new URL("/login", req.url);
+      // Tambahkan callbackUrl sebagai query parameter untuk redirect kembali setelah login
+      loginUrl.searchParams.set("callbackUrl", path);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (path === "/" || path === "/dashboard") {
+      if (isAuthenticated && token && token.role) {
+        const dashboardRoute = getDashboardRoute(
+          token.role as UserRole,
+          token.id as string,
+        );
+        return NextResponse.redirect(new URL(dashboardRoute, req.url));
+      } else {
+        // Redirect ke halaman login jika belum login
+        return NextResponse.redirect(new URL("/login", req.url));
+      }
+    }
+
+    return NextResponse.next();
+  } catch (error) {
+    console.error("Unexpected error in authMiddleware:", error);
+    return NextResponse.next();
+  }
 }
 
 /**
@@ -91,25 +121,57 @@ export async function roleMiddleware(
   req: NextRequest,
   allowedRoles: UserRole[],
 ) {
-  const path = req.nextUrl.pathname;
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  try {
+    const path = req.nextUrl.pathname;
 
-  if (!token) {
-    const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("callbackUrl", path);
-    return NextResponse.redirect(loginUrl);
+    // Tambahkan pengecekan untuk NEXTAUTH_SECRET
+    if (!process.env.NEXTAUTH_SECRET) {
+      console.error("NEXTAUTH_SECRET is not defined");
+      return NextResponse.next();
+    }
+
+    // Gunakan try/catch untuk getToken
+    let token;
+    try {
+      token = await getToken({
+        req,
+        secret: process.env.NEXTAUTH_SECRET,
+      });
+    } catch (error) {
+      console.error("Error getting token in roleMiddleware:", error);
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", path);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (!token) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", path);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Pastikan token.role ada sebelum menggunakannya
+    if (!token.role) {
+      console.error("Token exists but role is undefined");
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", path);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const userRole = token.role as UserRole;
+
+    if (!allowedRoles.includes(userRole)) {
+      // Redirect to appropriate dashboard based on role
+      const dashboardRoute = getDashboardRoute(userRole, token.id as string);
+      return NextResponse.redirect(new URL(dashboardRoute, req.url));
+    }
+
+    // User is authorized, continue
+    return null;
+  } catch (error) {
+    console.error("Unexpected error in roleMiddleware:", error);
+    return NextResponse.next();
   }
-
-  const userRole = token.role as UserRole;
-
-  if (!allowedRoles.includes(userRole)) {
-    // Redirect to appropriate dashboard based on role
-    const dashboardRoute = getDashboardRoute(userRole);
-    return NextResponse.redirect(new URL(dashboardRoute, req.url));
-  }
-
-  // User is authorized, continue
-  return null;
 }
 
 /**
@@ -139,10 +201,24 @@ export async function buyerMiddleware(req: NextRequest) {
 
 export async function middleware(req: NextRequest) {
   try {
+    // Tambahkan logging untuk debugging
+    console.log(`Processing middleware for path: ${req.nextUrl.pathname}`);
+
+    // Periksa apakah req.url valid
+    if (!req.url) {
+      console.error("req.url is undefined or null");
+      return NextResponse.next();
+    }
+
     // Gunakan authMiddleware yang sudah ada untuk menangani autentikasi dan otorisasi
     return await authMiddleware(req);
   } catch (error) {
     console.error("Middleware error:", error);
+    // Tambahkan detail error untuk debugging
+    if (error instanceof Error) {
+      console.error(`Error name: ${error.name}, message: ${error.message}`);
+      console.error(`Stack trace: ${error.stack}`);
+    }
     return NextResponse.next();
   }
 }

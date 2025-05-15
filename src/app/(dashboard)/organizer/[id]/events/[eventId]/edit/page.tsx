@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useOrganizerEventDetail } from "~/lib/api/hooks/organizer";
 import { AppSidebar } from "~/components/dashboard/organizer/app-sidebar";
 import { SiteHeader } from "~/components/dashboard/organizer/site-header";
@@ -30,9 +30,16 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 
-export default function EditEventPage({ params }: { params: { id: string } }) {
+export default function EditEventPage() {
   const router = useRouter();
-  const { data, isLoading, error, mutate } = useOrganizerEventDetail(params.id);
+  const params = useParams();
+  const organizerId = params.id as string;
+  const eventId = params.eventId as string;
+
+  const { data, isLoading, error, mutate } = useOrganizerEventDetail(
+    organizerId,
+    eventId,
+  );
   const event = data?.data;
 
   // Initialize form data with default values
@@ -177,7 +184,7 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
 
       // Send request to update event
       const response = await fetch(
-        ORGANIZER_ENDPOINTS.EVENT_DETAIL(params.id),
+        ORGANIZER_ENDPOINTS.EVENT_DETAIL(organizerId, eventId),
         {
           method: "PUT",
           headers: {
@@ -197,7 +204,7 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
       mutate();
 
       // Redirect to the event detail page
-      router.push(`/organizer/events/${params.id}`);
+      router.push(`/organizer/${organizerId}/events/${eventId}`);
     } catch (err: any) {
       console.error("Error updating event:", err);
       setFormError(err.message || "Failed to update event. Please try again.");
@@ -279,7 +286,11 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
                       >
                         Try Again
                       </Button>
-                      <Button onClick={() => router.push("/organizer/events")}>
+                      <Button
+                        onClick={() =>
+                          router.push(`/organizer/${organizerId}/events`)
+                        }
+                      >
                         Back to Events
                       </Button>
                     </div>

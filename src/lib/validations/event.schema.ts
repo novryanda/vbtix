@@ -8,8 +8,16 @@ export const eventSchema = z.object({
   organizerId: z.string(),
   title: z.string().min(1, { message: "Title cannot be empty" }),
   description: z.string().optional().nullable(),
-  posterUrl: z.string().url({ message: "Invalid URL format for posterUrl" }).optional().nullable(),
-  bannerUrl: z.string().url({ message: "Invalid URL format for bannerUrl" }).optional().nullable(),
+  posterUrl: z
+    .string()
+    .url({ message: "Invalid URL format for posterUrl" })
+    .optional()
+    .nullable(),
+  bannerUrl: z
+    .string()
+    .url({ message: "Invalid URL format for bannerUrl" })
+    .optional()
+    .nullable(),
   category: z.string().optional().nullable(),
   venue: z.string().min(1, { message: "Venue cannot be empty" }),
   address: z.string().optional().nullable(),
@@ -22,10 +30,18 @@ export const eventSchema = z.object({
   published: z.boolean(),
   seatingMap: z.string().optional().nullable(),
   maxAttendees: z.number().int().positive().optional().nullable(),
-  website: z.string().url({ message: "Invalid URL format for website" }).optional().nullable(),
+  website: z
+    .string()
+    .url({ message: "Invalid URL format for website" })
+    .optional()
+    .nullable(),
   terms: z.string().optional().nullable(),
-  startDate: z.string().datetime({ message: "Invalid datetime format for startDate" }),
-  endDate: z.string().datetime({ message: "Invalid datetime format for endDate" }),
+  startDate: z
+    .string()
+    .datetime({ message: "Invalid datetime format for startDate" }),
+  endDate: z
+    .string()
+    .datetime({ message: "Invalid datetime format for endDate" }),
   status: z.nativeEnum(EventStatus),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -39,8 +55,16 @@ export const createEventSchema = z.object({
   title: z.string().min(1, { message: "Title cannot be empty" }),
   slug: z.string().min(1, { message: "Slug cannot be empty" }).optional(),
   description: z.string().optional(),
-  posterUrl: z.string().url({ message: "Invalid URL format for posterUrl" }).optional(),
-  bannerUrl: z.string().url({ message: "Invalid URL format for bannerUrl" }).optional(),
+  posterUrl: z
+    .string()
+    .url({ message: "Invalid URL format for posterUrl" })
+    .optional(),
+  bannerUrl: z
+    .string()
+    .url({ message: "Invalid URL format for bannerUrl" })
+    .optional(),
+  posterPublicId: z.string().optional(),
+  bannerPublicId: z.string().optional(),
   category: z.string().optional(),
   venue: z.string().min(1, { message: "Venue cannot be empty" }),
   address: z.string().optional(),
@@ -49,14 +73,22 @@ export const createEventSchema = z.object({
   country: z.string().min(1, { message: "Country cannot be empty" }),
   tags: z.array(z.string()).optional().default([]),
   images: z.array(z.string()).optional().default([]),
+  imagePublicIds: z.array(z.string()).optional().default([]),
   featured: z.boolean().optional().default(false),
   published: z.boolean().optional().default(false),
   seatingMap: z.string().optional(),
   maxAttendees: z.number().int().positive().optional(),
-  website: z.string().url({ message: "Invalid URL format for website" }).optional(),
+  website: z
+    .string()
+    .url({ message: "Invalid URL format for website" })
+    .optional(),
   terms: z.string().optional(),
-  startDate: z.string().datetime({ message: "Invalid datetime format for startDate" }),
-  endDate: z.string().datetime({ message: "Invalid datetime format for endDate" }),
+  startDate: z
+    .string()
+    .datetime({ message: "Invalid datetime format for startDate" }),
+  endDate: z
+    .string()
+    .datetime({ message: "Invalid datetime format for endDate" }),
   status: z.nativeEnum(EventStatus).optional().default(EventStatus.DRAFT),
 });
 
@@ -65,24 +97,45 @@ export const updateEventSchema = z.object({
   title: z.string().min(1, { message: "Title cannot be empty" }).optional(),
   slug: z.string().min(1, { message: "Slug cannot be empty" }).optional(),
   description: z.string().optional(),
-  posterUrl: z.string().url({ message: "Invalid URL format for posterUrl" }).optional(),
-  bannerUrl: z.string().url({ message: "Invalid URL format for bannerUrl" }).optional(),
+  posterUrl: z
+    .string()
+    .url({ message: "Invalid URL format for posterUrl" })
+    .optional(),
+  bannerUrl: z
+    .string()
+    .url({ message: "Invalid URL format for bannerUrl" })
+    .optional(),
+  posterPublicId: z.string().optional(),
+  bannerPublicId: z.string().optional(),
   category: z.string().optional(),
   venue: z.string().min(1, { message: "Venue cannot be empty" }).optional(),
   address: z.string().optional(),
   city: z.string().optional(),
-  province: z.string().min(1, { message: "Province cannot be empty" }).optional(),
+  province: z
+    .string()
+    .min(1, { message: "Province cannot be empty" })
+    .optional(),
   country: z.string().min(1, { message: "Country cannot be empty" }).optional(),
   tags: z.array(z.string()).optional(),
   images: z.array(z.string()).optional(),
+  imagePublicIds: z.array(z.string()).optional(),
   featured: z.boolean().optional(),
   published: z.boolean().optional(),
   seatingMap: z.string().optional(),
   maxAttendees: z.number().int().positive().optional(),
-  website: z.string().url({ message: "Invalid URL format for website" }).optional(),
+  website: z
+    .string()
+    .url({ message: "Invalid URL format for website" })
+    .optional(),
   terms: z.string().optional(),
-  startDate: z.string().datetime({ message: "Invalid datetime format for startDate" }).optional(),
-  endDate: z.string().datetime({ message: "Invalid datetime format for endDate" }).optional(),
+  startDate: z
+    .string()
+    .datetime({ message: "Invalid datetime format for startDate" })
+    .optional(),
+  endDate: z
+    .string()
+    .datetime({ message: "Invalid datetime format for endDate" })
+    .optional(),
   status: z.nativeEnum(EventStatus).optional(),
 });
 
@@ -118,9 +171,7 @@ export const eventQuerySchema = z.object({
       }
       return undefined;
     }),
-  organizerId: z
-    .union([z.string(), z.null()])
-    .optional(),
+  organizerId: z.union([z.string(), z.null()]).optional(),
   search: z
     .union([z.string(), z.null()])
     .optional()
