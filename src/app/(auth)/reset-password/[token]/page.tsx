@@ -18,13 +18,17 @@ export const metadata: Metadata = {
 };
 
 // Schema validasi form reset password
-const resetPasswordSchema = z.object({
-  password: z.string().min(6, "Password minimal 6 karakter"),
-  confirmPassword: z.string().min(6, "Konfirmasi password minimal 6 karakter"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Password dan konfirmasi password tidak sama",
-  path: ["confirmPassword"],
-});
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(6, "Password minimal 6 karakter"),
+    confirmPassword: z
+      .string()
+      .min(6, "Konfirmasi password minimal 6 karakter"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Password dan konfirmasi password tidak sama",
+    path: ["confirmPassword"],
+  });
 
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
@@ -73,7 +77,10 @@ export default function ResetPasswordPage({
       if (!response.ok) {
         setError(result.error || "Terjadi kesalahan saat reset password");
       } else {
-        setSuccess(result.message || "Password berhasil diubah. Silakan login dengan password baru.");
+        setSuccess(
+          result.message ||
+            "Password berhasil diubah. Silakan login dengan password baru.",
+        );
         // Redirect ke halaman login setelah 3 detik
         setTimeout(() => {
           router.push("/login");
@@ -93,13 +100,13 @@ export default function ResetPasswordPage({
           <h1 className="text-2xl font-semibold tracking-tight">
             Reset Password
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Masukkan password baru Anda
           </p>
         </div>
 
         {error && (
-          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+          <div className="bg-destructive/15 text-destructive rounded-md p-3 text-sm">
             {error}
           </div>
         )}
@@ -124,7 +131,9 @@ export default function ResetPasswordPage({
                   {...register("password")}
                 />
                 {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                  <p className="text-destructive text-sm">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
 
@@ -139,7 +148,9 @@ export default function ResetPasswordPage({
                   {...register("confirmPassword")}
                 />
                 {errors.confirmPassword && (
-                  <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+                  <p className="text-destructive text-sm">
+                    {errors.confirmPassword.message}
+                  </p>
                 )}
               </div>
 
@@ -154,7 +165,7 @@ export default function ResetPasswordPage({
         <div className="text-center text-sm">
           <Link
             href="/login"
-            className="underline underline-offset-4 hover:text-primary"
+            className="hover:text-primary underline underline-offset-4"
           >
             Kembali ke halaman login
           </Link>

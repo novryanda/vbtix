@@ -52,9 +52,15 @@ export default function ForgotPasswordPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        setError(result.error || "Terjadi kesalahan saat mengirim email reset password");
+        setError(
+          result.error ||
+            "Terjadi kesalahan saat mengirim email reset password",
+        );
       } else {
-        setSuccess(result.message || "Instruksi reset password telah dikirim ke email Anda");
+        setSuccess(
+          result.message ||
+            "Instruksi reset password telah dikirim ke email Anda",
+        );
       }
     } catch (err) {
       setError("Terjadi kesalahan saat mengirim email reset password");
@@ -67,14 +73,16 @@ export default function ForgotPasswordPage() {
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Lupa Password</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Lupa Password
+          </h1>
+          <p className="text-muted-foreground text-sm">
             Masukkan email Anda untuk menerima instruksi reset password
           </p>
         </div>
 
         {error && (
-          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+          <div className="bg-destructive/15 text-destructive rounded-md p-3 text-sm">
             {error}
           </div>
         )}
@@ -99,7 +107,9 @@ export default function ForgotPasswordPage() {
                   {...register("email")}
                 />
                 {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                  <p className="text-destructive text-sm">
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
 
@@ -114,7 +124,7 @@ export default function ForgotPasswordPage() {
         <div className="text-center text-sm">
           <Link
             href="/login"
-            className="underline underline-offset-4 hover:text-primary"
+            className="hover:text-primary underline underline-offset-4"
           >
             Kembali ke halaman login
           </Link>
