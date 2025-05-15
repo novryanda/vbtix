@@ -1,12 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { PlusIcon, SearchIcon } from "lucide-react";
 
-import { AppSidebar } from "~/components/dashboard/organizer/app-sidebar";
-import { SiteHeader } from "~/components/dashboard/organizer/site-header";
-import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import { OrganizerRoute } from "~/components/auth/organizer-route";
 import { useOrganizerEvents } from "~/lib/api/hooks/organizer";
 import { Button } from "~/components/ui/button";
@@ -22,8 +19,9 @@ import {
 import { EventsTable } from "~/components/dashboard/organizer/events-table";
 import { PaginationControls } from "~/components/dashboard/organizer/pagination";
 
-export default function EventsPage({ params }: { params: { id: string } }) {
-  const organizerId = params.id;
+export default function EventsPage() {
+  const params = useParams();
+  const organizerId = params.id as string;
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -92,133 +90,118 @@ export default function EventsPage({ params }: { params: { id: string } }) {
 
   return (
     <OrganizerRoute>
-      <SidebarProvider>
-        <AppSidebar organizerId={organizerId} variant="inset" />
-        <SidebarInset>
-          <SiteHeader />
-          <div className="flex flex-1 flex-col">
-            <div className="@container/main flex flex-1 flex-col gap-2">
-              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                <div className="px-4 lg:px-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <h1 className="text-2xl font-semibold">Events</h1>
-                    <Button
-                      onClick={() =>
-                        router.push(`/organizer/${organizerId}/events/new`)
-                      }
-                    >
-                      <PlusIcon className="mr-2 h-4 w-4" />
-                      Create Event
-                    </Button>
-                  </div>
+      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+        <div className="px-4 lg:px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-2xl font-semibold">Events</h1>
+            <Button
+              onClick={() =>
+                router.push(`/organizer/${organizerId}/events/new`)
+              }
+            >
+              <PlusIcon className="mr-2 h-4 w-4" />
+              Create Event
+            </Button>
+          </div>
 
-                  <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <form
-                      onSubmit={handleSearch}
-                      className="flex w-full max-w-sm items-center space-x-2"
-                    >
-                      <Input
-                        type="search"
-                        placeholder="Search events..."
-                        className="w-full"
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                      />
-                      <Button type="submit" size="icon" variant="ghost">
-                        <SearchIcon className="h-4 w-4" />
-                        <span className="sr-only">Search</span>
-                      </Button>
-                    </form>
+          <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <form
+              onSubmit={handleSearch}
+              className="flex w-full max-w-sm items-center space-x-2"
+            >
+              <Input
+                type="search"
+                placeholder="Search events..."
+                className="w-full"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
+              <Button type="submit" size="icon" variant="ghost">
+                <SearchIcon className="h-4 w-4" />
+                <span className="sr-only">Search</span>
+              </Button>
+            </form>
 
-                    <div className="flex items-center space-x-2">
-                      <Select
-                        value={status || "ALL"}
-                        onValueChange={handleStatusChange}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Filter by status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ALL">All Statuses</SelectItem>
-                          <SelectItem value={EventStatus.DRAFT}>
-                            Draft
-                          </SelectItem>
-                          <SelectItem value={EventStatus.PUBLISHED}>
-                            Published
-                          </SelectItem>
-                          <SelectItem value={EventStatus.CANCELLED}>
-                            Cancelled
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="px-4 lg:px-6">
-                  {isLoading ? (
-                    <div className="flex items-center justify-center p-8">
-                      <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
-                    </div>
-                  ) : error ? (
-                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                      <h3 className="mb-2 text-lg font-semibold">
-                        Error loading events
-                      </h3>
-                      <p className="text-muted-foreground text-sm">
-                        {error.message ||
-                          "Failed to load events. Please try again."}
-                      </p>
-                      <Button
-                        variant="outline"
-                        className="mt-4"
-                        onClick={() => router.refresh()}
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  ) : eventsData?.data?.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                      <h3 className="mb-2 text-lg font-semibold">
-                        No events found
-                      </h3>
-                      <p className="text-muted-foreground text-sm">
-                        You haven't created any events yet or no events match
-                        your search criteria.
-                      </p>
-                      <Button
-                        className="mt-4"
-                        onClick={() =>
-                          router.push(`/organizer/${organizerId}/events/new`)
-                        }
-                      >
-                        <PlusIcon className="mr-2 h-4 w-4" />
-                        Create Your First Event
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="rounded-md border">
-                        <EventsTable data={eventsData?.data || []} />
-                      </div>
-
-                      {totalPages > 1 && (
-                        <div className="mt-4 flex justify-center">
-                          <PaginationControls
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            onPageChange={handlePageChange}
-                          />
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Select
+                value={status || "ALL"}
+                onValueChange={handleStatusChange}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Statuses</SelectItem>
+                  <SelectItem value={EventStatus.DRAFT}>Draft</SelectItem>
+                  <SelectItem value={EventStatus.PUBLISHED}>
+                    Published
+                  </SelectItem>
+                  <SelectItem value={EventStatus.CANCELLED}>
+                    Cancelled
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+
+        <div className="px-4 lg:px-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+              <h3 className="mb-2 text-lg font-semibold">
+                Error loading events
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                {error.message || "Failed to load events. Please try again."}
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => router.refresh()}
+              >
+                Try Again
+              </Button>
+            </div>
+          ) : eventsData?.data?.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+              <h3 className="mb-2 text-lg font-semibold">No events found</h3>
+              <p className="text-muted-foreground text-sm">
+                You haven't created any events yet or no events match your
+                search criteria.
+              </p>
+              <Button
+                className="mt-4"
+                onClick={() =>
+                  router.push(`/organizer/${organizerId}/events/new`)
+                }
+              >
+                <PlusIcon className="mr-2 h-4 w-4" />
+                Create Your First Event
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <EventsTable data={eventsData?.data || []} />
+              </div>
+
+              {totalPages > 1 && (
+                <div className="mt-4 flex justify-center">
+                  <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </OrganizerRoute>
   );
 }

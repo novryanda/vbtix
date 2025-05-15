@@ -2,6 +2,7 @@ import { eventService } from "~/server/services/event.service";
 import { organizerService } from "~/server/services/organizer.service";
 import { ticketService } from "~/server/services/ticket.service";
 import { EventStatus } from "@prisma/client";
+import { deleteImage } from "~/lib/cloudinary-utils";
 
 /**
  * Get events for a specific organizer
@@ -117,7 +118,7 @@ export async function handleCreateOrganizerEvent(params: {
   };
 
   // Create event
-  const event = await eventService.createEvent(data);
+  const event = await eventService.createEvent(data, organizer.id);
 
   return event;
 }
@@ -149,6 +150,41 @@ export async function handleUpdateOrganizerEvent(params: {
     throw new Error("Event does not belong to this organizer");
   }
 
+  // Handle Cloudinary image updates
+  const event = existingEvent as any;
+  const newData = eventData as any;
+
+  // If poster image has changed, delete the old one
+  if (
+    newData.posterPublicId &&
+    event.posterPublicId &&
+    newData.posterPublicId !== event.posterPublicId
+  ) {
+    await deleteImage(event.posterPublicId);
+  }
+
+  // If banner image has changed, delete the old one
+  if (
+    newData.bannerPublicId &&
+    event.bannerPublicId &&
+    newData.bannerPublicId !== event.bannerPublicId
+  ) {
+    await deleteImage(event.bannerPublicId);
+  }
+
+  // Handle additional images
+  if (newData.imagePublicIds && event.imagePublicIds) {
+    // Find images that were removed
+    const removedPublicIds = event.imagePublicIds.filter(
+      (id: string) => !newData.imagePublicIds.includes(id),
+    );
+
+    // Delete removed images from Cloudinary
+    for (const publicId of removedPublicIds) {
+      await deleteImage(publicId);
+    }
+  }
+
   // Update event
   return await eventService.updateEvent(eventId, eventData);
 }
@@ -177,6 +213,23 @@ export async function handleDeleteOrganizerEvent(params: {
   // Check if the event belongs to the organizer
   if (existingEvent.organizerId !== organizer.id) {
     throw new Error("Event does not belong to this organizer");
+  }
+
+  // Delete Cloudinary images if they exist
+  const event = existingEvent as any;
+
+  if (event.posterPublicId) {
+    await deleteImage(event.posterPublicId);
+  }
+
+  if (event.bannerPublicId) {
+    await deleteImage(event.bannerPublicId);
+  }
+
+  if (event.imagePublicIds && event.imagePublicIds.length > 0) {
+    for (const publicId of event.imagePublicIds) {
+      await deleteImage(publicId);
+    }
   }
 
   // Delete event
