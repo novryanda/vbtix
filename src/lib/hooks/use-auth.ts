@@ -20,7 +20,11 @@ export const useAuth = () => {
   /**
    * Fungsi untuk login dengan kredensial (email/password)
    */
-  const login = async (email: string, password: string, callbackUrl?: string) => {
+  const login = async (
+    email: string,
+    password: string,
+    callbackUrl?: string,
+  ) => {
     try {
       const result = await signIn("credentials", {
         email,
@@ -32,10 +36,16 @@ export const useAuth = () => {
         return { success: false, error: result.error };
       }
 
+      // Force a session update before redirecting
+      await fetch("/api/auth/session");
+
+      // Use router.replace instead of push for a cleaner navigation experience
       if (callbackUrl) {
-        router.push(callbackUrl);
+        router.replace(callbackUrl);
       } else {
-        redirectToDashboard();
+        // Get the dashboard route based on user role
+        const dashboardRoute = getDashboardRoute(session?.user?.role);
+        router.replace(dashboardRoute);
       }
 
       return { success: true };
