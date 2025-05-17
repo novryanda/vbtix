@@ -170,7 +170,10 @@ export async function handlePurchaseTickets(params: {
   // Check if tickets are available
   for (const item of items) {
     const ticketType = ticketTypes.find((tt) => tt.id === item.ticketTypeId);
-    if (!ticketType) continue;
+    // Add null check for ticketType
+    if (!ticketType) {
+      throw new Error(`Ticket type not found: ${item.ticketTypeId}`);
+    }
 
     const available = ticketType.quantity - ticketType.sold;
     if (item.quantity > available) {
@@ -186,7 +189,11 @@ export async function handlePurchaseTickets(params: {
 
   // Calculate total amount
   let totalAmount = 0;
-  const orderItems = [];
+  const orderItems: Array<{
+    ticketTypeId: string;
+    quantity: number;
+    price: any; // Using 'any' for Decimal type compatibility
+  }> = [];
   for (const item of items) {
     const ticketType = ticketTypes.find((tt) => tt.id === item.ticketTypeId);
     if (!ticketType) continue;
@@ -202,7 +209,13 @@ export async function handlePurchaseTickets(params: {
   }
 
   // Get event ID (assuming all tickets are for the same event)
-  const eventId = ticketTypes[0].event.id;
+  // We've already validated that ticketTypes has at least one item
+  // by checking ticketTypes.length !== ticketTypeIds.length
+  const eventId = ticketTypes[0]?.event.id;
+
+  if (!eventId) {
+    throw new Error("Could not determine event ID");
+  }
 
   // Create transaction in a transaction to ensure atomicity
   const result = await prisma.$transaction(async (tx) => {
@@ -230,7 +243,13 @@ export async function handlePurchaseTickets(params: {
     });
 
     // Create tickets
-    const tickets = [];
+    const tickets: Array<{
+      ticketTypeId: string;
+      transactionId: string;
+      userId: string;
+      qrCode: string;
+      status: TicketStatus;
+    }> = [];
     for (const item of orderItems) {
       for (let i = 0; i < item.quantity; i++) {
         tickets.push({
@@ -238,7 +257,7 @@ export async function handlePurchaseTickets(params: {
           transactionId: transaction.id,
           userId,
           qrCode: generateUniqueCode(),
-          status: "ACTIVE", // Will be updated after payment
+          status: TicketStatus.ACTIVE, // Using enum value instead of string
         });
       }
     }

@@ -1,20 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "~/lib/hooks/use-auth";
+import { useSession } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
+import { useToast } from "~/components/ui/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import {
@@ -22,26 +16,73 @@ import {
   User,
   Mail,
   Phone,
-  MapPin,
-  Calendar,
   Edit,
   Save,
   Lock,
+  Loader2,
 } from "lucide-react";
+
+// User profile type
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  image: string | null;
+  role: string;
+  createdAt: string;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { data: session, status } = useSession();
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    phone: "081234567890", // Dummy data
-    address: "Jl. Contoh No. 123, Jakarta", // Dummy data
-    birthDate: "1990-01-01", // Dummy data
+    name: "",
+    email: "",
+    phone: "",
   });
+
+  // Fetch user profile from API
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (status === "loading") return;
+
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/buyer/profile");
+        const data = await response.json();
+
+        if (data.success) {
+          setProfile(data.data);
+          setFormData({
+            name: data.data.name || "",
+            email: data.data.email || "",
+            phone: data.data.phone || "",
+          });
+        } else {
+          console.error("Failed to fetch profile:", data.error);
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [session, status, router]);
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,12 +94,50 @@ export default function ProfilePage() {
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real implementation, this would update the user profile
-    // through an API call
-    console.log("Profile updated:", formData);
-    setIsEditing(false);
+    setIsSaving(true);
+
+    try {
+      // Update profile through API
+      const response = await fetch("/api/buyer/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          phone: formData.phone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update profile state
+        setProfile(data.data);
+        setIsEditing(false);
+        toast({
+          title: "Profile updated",
+          description: "Your profile has been updated successfully.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to update profile",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Handle password change
@@ -109,18 +188,22 @@ export default function ProfilePage() {
               <CardContent className="flex flex-col items-center pt-6 pb-6">
                 <Avatar className="mb-4 h-24 w-24">
                   <AvatarImage
-                    src={user?.image || "/avatars/default.jpg"}
-                    alt={user?.name || "User"}
+                    src={
+                      profile?.image ||
+                      session?.user?.image ||
+                      "/avatars/default.jpg"
+                    }
+                    alt={profile?.name || session?.user?.name || "User"}
                   />
                   <AvatarFallback className="bg-blue-100 text-xl text-blue-600">
-                    {user?.name?.charAt(0) || "U"}
+                    {(profile?.name || session?.user?.name || "U").charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <h2 className="text-xl font-semibold">
-                  {user?.name || "User"}
+                  {profile?.name || session?.user?.name || "User"}
                 </h2>
                 <p className="mt-1 text-gray-500">
-                  {user?.email || "user@example.com"}
+                  {profile?.email || session?.user?.email || "user@example.com"}
                 </p>
                 <div className="mt-4 w-full">
                   <div className="rounded-full bg-blue-100 px-3 py-1 text-center text-sm text-blue-800">
@@ -211,36 +294,9 @@ export default function ProfilePage() {
                               />
                             </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="birthDate">Tanggal Lahir</Label>
-                            <div className="flex items-center">
-                              <Calendar className="mr-2 h-4 w-4 text-blue-500" />
-                              <Input
-                                id="birthDate"
-                                name="birthDate"
-                                type="date"
-                                value={formData.birthDate}
-                                onChange={handleInputChange}
-                                disabled={!isEditing}
-                                className={!isEditing ? "bg-gray-50" : ""}
-                              />
-                            </div>
-                          </div>
+                          {/* Additional fields can be added here when the API supports them */}
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="address">Alamat</Label>
-                          <div className="flex items-center">
-                            <MapPin className="mr-2 h-4 w-4 text-blue-500" />
-                            <Input
-                              id="address"
-                              name="address"
-                              value={formData.address}
-                              onChange={handleInputChange}
-                              disabled={!isEditing}
-                              className={!isEditing ? "bg-gray-50" : ""}
-                            />
-                          </div>
-                        </div>
+                        {/* Address field can be added here when the API supports it */}
                       </div>
                       {isEditing && (
                         <div className="mt-6 flex justify-end">
@@ -249,10 +305,20 @@ export default function ProfilePage() {
                             variant="outline"
                             className="mr-2"
                             onClick={() => setIsEditing(false)}
+                            disabled={isSaving}
                           >
                             Batal
                           </Button>
-                          <Button type="submit">Simpan Perubahan</Button>
+                          <Button type="submit" disabled={isSaving}>
+                            {isSaving ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Menyimpan...
+                              </>
+                            ) : (
+                              "Simpan Perubahan"
+                            )}
+                          </Button>
                         </div>
                       )}
                     </form>

@@ -7,7 +7,7 @@ import {
   getPendingEvents,
   getPendingOrganizers,
   getEventStats,
-  getOrganizerStats
+  getOrganizerStats,
 } from "~/server/services/dashboard.service";
 import { formatDate } from "~/lib/utils";
 
@@ -32,11 +32,11 @@ export async function handleGetRecentEvents(limit?: number) {
     const events = await getRecentEvents(validLimit);
 
     // Transform data if needed
-    return events.map(event => ({
+    return events.map((event) => ({
       ...event,
       formattedStartDate: formatDate(event.startDate),
       formattedEndDate: formatDate(event.endDate),
-      formattedCreatedAt: formatDate(event.createdAt)
+      formattedCreatedAt: formatDate(event.createdAt),
     }));
   } catch (error) {
     console.error("Error getting recent events:", error);
@@ -53,11 +53,11 @@ export async function handleGetPendingEvents(limit?: number) {
     const events = await getPendingEvents(validLimit);
 
     // Transform data if needed
-    return events.map(event => ({
+    return events.map((event) => ({
       ...event,
       formattedStartDate: formatDate(event.startDate),
       formattedEndDate: formatDate(event.endDate),
-      formattedCreatedAt: formatDate(event.createdAt)
+      formattedCreatedAt: formatDate(event.createdAt),
     }));
   } catch (error) {
     console.error("Error getting pending events:", error);
@@ -86,10 +86,10 @@ export async function handleGetRecentOrganizers(limit?: number) {
     const organizers = await getRecentOrganizers(validLimit);
 
     // Transform data if needed
-    return organizers.map(organizer => ({
+    return organizers.map((organizer) => ({
       ...organizer,
       formattedCreatedAt: formatDate(organizer.createdAt),
-      eventsCount: organizer.events?.length || 0
+      eventsCount: organizer.events?.length || 0,
     }));
   } catch (error) {
     console.error("Error getting recent organizers:", error);
@@ -106,9 +106,9 @@ export async function handleGetPendingOrganizers(limit?: number) {
     const organizers = await getPendingOrganizers(validLimit);
 
     // Transform data if needed
-    return organizers.map(organizer => ({
+    return organizers.map((organizer) => ({
       ...organizer,
-      formattedCreatedAt: formatDate(organizer.createdAt)
+      formattedCreatedAt: formatDate(organizer.createdAt),
     }));
   } catch (error) {
     console.error("Error getting pending organizers:", error);
@@ -137,13 +137,13 @@ export async function handleGetRecentUsers(limit?: number) {
     const users = await getRecentUsers(validLimit);
 
     // Remove sensitive information
-    return users.map(user => ({
+    return users.map((user) => ({
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
       image: user.image,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
     }));
   } catch (error) {
     console.error("Error getting recent users:", error);
@@ -158,11 +158,17 @@ export async function handleGetSalesOverview() {
   try {
     const salesData = await getSalesOverview();
 
+    // Define the type for sales data items
+    interface SalesDataItem {
+      month: Date;
+      totalSales: number;
+    }
+
     // Format dates and additional processing if needed
-    return salesData.map(item => ({
+    return salesData.map((item: SalesDataItem) => ({
       ...item,
       formattedMonth: formatMonth(item.month),
-      totalSalesFormatted: formatCurrency(item.totalSales)
+      totalSalesFormatted: formatCurrency(item.totalSales),
     }));
   } catch (error) {
     console.error("Error getting sales overview:", error);

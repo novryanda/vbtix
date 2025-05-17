@@ -3,7 +3,7 @@
 import useSWR from "swr";
 import { ORGANIZER_ENDPOINTS } from "../endpoints";
 import { fetcher } from "../client"; // Import fetcher from client
-import { Event, PaginatedResponse, TicketType } from "~/lib/types";
+import type { Event, PaginatedResponse, TicketType } from "~/lib/types";
 
 // Hook to fetch organizer dashboard data
 export const useOrganizerDashboard = (organizerId: string) => {

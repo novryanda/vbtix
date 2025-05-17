@@ -91,7 +91,7 @@ export async function handleGetUserOrders(params: {
       venue: order.event.venue,
       organizer: order.event.organizer,
     },
-    items: order.orderItems.map(item => ({
+    items: order.orderItems.map((item) => ({
       id: item.id,
       quantity: item.quantity,
       price: Number(item.price),
@@ -212,20 +212,20 @@ export async function handleGetOrderById(params: {
       province: order.event.province,
       organizer: order.event.organizer,
     },
-    items: order.orderItems.map(item => ({
+    items: order.orderItems.map((item) => ({
       id: item.id,
       quantity: item.quantity,
       price: Number(item.price),
       subtotal: Number(item.price) * item.quantity,
       ticketType: item.ticketType,
     })),
-    tickets: order.tickets.map(ticket => ({
+    tickets: order.tickets.map((ticket) => ({
       id: ticket.id,
       qrCode: ticket.qrCode,
       status: ticket.status,
       checkedIn: ticket.checkedIn,
     })),
-    payments: order.payments.map(payment => ({
+    payments: order.payments.map((payment) => ({
       id: payment.id,
       gateway: payment.gateway,
       amount: Number(payment.amount),
@@ -275,7 +275,7 @@ export async function handleCancelOrder(params: {
     const updatedOrder = await tx.transaction.update({
       where: { id: orderId },
       data: {
-        status: "CANCELLED",
+        status: PaymentStatus.FAILED,
       },
     });
 
@@ -283,7 +283,7 @@ export async function handleCancelOrder(params: {
     await tx.ticket.updateMany({
       where: { transactionId: orderId },
       data: {
-        status: "CANCELLED",
+        status: "CANCELLED", // This is valid for TicketStatus
       },
     });
 

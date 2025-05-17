@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Metadata } from "next";
 import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -11,11 +10,6 @@ import { Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-
-export const metadata: Metadata = {
-  title: "Reset Password - VBTix",
-  description: "Reset password akun Anda",
-};
 
 // Schema validasi form reset password
 const resetPasswordSchema = z
