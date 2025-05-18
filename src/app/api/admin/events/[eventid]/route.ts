@@ -9,12 +9,12 @@ import { UserRole } from "@prisma/client";
 import { updateEventSchema } from "~/lib/validations/event.schema";
 
 /**
- * GET /api/admin/events/[eventid]
+ * GET /api/admin/events/[eventId]
  * Get event by ID
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { eventid: string } },
+  { params }: { params: { eventId: string } },
 ) {
   try {
     const session = await auth();
@@ -32,15 +32,15 @@ export async function GET(
       );
     }
 
-    const { eventid: id } = params;
-    const event = await handleGetEventById(id);
+    const { eventId } = params;
+    const event = await handleGetEventById(eventId);
 
     return NextResponse.json({
       success: true,
       data: event,
     });
   } catch (error: any) {
-    console.error(`Error getting event ${params?.eventid}:`, error); // Gunakan optional chaining
+    console.error(`Error getting event ${params?.eventId}:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -51,9 +51,13 @@ export async function GET(
   }
 }
 
+/**
+ * PUT /api/admin/events/[eventId]
+ * Update an event
+ */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { eventid: string } },
+  { params }: { params: { eventId: string } },
 ) {
   try {
     const session = await auth();
@@ -71,14 +75,13 @@ export async function PUT(
       );
     }
 
-    const { eventid: id } = params;
-
+    const { eventId } = params;
     const body = await request.json();
 
     try {
       const validatedData = updateEventSchema.parse(body);
       const updatedEvent = await handleUpdateEvent(
-        id,
+        eventId,
         validatedData,
         session.user.id,
       );
@@ -94,7 +97,7 @@ export async function PUT(
       );
     }
   } catch (error: any) {
-    console.error(`Error updating event ${params?.eventid}:`, error); // Gunakan optional chaining
+    console.error(`Error updating event ${params?.eventId}:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -105,9 +108,13 @@ export async function PUT(
   }
 }
 
+/**
+ * DELETE /api/admin/events/[eventId]
+ * Delete an event
+ */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { eventid: string } },
+  { params }: { params: { eventId: string } },
 ) {
   try {
     const session = await auth();
@@ -125,15 +132,15 @@ export async function DELETE(
       );
     }
 
-    const { eventid } = params;
-    await handleDeleteEvent(eventid, session.user.id);
+    const { eventId } = params;
+    await handleDeleteEvent(eventId, session.user.id);
 
     return NextResponse.json({
       success: true,
       message: "Event deleted successfully",
     });
   } catch (error: any) {
-    console.error(`Error deleting event ${params?.eventid}:`, error); // Gunakan optional chaining
+    console.error(`Error deleting event ${params?.eventId}:`, error);
     return NextResponse.json(
       {
         success: false,

@@ -152,26 +152,37 @@ export default function TicketsPage() {
   const TicketCard = ({ ticket }: { ticket: Ticket }) => (
     <Card className="overflow-hidden transition-all hover:shadow-md">
       <div className="relative h-32 w-full overflow-hidden bg-blue-600">
-        <img
-          src={
-            ticket.event.image || "https://placehold.co/400x200?text=No+Image"
-          }
-          alt={ticket.event.title}
-          className="h-full w-full object-cover opacity-30"
-        />
-        <div className="absolute inset-0 flex flex-col justify-center p-4 text-white">
-          <h3 className="mb-1 line-clamp-1 text-lg font-semibold">
-            {ticket.event.title}
-          </h3>
-          <div className="flex items-center text-sm">
-            <Calendar size={14} className="mr-1.5" />
-            <span>{ticket.event.date}</span>
-          </div>
-          <div className="flex items-center text-sm">
-            <MapPin size={14} className="mr-1.5" />
-            <span className="line-clamp-1">{ticket.event.location}</span>
-          </div>
-        </div>
+        {ticket.imageUrl ? (
+          <img
+            src={ticket.imageUrl}
+            alt={`Ticket for ${ticket.event.title}`}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <>
+            <img
+              src={
+                ticket.event.image ||
+                "https://placehold.co/400x200?text=No+Image"
+              }
+              alt={ticket.event.title}
+              className="h-full w-full object-cover opacity-30"
+            />
+            <div className="absolute inset-0 flex flex-col justify-center p-4 text-white">
+              <h3 className="mb-1 line-clamp-1 text-lg font-semibold">
+                {ticket.event.title}
+              </h3>
+              <div className="flex items-center text-sm">
+                <Calendar size={14} className="mr-1.5" />
+                <span>{ticket.event.date}</span>
+              </div>
+              <div className="flex items-center text-sm">
+                <MapPin size={14} className="mr-1.5" />
+                <span className="line-clamp-1">{ticket.event.location}</span>
+              </div>
+            </div>
+          </>
+        )}
         <div className="absolute top-2 right-2">
           {getStatusBadge(ticket.status)}
         </div>

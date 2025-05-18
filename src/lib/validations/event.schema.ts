@@ -165,10 +165,16 @@ export const eventQuerySchema = z.object({
     .union([z.string(), z.null()])
     .optional()
     .transform((val) => {
-      if (!val) return undefined;
+      console.log("Validating status:", val);
+      if (!val) {
+        console.log("Status is empty, returning undefined");
+        return undefined;
+      }
       if (Object.values(EventStatus).includes(val as EventStatus)) {
+        console.log("Status is valid:", val);
         return val as EventStatus;
       }
+      console.log("Status is invalid, returning undefined");
       return undefined;
     }),
   organizerId: z.union([z.string(), z.null()]).optional(),

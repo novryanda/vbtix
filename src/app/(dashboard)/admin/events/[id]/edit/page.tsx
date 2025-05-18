@@ -2,16 +2,14 @@
 import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Save } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Save } from "lucide-react";
 import { useAdminEventDetail } from "~/lib/api/hooks/admin";
-import {
-  EventDetailSkeleton,
-  EventDetailErrorState,
-} from "~/components/dashboard/admin/event-detail-loading";
+import { EventDetailErrorState } from "~/components/dashboard/admin/event-detail-loading";
 import { AdminRoute } from "~/components/auth/admin-route";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Textarea } from "~/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -40,6 +38,8 @@ const EVENT_STATUS_OPTIONS = [
   { value: "PENDING_REVIEW", label: "Pending Review" },
   { value: "PUBLISHED", label: "Published" },
   { value: "REJECTED", label: "Rejected" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
 // Define category options (example)
@@ -223,346 +223,363 @@ export default function EditEventPage({
     }
   };
 
-  const renderContent = () => {
-    if (isEventLoading) {
-      return <EventDetailSkeleton />;
-    }
-
-    if (eventError || !event) {
-      return (
-        <EventDetailErrorState message="Failed to load event details. Please try again later." />
-      );
-    }
-
+  // Loading state
+  if (isEventLoading) {
     return (
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold tracking-tight">Edit Event</h2>
-          <Button type="submit" disabled={isSubmitting}>
-            <Save className="mr-2 h-4 w-4" />
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </Button>
+      <AdminRoute>
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <div className="px-4 lg:px-6">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <h1 className="text-2xl font-semibold">Edit Event</h1>
+            </div>
+            <div className="flex items-center justify-center p-8">
+              <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
+            </div>
+          </div>
         </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-              <CardDescription>
-                Edit the basic details of your event
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Title */}
-              <div className="space-y-2">
-                <Label htmlFor="title">Event Title</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  placeholder="Enter event title"
-                  required
-                />
-              </div>
-
-              {/* Venue */}
-              <div className="space-y-2">
-                <Label htmlFor="venue">Venue</Label>
-                <Input
-                  id="venue"
-                  name="venue"
-                  value={formData.venue}
-                  onChange={handleInputChange}
-                  placeholder="Enter venue name"
-                  required
-                />
-              </div>
-
-              {/* Address */}
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  placeholder="Enter address"
-                />
-              </div>
-
-              {/* City */}
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  placeholder="Enter city"
-                />
-              </div>
-
-              {/* Province */}
-              <div className="space-y-2">
-                <Label htmlFor="province">Province</Label>
-                <Input
-                  id="province"
-                  name="province"
-                  value={formData.province}
-                  onChange={handleInputChange}
-                  placeholder="Enter province"
-                  required
-                />
-              </div>
-
-              {/* Country */}
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleInputChange}
-                  placeholder="Enter country"
-                  required
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Additional Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Additional Information</CardTitle>
-              <CardDescription>
-                Edit additional details of your event
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Category */}
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) =>
-                    handleSelectChange("category", value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleSelectChange("status", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EVENT_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Start Date */}
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.startDate ? (
-                        format(formData.startDate, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.startDate}
-                      onSelect={(date) => handleDateChange("startDate", date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* End Date */}
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.endDate ? (
-                        format(formData.endDate, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.endDate}
-                      onSelect={(date) => handleDateChange("endDate", date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Enter event description"
-                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-[100px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Read-only Information */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Organizer Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Organizer Information</CardTitle>
-              <CardDescription>Organizer details (read-only)</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Organizer Name */}
-              <div className="space-y-2">
-                <Label htmlFor="organizerName">Organizer Name</Label>
-                <Input
-                  id="organizerName"
-                  value={formData.organizerName}
-                  readOnly
-                  disabled
-                />
-              </div>
-
-              {/* Organizer ID */}
-              <div className="space-y-2">
-                <Label htmlFor="organizerId">Organizer ID</Label>
-                <Input
-                  id="organizerId"
-                  value={formData.organizerId}
-                  readOnly
-                  disabled
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Event Statistics */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Event Statistics</CardTitle>
-              <CardDescription>
-                Event statistics (for display purposes only)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Total Capacity */}
-              <div className="space-y-2">
-                <Label htmlFor="totalCapacity">Total Capacity</Label>
-                <Input
-                  id="totalCapacity"
-                  name="totalCapacity"
-                  type="number"
-                  value={statistics.totalCapacity}
-                  onChange={handleStatisticsChange}
-                  min="0"
-                />
-              </div>
-
-              {/* Tickets Sold */}
-              <div className="space-y-2">
-                <Label htmlFor="totalTicketsSold">Tickets Sold</Label>
-                <Input
-                  id="totalTicketsSold"
-                  name="totalTicketsSold"
-                  type="number"
-                  value={statistics.totalTicketsSold}
-                  onChange={handleStatisticsChange}
-                  min="0"
-                />
-              </div>
-
-              {/* Revenue */}
-              <div className="space-y-2">
-                <Label htmlFor="totalRevenue">Revenue</Label>
-                <div className="relative">
-                  <span className="absolute top-1/2 left-3 -translate-y-1/2">
-                    Rp
-                  </span>
-                  <Input
-                    id="totalRevenue"
-                    name="totalRevenue"
-                    className="pl-10"
-                    value={statistics.totalRevenue.toLocaleString()}
-                    onChange={handleRevenueChange}
-                  />
-                </div>
-              </div>
-
-              {/* Transactions */}
-              <div className="space-y-2">
-                <Label htmlFor="totalTransactions">Transactions</Label>
-                <Input
-                  id="totalTransactions"
-                  name="totalTransactions"
-                  type="number"
-                  value={statistics.totalTransactions}
-                  onChange={handleStatisticsChange}
-                  min="0"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </form>
+      </AdminRoute>
     );
-  };
+  }
+
+  // Error state
+  if (eventError || !event) {
+    return (
+      <AdminRoute>
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <div className="px-4 lg:px-6">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <h1 className="text-2xl font-semibold">Edit Event</h1>
+            </div>
+            <EventDetailErrorState message="Failed to load event details. Please try again later." />
+          </div>
+        </div>
+      </AdminRoute>
+    );
+  }
 
   return (
     <AdminRoute>
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-        <div className="px-4 lg:px-6">{renderContent()}</div>
+        <div className="px-4 lg:px-6">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl font-semibold">Edit Event</h1>
+          </div>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Event Details</CardTitle>
+              <CardDescription>Update your event information</CardDescription>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Basic Information */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Event Title</Label>
+                      <Input
+                        id="title"
+                        name="title"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        placeholder="Enter event title"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        placeholder="Enter event description"
+                        rows={5}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="category">Category</Label>
+                        <Select
+                          value={formData.category}
+                          onValueChange={(value) =>
+                            handleSelectChange("category", value)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CATEGORY_OPTIONS.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="status">Status</Label>
+                        <Select
+                          value={formData.status}
+                          onValueChange={(value) =>
+                            handleSelectChange("status", value)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EVENT_STATUS_OPTIONS.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Location and Date Information */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="venue">Venue</Label>
+                      <Input
+                        id="venue"
+                        name="venue"
+                        value={formData.venue}
+                        onChange={handleInputChange}
+                        placeholder="Enter venue name"
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="address">Address</Label>
+                        <Input
+                          id="address"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          placeholder="Enter address"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          name="city"
+                          value={formData.city}
+                          onChange={handleInputChange}
+                          placeholder="Enter city"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="province">Province</Label>
+                        <Input
+                          id="province"
+                          name="province"
+                          value={formData.province}
+                          onChange={handleInputChange}
+                          placeholder="Enter province"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="country">Country</Label>
+                        <Input
+                          id="country"
+                          name="country"
+                          value={formData.country}
+                          onChange={handleInputChange}
+                          placeholder="Enter country"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Start Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {formData.startDate ? (
+                                format(formData.startDate, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={formData.startDate}
+                              onSelect={(date) =>
+                                handleDateChange("startDate", date)
+                              }
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>End Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {formData.endDate ? (
+                                format(formData.endDate, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={formData.endDate}
+                              onSelect={(date) =>
+                                handleDateChange("endDate", date)
+                              }
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Organizer Information (Read-only) */}
+                <div className="border-t pt-6">
+                  <h3 className="mb-4 text-lg font-medium">
+                    Organizer Information (Read-only)
+                  </h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="organizerName">Organizer Name</Label>
+                      <Input
+                        id="organizerName"
+                        value={formData.organizerName}
+                        readOnly
+                        disabled
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="organizerId">Organizer ID</Label>
+                      <Input
+                        id="organizerId"
+                        value={formData.organizerId}
+                        readOnly
+                        disabled
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event Statistics (Read-only) */}
+                <div className="border-t pt-6">
+                  <h3 className="mb-4 text-lg font-medium">
+                    Event Statistics (Read-only)
+                  </h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="totalCapacity">Total Capacity</Label>
+                      <Input
+                        id="totalCapacity"
+                        name="totalCapacity"
+                        type="number"
+                        value={statistics.totalCapacity}
+                        onChange={handleStatisticsChange}
+                        min="0"
+                        readOnly
+                        disabled
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="totalTicketsSold">Tickets Sold</Label>
+                      <Input
+                        id="totalTicketsSold"
+                        name="totalTicketsSold"
+                        type="number"
+                        value={statistics.totalTicketsSold}
+                        onChange={handleStatisticsChange}
+                        min="0"
+                        readOnly
+                        disabled
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="totalRevenue">Revenue</Label>
+                      <div className="relative">
+                        <span className="absolute top-1/2 left-3 -translate-y-1/2">
+                          Rp
+                        </span>
+                        <Input
+                          id="totalRevenue"
+                          name="totalRevenue"
+                          className="pl-10"
+                          value={statistics.totalRevenue.toLocaleString()}
+                          onChange={handleRevenueChange}
+                          readOnly
+                          disabled
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="totalTransactions">Transactions</Label>
+                      <Input
+                        id="totalTransactions"
+                        name="totalTransactions"
+                        type="number"
+                        value={statistics.totalTransactions}
+                        onChange={handleStatisticsChange}
+                        min="0"
+                        readOnly
+                        disabled
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-end border-t p-6">
+                <Button type="submit" disabled={isSubmitting}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        </div>
       </div>
     </AdminRoute>
   );

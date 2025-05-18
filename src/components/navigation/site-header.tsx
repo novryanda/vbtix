@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { LogOut, User, Bell } from "lucide-react";
+import { LogOut, User, Bell, Settings } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
@@ -19,6 +19,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { cn } from "~/lib/utils";
+import { UserRole } from "@prisma/client";
 
 // Map of path segments to display names
 const pathMap: Record<string, string> = {
@@ -41,6 +42,7 @@ interface SiteHeaderProps {
 export function SiteHeader({ className }: SiteHeaderProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
 
   // Parse the pathname to create breadcrumb segments
   const segments = pathname.split("/").filter(Boolean);
@@ -142,9 +144,63 @@ export function SiteHeader({ className }: SiteHeaderProps) {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
+                {session?.user?.role === UserRole.ADMIN && (
+                  <DropdownMenuItem
+                    onClick={() => router.push("/admin/profile")}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                )}
+                {session?.user?.role === UserRole.ORGANIZER && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      // Get organizer ID from pathname
+                      const segments = pathname.split("/");
+                      const organizerId = segments.find(
+                        (segment, index) =>
+                          segments[index - 1] === "organizer" &&
+                          segment !== "dashboard",
+                      );
+
+                      if (organizerId) {
+                        router.push(`/organizer/${organizerId}/profile`);
+                      }
+                    }}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                )}
+                {session?.user?.role === UserRole.BUYER && (
+                  <DropdownMenuItem
+                    onClick={() => router.push("/buyer/profile")}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (session?.user?.role === UserRole.ADMIN) {
+                      router.push("/admin/settings");
+                    } else if (session?.user?.role === UserRole.ORGANIZER) {
+                      // Get organizer ID from pathname
+                      const segments = pathname.split("/");
+                      const organizerId = segments.find(
+                        (segment, index) =>
+                          segments[index - 1] === "organizer" &&
+                          segment !== "dashboard",
+                      );
+
+                      if (organizerId) {
+                        router.push(`/organizer/${organizerId}/settings`);
+                      }
+                    }
+                  }}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

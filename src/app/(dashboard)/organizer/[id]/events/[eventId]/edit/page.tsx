@@ -3,9 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useOrganizerEventDetail } from "~/lib/api/hooks/organizer";
-import { AppSidebar } from "~/components/dashboard/organizer/app-sidebar";
-import { SiteHeader } from "~/components/dashboard/organizer/site-header";
-import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import { OrganizerRoute } from "~/components/auth/organizer-route";
 import { Button } from "~/components/ui/button";
 import {
@@ -217,102 +214,9 @@ export default function EditEventPage() {
   if (isLoading) {
     return (
       <OrganizerRoute>
-        <SidebarProvider>
-          <AppSidebar variant="inset" />
-          <SidebarInset>
-            <SiteHeader />
-            <div className="flex flex-1 flex-col">
-              <div className="@container/main flex flex-1 flex-col gap-2">
-                <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                  <div className="px-4 lg:px-6">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.back()}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <h1 className="text-2xl font-semibold">Edit Event</h1>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center p-8">
-                    <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
-      </OrganizerRoute>
-    );
-  }
-
-  // Error state
-  if (error || !event) {
-    return (
-      <OrganizerRoute>
-        <SidebarProvider>
-          <AppSidebar variant="inset" />
-          <SidebarInset>
-            <SiteHeader />
-            <div className="flex flex-1 flex-col">
-              <div className="@container/main flex flex-1 flex-col gap-2">
-                <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                  <div className="px-4 lg:px-6">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.back()}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <h1 className="text-2xl font-semibold">Edit Event</h1>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                    <h3 className="mb-2 text-lg font-semibold">
-                      Error loading event
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      {error?.message ||
-                        "Failed to load event details. Please try again."}
-                    </p>
-                    <div className="mt-4 flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => router.refresh()}
-                      >
-                        Try Again
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          router.push(`/organizer/${organizerId}/events`)
-                        }
-                      >
-                        Back to Events
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
-      </OrganizerRoute>
-    );
-  }
-
-  // Main form
-  return (
-    <OrganizerRoute>
-      <SidebarProvider>
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader />
+        <div className="flex min-h-screen flex-col">
           <div className="flex flex-1 flex-col">
-            <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="container flex flex-1 flex-col gap-2 pt-4">
               <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                 <div className="px-4 lg:px-6">
                   <div className="flex items-center gap-2">
@@ -326,194 +230,272 @@ export default function EditEventPage() {
                     <h1 className="text-2xl font-semibold">Edit Event</h1>
                   </div>
                 </div>
-
-                <div className="px-4 lg:px-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Event Details</CardTitle>
-                      <CardDescription>
-                        Update your event information
-                      </CardDescription>
-                    </CardHeader>
-                    <form onSubmit={handleSubmit}>
-                      {formError && (
-                        <div className="mx-6 mb-4 rounded-md bg-red-50 p-3 text-sm text-red-500">
-                          {formError}
-                        </div>
-                      )}
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="title">Event Title</Label>
-                          <Input
-                            id="title"
-                            name="title"
-                            value={formData.title}
-                            onChange={handleChange}
-                            required
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea
-                            id="description"
-                            name="description"
-                            value={formData.description}
-                            onChange={handleChange}
-                            rows={5}
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="startDate">Start Date</Label>
-                            <div className="flex items-center gap-2">
-                              <CalendarDays className="text-muted-foreground h-4 w-4" />
-                              <Input
-                                id="startDate"
-                                name="startDate"
-                                type="date"
-                                value={formData.startDate}
-                                onChange={handleChange}
-                                required
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="startTime">Start Time</Label>
-                            <div className="flex items-center gap-2">
-                              <Clock className="text-muted-foreground h-4 w-4" />
-                              <Input
-                                id="startTime"
-                                name="startTime"
-                                type="time"
-                                value={formData.startTime}
-                                onChange={handleChange}
-                                required
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="endDate">End Date</Label>
-                            <div className="flex items-center gap-2">
-                              <CalendarDays className="text-muted-foreground h-4 w-4" />
-                              <Input
-                                id="endDate"
-                                name="endDate"
-                                type="date"
-                                value={formData.endDate}
-                                onChange={handleChange}
-                                required
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="endTime">End Time</Label>
-                            <div className="flex items-center gap-2">
-                              <Clock className="text-muted-foreground h-4 w-4" />
-                              <Input
-                                id="endTime"
-                                name="endTime"
-                                type="time"
-                                value={formData.endTime}
-                                onChange={handleChange}
-                                required
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                          <div className="space-y-2">
-                            <Label htmlFor="venue">Venue</Label>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="text-muted-foreground h-4 w-4" />
-                              <Input
-                                id="venue"
-                                name="venue"
-                                value={formData.venue}
-                                onChange={handleChange}
-                                required
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="city">City</Label>
-                            <Input
-                              id="city"
-                              name="city"
-                              value={formData.city}
-                              onChange={handleChange}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="province">Province</Label>
-                            <Input
-                              id="province"
-                              name="province"
-                              value={formData.province}
-                              onChange={handleChange}
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="category">Category</Label>
-                            <Input
-                              id="category"
-                              name="category"
-                              value={formData.category}
-                              onChange={handleChange}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="status">Status</Label>
-                            <Select
-                              value={formData.status}
-                              onValueChange={handleStatusChange}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value={EventStatus.DRAFT}>
-                                  Draft
-                                </SelectItem>
-                                <SelectItem value={EventStatus.PUBLISHED}>
-                                  Published
-                                </SelectItem>
-                                <SelectItem value={EventStatus.CANCELLED}>
-                                  Cancelled
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex justify-between">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => router.back()}
-                        >
-                          Cancel
-                        </Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                          <Save className="mr-2 h-4 w-4" />
-                          {isSubmitting ? "Saving..." : "Save Changes"}
-                        </Button>
-                      </CardFooter>
-                    </form>
-                  </Card>
+                <div className="flex items-center justify-center p-8">
+                  <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
                 </div>
               </div>
             </div>
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+      </OrganizerRoute>
+    );
+  }
+
+  // Error state
+  if (error || !event) {
+    return (
+      <OrganizerRoute>
+        <div className="flex min-h-screen flex-col">
+          <div className="flex flex-1 flex-col">
+            <div className="container flex flex-1 flex-col gap-2 pt-4">
+              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                <div className="px-4 lg:px-6">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => router.back()}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <h1 className="text-2xl font-semibold">Edit Event</h1>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                  <h3 className="mb-2 text-lg font-semibold">
+                    Error loading event
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    {error?.message ||
+                      "Failed to load event details. Please try again."}
+                  </p>
+                  <div className="mt-4 flex gap-2">
+                    <Button variant="outline" onClick={() => router.refresh()}>
+                      Try Again
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        router.push(`/organizer/${organizerId}/events`)
+                      }
+                    >
+                      Back to Events
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </OrganizerRoute>
+    );
+  }
+
+  // Main form
+  return (
+    <OrganizerRoute>
+      <div className="flex min-h-screen flex-col">
+        <div className="flex flex-1 flex-col">
+          <div className="container flex flex-1 flex-col gap-2 pt-4">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <div className="px-4 lg:px-6">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => router.back()}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <h1 className="text-2xl font-semibold">Edit Event</h1>
+                </div>
+              </div>
+
+              <div className="px-4 lg:px-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Event Details</CardTitle>
+                    <CardDescription>
+                      Update your event information
+                    </CardDescription>
+                  </CardHeader>
+                  <form onSubmit={handleSubmit}>
+                    {formError && (
+                      <div className="mx-6 mb-4 rounded-md bg-red-50 p-3 text-sm text-red-500">
+                        {formError}
+                      </div>
+                    )}
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="title">Event Title</Label>
+                        <Input
+                          id="title"
+                          name="title"
+                          value={formData.title}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          name="description"
+                          value={formData.description}
+                          onChange={handleChange}
+                          rows={5}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="startDate">Start Date</Label>
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="text-muted-foreground h-4 w-4" />
+                            <Input
+                              id="startDate"
+                              name="startDate"
+                              type="date"
+                              value={formData.startDate}
+                              onChange={handleChange}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="startTime">Start Time</Label>
+                          <div className="flex items-center gap-2">
+                            <Clock className="text-muted-foreground h-4 w-4" />
+                            <Input
+                              id="startTime"
+                              name="startTime"
+                              type="time"
+                              value={formData.startTime}
+                              onChange={handleChange}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="endDate">End Date</Label>
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="text-muted-foreground h-4 w-4" />
+                            <Input
+                              id="endDate"
+                              name="endDate"
+                              type="date"
+                              value={formData.endDate}
+                              onChange={handleChange}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="endTime">End Time</Label>
+                          <div className="flex items-center gap-2">
+                            <Clock className="text-muted-foreground h-4 w-4" />
+                            <Input
+                              id="endTime"
+                              name="endTime"
+                              type="time"
+                              value={formData.endTime}
+                              onChange={handleChange}
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="venue">Venue</Label>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="text-muted-foreground h-4 w-4" />
+                            <Input
+                              id="venue"
+                              name="venue"
+                              value={formData.venue}
+                              onChange={handleChange}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="city">City</Label>
+                          <Input
+                            id="city"
+                            name="city"
+                            value={formData.city}
+                            onChange={handleChange}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="province">Province</Label>
+                          <Input
+                            id="province"
+                            name="province"
+                            value={formData.province}
+                            onChange={handleChange}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="category">Category</Label>
+                          <Input
+                            id="category"
+                            name="category"
+                            value={formData.category}
+                            onChange={handleChange}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="status">Status</Label>
+                          <Select
+                            value={formData.status}
+                            onValueChange={handleStatusChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={EventStatus.DRAFT}>
+                                Draft
+                              </SelectItem>
+                              <SelectItem value={EventStatus.PUBLISHED}>
+                                Published
+                              </SelectItem>
+                              <SelectItem value={EventStatus.CANCELLED}>
+                                Cancelled
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => router.back()}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={isSubmitting}>
+                        <Save className="mr-2 h-4 w-4" />
+                        {isSubmitting ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </CardFooter>
+                  </form>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </OrganizerRoute>
   );
 }

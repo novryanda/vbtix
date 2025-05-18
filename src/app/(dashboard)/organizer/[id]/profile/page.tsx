@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -20,7 +19,11 @@ import {
   Save,
   Lock,
   Loader2,
+  Building,
+  CreditCard,
+  Globe,
 } from "lucide-react";
+import { OrganizerRoute } from "~/components/auth/organizer-route";
 
 // User profile type
 interface UserProfile {
@@ -31,10 +34,20 @@ interface UserProfile {
   image: string | null;
   role: string;
   createdAt: string;
+  organizer?: {
+    id: string;
+    orgName: string;
+    legalName: string | null;
+    npwp: string | null;
+    verified: boolean;
+    socialMedia: any | null;
+  };
 }
 
-export default function ProfilePage() {
+export default function OrganizerProfilePage() {
   const router = useRouter();
+  const params = useParams();
+  const organizerId = params.id as string;
   const { data: session, status } = useSession();
   // Using sonner toast directly
   const [isEditing, setIsEditing] = useState(false);
@@ -47,6 +60,9 @@ export default function ProfilePage() {
     name: "",
     email: "",
     phone: "",
+    orgName: "",
+    legalName: "",
+    npwp: "",
   });
 
   // Fetch user profile from API
@@ -61,6 +77,7 @@ export default function ProfilePage() {
 
       try {
         setIsLoading(true);
+        // Using the buyer profile API for now, will be replaced with organizer-specific API
         const response = await fetch("/api/buyer/profile");
         const data = await response.json();
 
@@ -70,6 +87,9 @@ export default function ProfilePage() {
             name: data.data.name || "",
             email: data.data.email || "",
             phone: data.data.phone || "",
+            orgName: data.data.organizer?.orgName || "",
+            legalName: data.data.organizer?.legalName || "",
+            npwp: data.data.organizer?.npwp || "",
           });
         } else {
           console.error("Failed to fetch profile:", data.error);
@@ -84,22 +104,23 @@ export default function ProfilePage() {
     fetchProfile();
   }, [session, status, router]);
 
-  // Handle form input changes
+  // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
+    if (!isEditing) {
+      setIsEditing(true);
+      return;
+    }
 
     try {
-      // Update profile through API
+      setIsSaving(true);
+      // Using the buyer profile API for now, will be replaced with organizer-specific API
       const response = await fetch("/api/buyer/profile", {
         method: "PUT",
         headers: {
@@ -129,49 +150,38 @@ export default function ProfilePage() {
     }
   };
 
-  // Handle password change
-  const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real implementation, this would update the user's password
-    console.log("Password change requested");
-  };
-
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-blue-600"></div>
-        </div>
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="text-primary h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-blue-50 pb-16">
-      {/* Back button */}
-      <div className="bg-blue-600 shadow-md">
-        <div className="container mx-auto px-4 py-4">
-          <Link
-            href="/buyer"
-            className="inline-flex items-center text-white hover:text-blue-100"
-          >
-            <ArrowLeft size={16} className="mr-2" />
-            <span>Kembali ke Dashboard</span>
-          </Link>
-        </div>
-      </div>
-
+    <OrganizerRoute>
       <div className="container mx-auto px-4 py-8">
-        <h1 className="mb-6 text-2xl font-bold">Profil Saya</h1>
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">My Profile</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.back()}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           {/* Left Column - Profile Card */}
           <div className="md:col-span-1">
-            <Card className="border-blue-200 bg-white shadow-md">
-              <CardHeader className="border-b border-blue-200 bg-blue-600 text-white">
+            <Card>
+              <CardHeader>
                 <CardTitle className="flex items-center">
                   <User className="mr-2 h-5 w-5" />
-                  Profil
+                  Profile
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col items-center pt-6 pb-6">
@@ -184,21 +194,42 @@ export default function ProfilePage() {
                     }
                     alt={profile?.name || session?.user?.name || "User"}
                   />
-                  <AvatarFallback className="bg-blue-100 text-xl text-blue-600">
+                  <AvatarFallback>
                     {(profile?.name || session?.user?.name || "U").charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <h2 className="text-xl font-semibold">
                   {profile?.name || session?.user?.name || "User"}
                 </h2>
-                <p className="mt-1 text-gray-500">
+                <p className="text-muted-foreground mt-1">
                   {profile?.email || session?.user?.email || "user@example.com"}
                 </p>
                 <div className="mt-4 w-full">
-                  <div className="rounded-full bg-blue-100 px-3 py-1 text-center text-sm text-blue-800">
-                    Buyer
+                  <div className="bg-primary/10 text-primary flex items-center justify-center gap-2 rounded-full px-3 py-1 text-center text-sm">
+                    <Building className="h-4 w-4" />
+                    Organizer
                   </div>
                 </div>
+                {profile?.organizer?.verified && (
+                  <div className="mt-2 w-full">
+                    <div className="flex items-center justify-center gap-2 rounded-full bg-green-100 px-3 py-1 text-center text-sm text-green-700">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                        <path d="m9 12 2 2 4-4" />
+                      </svg>
+                      Verified
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -206,31 +237,32 @@ export default function ProfilePage() {
           {/* Right Column - Profile Details */}
           <div className="md:col-span-2">
             <Tabs defaultValue="personal" className="w-full">
-              <TabsList className="mb-6 grid w-full grid-cols-2">
-                <TabsTrigger value="personal">Informasi Pribadi</TabsTrigger>
-                <TabsTrigger value="security">Keamanan</TabsTrigger>
+              <TabsList className="mb-6 grid w-full grid-cols-3">
+                <TabsTrigger value="personal">Personal</TabsTrigger>
+                <TabsTrigger value="organization">Organization</TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
               </TabsList>
 
               <TabsContent value="personal">
-                <Card className="border-blue-200 bg-white shadow-md">
-                  <CardHeader className="border-b border-blue-200 bg-blue-600 text-white">
+                <Card>
+                  <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                       <div className="flex items-center">
                         <User className="mr-2 h-5 w-5" />
-                        Informasi Pribadi
+                        Personal Information
                       </div>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="text-white hover:bg-blue-700"
                         onClick={() => setIsEditing(!isEditing)}
+                        disabled={isSaving}
                       >
                         {isEditing ? (
                           <Save className="mr-1 h-4 w-4" />
                         ) : (
                           <Edit className="mr-1 h-4 w-4" />
                         )}
-                        {isEditing ? "Simpan" : "Edit"}
+                        {isEditing ? "Save" : "Edit"}
                       </Button>
                     </CardTitle>
                   </CardHeader>
@@ -239,53 +271,51 @@ export default function ProfilePage() {
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
-                            <Label htmlFor="name">Nama Lengkap</Label>
+                            <Label htmlFor="name">Full Name</Label>
                             <div className="flex items-center">
-                              <User className="mr-2 h-4 w-4 text-blue-500" />
+                              <User className="text-muted-foreground mr-2 h-4 w-4" />
                               <Input
                                 id="name"
                                 name="name"
                                 value={formData.name}
                                 onChange={handleInputChange}
-                                disabled={!isEditing}
-                                className={!isEditing ? "bg-gray-50" : ""}
+                                disabled={!isEditing || isSaving}
+                                className={!isEditing ? "bg-muted/50" : ""}
                               />
                             </div>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <div className="flex items-center">
-                              <Mail className="mr-2 h-4 w-4 text-blue-500" />
+                              <Mail className="text-muted-foreground mr-2 h-4 w-4" />
                               <Input
                                 id="email"
                                 name="email"
                                 type="email"
                                 value={formData.email}
                                 onChange={handleInputChange}
-                                disabled={!isEditing}
-                                className={!isEditing ? "bg-gray-50" : ""}
+                                disabled={true}
+                                className="bg-muted/50"
                               />
                             </div>
                           </div>
                         </div>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
-                            <Label htmlFor="phone">Nomor Telepon</Label>
+                            <Label htmlFor="phone">Phone Number</Label>
                             <div className="flex items-center">
-                              <Phone className="mr-2 h-4 w-4 text-blue-500" />
+                              <Phone className="text-muted-foreground mr-2 h-4 w-4" />
                               <Input
                                 id="phone"
                                 name="phone"
                                 value={formData.phone}
                                 onChange={handleInputChange}
-                                disabled={!isEditing}
-                                className={!isEditing ? "bg-gray-50" : ""}
+                                disabled={!isEditing || isSaving}
+                                className={!isEditing ? "bg-muted/50" : ""}
                               />
                             </div>
                           </div>
-                          {/* Additional fields can be added here when the API supports them */}
                         </div>
-                        {/* Address field can be added here when the API supports it */}
                       </div>
                       {isEditing && (
                         <div className="mt-6 flex justify-end">
@@ -296,17 +326,13 @@ export default function ProfilePage() {
                             onClick={() => setIsEditing(false)}
                             disabled={isSaving}
                           >
-                            Batal
+                            Cancel
                           </Button>
                           <Button type="submit" disabled={isSaving}>
-                            {isSaving ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Menyimpan...
-                              </>
-                            ) : (
-                              "Simpan Perubahan"
+                            {isSaving && (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             )}
+                            Save Changes
                           </Button>
                         </div>
                       )}
@@ -315,53 +341,73 @@ export default function ProfilePage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="security">
-                <Card className="border-blue-200 bg-white shadow-md">
-                  <CardHeader className="border-b border-blue-200 bg-blue-600 text-white">
+              <TabsContent value="organization">
+                <Card>
+                  <CardHeader>
                     <CardTitle className="flex items-center">
-                      <Lock className="mr-2 h-5 w-5" />
-                      Keamanan Akun
+                      <Building className="mr-2 h-5 w-5" />
+                      Organization Details
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6">
-                    <form onSubmit={handlePasswordChange}>
-                      <div className="space-y-4">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor="currentPassword">
-                            Password Saat Ini
-                          </Label>
+                          <Label htmlFor="orgName">Organization Name</Label>
                           <Input
-                            id="currentPassword"
-                            name="currentPassword"
-                            type="password"
-                            placeholder="Masukkan password saat ini"
+                            id="orgName"
+                            name="orgName"
+                            value={formData.orgName}
+                            disabled={true}
+                            className="bg-muted/50"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="newPassword">Password Baru</Label>
+                          <Label htmlFor="legalName">Legal Name</Label>
                           <Input
-                            id="newPassword"
-                            name="newPassword"
-                            type="password"
-                            placeholder="Masukkan password baru"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="confirmPassword">
-                            Konfirmasi Password Baru
-                          </Label>
-                          <Input
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            type="password"
-                            placeholder="Konfirmasi password baru"
+                            id="legalName"
+                            name="legalName"
+                            value={formData.legalName}
+                            disabled={true}
+                            className="bg-muted/50"
                           />
                         </div>
                       </div>
-                      <div className="mt-6">
-                        <Button type="submit">Ubah Password</Button>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="npwp">NPWP</Label>
+                          <Input
+                            id="npwp"
+                            name="npwp"
+                            value={formData.npwp}
+                            disabled={true}
+                            className="bg-muted/50"
+                          />
+                        </div>
                       </div>
-                    </form>
+                      <p className="text-muted-foreground text-sm">
+                        To update organization details, please contact support.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="security">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Lock className="mr-2 h-5 w-5" />
+                      Security Settings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <p className="text-muted-foreground">
+                        Password management and security settings will be
+                        implemented in a future update.
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -369,6 +415,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    </main>
+    </OrganizerRoute>
   );
 }

@@ -1,15 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   useOrganizerEventDetail,
   useEventTickets,
 } from "~/lib/api/hooks/organizer";
-import { AppSidebar } from "~/components/dashboard/organizer/app-sidebar";
-import { SiteHeader } from "~/components/dashboard/organizer/site-header";
-import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
-import { OrganizerRoute } from "~/components/auth/organizer-route";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -21,6 +17,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
+import { Checkbox } from "~/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -45,6 +42,7 @@ import {
   Ticket,
   Trash,
   AlertCircle,
+  MoreHorizontal,
 } from "lucide-react";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { formatCurrency } from "~/lib/utils";
@@ -59,11 +57,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import { DeferredTicketImageUpload } from "~/components/ui/deferred-ticket-image-upload";
+import { Separator } from "~/components/ui/separator";
 
 export default function EventTicketsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string; eventId: string }>;
 }) {
   const router = useRouter();
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
@@ -74,16 +82,31 @@ export default function EventTicketsPage({
     description: "",
     price: "",
     quantity: "",
+    maxPerPurchase: "10",
+    isVisible: true,
+    allowTransfer: false,
+    ticketFeatures: "",
+    perks: "",
+    earlyBirdDeadline: "",
+    saleStartDate: "",
+    saleEndDate: "",
   });
+  const [ticketImage, setTicketImage] = useState<File | null>(null);
+  const [ticketImagePreview, setTicketImagePreview] = useState<string | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // Unwrap params with React.use()
+  const { id, eventId } = React.use(params);
 
   // Fetch event details
   const {
     data: eventData,
     isLoading: isEventLoading,
     error: eventError,
-  } = useOrganizerEventDetail(params.id);
+  } = useOrganizerEventDetail(id, eventId);
   const event = eventData?.data;
 
   // Fetch event tickets
@@ -92,7 +115,7 @@ export default function EventTicketsPage({
     isLoading: isTicketsLoading,
     error: ticketsError,
     mutate: mutateTickets,
-  } = useEventTickets(params.id);
+  } = useEventTickets(id, eventId);
 
   // Type assertion for TypeScript
   const tickets = ticketsData?.data as any[] | undefined;
@@ -108,6 +131,19 @@ export default function EventTicketsPage({
     }));
   };
 
+  // Handle ticket image change
+  const handleTicketImageChange = (file: File | null) => {
+    setTicketImage(file);
+
+    // Create a preview URL for the image
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setTicketImagePreview(previewUrl);
+    } else {
+      setTicketImagePreview(null);
+    }
+  };
+
   // Handle create ticket
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,15 +151,25 @@ export default function EventTicketsPage({
     setFormError("");
 
     try {
+      // Create the ticket data
       const ticketData = {
         name: ticketFormData.name,
         description: ticketFormData.description,
         price: parseFloat(ticketFormData.price),
         quantity: parseInt(ticketFormData.quantity, 10),
+        maxPerPurchase: parseInt(ticketFormData.maxPerPurchase, 10),
+        isVisible: ticketFormData.isVisible,
+        allowTransfer: ticketFormData.allowTransfer,
+        ticketFeatures: ticketFormData.ticketFeatures || undefined,
+        perks: ticketFormData.perks || undefined,
+        earlyBirdDeadline: ticketFormData.earlyBirdDeadline || undefined,
+        saleStartDate: ticketFormData.saleStartDate || undefined,
+        saleEndDate: ticketFormData.saleEndDate || undefined,
       };
 
+      // Create the ticket first
       const response = await fetch(
-        ORGANIZER_ENDPOINTS.EVENT_TICKETS(params.id),
+        ORGANIZER_ENDPOINTS.EVENT_TICKETS(id, eventId),
         {
           method: "POST",
           headers: {
@@ -139,17 +185,64 @@ export default function EventTicketsPage({
         throw new Error(result.error || "Failed to create ticket");
       }
 
+      // If we have an image, upload it
+      if (ticketImage) {
+        try {
+          // Get the created ticket ID
+          const ticketId = result.data.id;
+
+          // Create a FormData object to send the file
+          const formData = new FormData();
+          formData.append("file", ticketImage);
+
+          // Upload the image directly to the ticket image endpoint
+          const imageUpdateResponse = await fetch(
+            ORGANIZER_ENDPOINTS.TICKET_IMAGE(id, ticketId),
+            {
+              method: "PUT",
+              body: formData,
+            },
+          );
+
+          if (!imageUpdateResponse.ok) {
+            console.error(
+              "Failed to update ticket with image, but ticket was created",
+            );
+          }
+        } catch (imageError) {
+          console.error("Error uploading ticket image:", imageError);
+          // We don't throw here because the ticket was created successfully
+        }
+      }
+
       // Reset form and close dialog
       setTicketFormData({
         name: "",
         description: "",
         price: "",
         quantity: "",
+        maxPerPurchase: "10",
+        isVisible: true,
+        allowTransfer: false,
+        ticketFeatures: "",
+        perks: "",
+        earlyBirdDeadline: "",
+        saleStartDate: "",
+        saleEndDate: "",
       });
+      setTicketImage(null);
+      setTicketImagePreview(null);
       setIsTicketDialogOpen(false);
 
       // Refresh tickets data
       mutateTickets();
+
+      // Navigate to the newly created ticket
+      if (result.data?.id) {
+        router.push(
+          `/organizer/${id}/events/${eventId}/tickets/${result.data.id}`,
+        );
+      }
     } catch (err: any) {
       console.error("Error creating ticket:", err);
       setFormError(err.message || "Failed to create ticket. Please try again.");
@@ -160,7 +253,7 @@ export default function EventTicketsPage({
 
   // Handle edit ticket
   const handleEditTicket = (ticketId: string) => {
-    router.push(`/organizer/tickets/${ticketId}`);
+    router.push(`/organizer/${id}/events/${eventId}/tickets/${ticketId}`);
   };
 
   // Handle delete ticket
@@ -169,7 +262,7 @@ export default function EventTicketsPage({
 
     try {
       const response = await fetch(
-        ORGANIZER_ENDPOINTS.TICKET_DETAIL(selectedTicketId),
+        ORGANIZER_ENDPOINTS.EVENT_TICKET_DETAIL(id, eventId, selectedTicketId),
         {
           method: "DELETE",
         },
@@ -194,356 +287,631 @@ export default function EventTicketsPage({
   // Loading state
   if (isEventLoading) {
     return (
-      <OrganizerRoute>
-        <SidebarProvider>
-          <AppSidebar variant="inset" />
-          <SidebarInset>
-            <SiteHeader />
-            <div className="flex flex-1 flex-col">
-              <div className="@container/main flex flex-1 flex-col gap-2">
-                <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                  <div className="px-4 lg:px-6">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.back()}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <h1 className="text-2xl font-semibold">Event Tickets</h1>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center p-8">
-                    <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
-                  </div>
+      <div className="flex min-h-screen flex-col">
+        <div className="flex flex-1 flex-col">
+          <div className="container flex flex-1 flex-col gap-2 pt-4">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <div className="px-4 lg:px-6">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => router.back()}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <h1 className="text-2xl font-semibold">Event Tickets</h1>
                 </div>
               </div>
+              <div className="flex items-center justify-center p-8">
+                <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
+              </div>
             </div>
-          </SidebarInset>
-        </SidebarProvider>
-      </OrganizerRoute>
+          </div>
+        </div>
+      </div>
     );
   }
 
   // Error state
   if (eventError || !event) {
     return (
-      <OrganizerRoute>
-        <SidebarProvider>
-          <AppSidebar variant="inset" />
-          <SidebarInset>
-            <SiteHeader />
-            <div className="flex flex-1 flex-col">
-              <div className="@container/main flex flex-1 flex-col gap-2">
-                <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                  <div className="px-4 lg:px-6">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.back()}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <h1 className="text-2xl font-semibold">Event Tickets</h1>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                    <AlertCircle className="mb-2 h-8 w-8 text-red-500" />
-                    <h3 className="mb-2 text-lg font-semibold">
-                      Error loading event
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      {eventError?.message ||
-                        "Failed to load event details. Please try again."}
-                    </p>
-                    <div className="mt-4 flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => router.refresh()}
-                      >
-                        Try Again
-                      </Button>
-                      <Button onClick={() => router.push("/organizer/events")}>
-                        Back to Events
-                      </Button>
-                    </div>
-                  </div>
+      <div className="flex min-h-screen flex-col">
+        <div className="flex flex-1 flex-col">
+          <div className="container flex flex-1 flex-col gap-2 pt-4">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <div className="px-4 lg:px-6">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => router.back()}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <h1 className="text-2xl font-semibold">Event Tickets</h1>
+                </div>
+              </div>
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                <AlertCircle className="mb-2 h-8 w-8 text-red-500" />
+                <h3 className="mb-2 text-lg font-semibold">
+                  Error loading event
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  {eventError?.message ||
+                    "Failed to load event details. Please try again."}
+                </p>
+                <div className="mt-4 flex gap-2">
+                  <Button variant="outline" onClick={() => router.refresh()}>
+                    Try Again
+                  </Button>
+                  <Button onClick={() => router.push("/organizer/events")}>
+                    Back to Events
+                  </Button>
                 </div>
               </div>
             </div>
-          </SidebarInset>
-        </SidebarProvider>
-      </OrganizerRoute>
+          </div>
+        </div>
+      </div>
     );
   }
 
   // Main content
   return (
-    <OrganizerRoute>
-      <SidebarProvider>
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader />
-          <div className="flex flex-1 flex-col">
-            <div className="@container/main flex flex-1 flex-col gap-2">
-              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                <div className="px-4 lg:px-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.back()}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <div>
-                        <h1 className="text-2xl font-semibold">
-                          Ticket Management
-                        </h1>
-                        <p className="text-muted-foreground text-sm">
-                          {event.title}
-                        </p>
-                      </div>
-                    </div>
-                    <Dialog
-                      open={isTicketDialogOpen}
-                      onOpenChange={setIsTicketDialogOpen}
-                    >
-                      <DialogTrigger asChild>
-                        <Button>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Create Ticket
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Create New Ticket</DialogTitle>
-                          <DialogDescription>
-                            Add a new ticket type for this event
-                          </DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleCreateTicket}>
-                          {formError && (
-                            <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-500">
-                              {formError}
-                            </div>
-                          )}
-                          <div className="grid gap-4 py-4">
+    <div className="flex min-h-screen flex-col">
+      <div className="flex flex-1 flex-col">
+        <div className="container flex flex-1 flex-col gap-2 pt-4">
+          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <div className="px-4 lg:px-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => router.back()}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <h1 className="text-2xl font-semibold">
+                      Ticket Management
+                    </h1>
+                    <p className="text-muted-foreground text-sm">
+                      {event?.title}
+                    </p>
+                  </div>
+                </div>
+                <Dialog
+                  open={isTicketDialogOpen}
+                  onOpenChange={setIsTicketDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Ticket Type
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[600px] md:max-w-[700px] lg:max-w-[800px]">
+                    <DialogHeader>
+                      <DialogTitle>Create New Ticket Type</DialogTitle>
+                      <DialogDescription>
+                        Create a ticket category that defines pricing,
+                        availability, and features. Individual tickets will be
+                        generated when buyers make purchases.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleCreateTicket}>
+                      {formError && (
+                        <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-500">
+                          {formError}
+                        </div>
+                      )}
+                      <div className="grid max-h-[60vh] gap-4 overflow-y-auto py-4 pr-2">
+                        {/* Basic Information Section */}
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-medium">
+                            Basic Information
+                          </h3>
+
+                          <div className="grid gap-2">
+                            <Label htmlFor="name">Ticket Name</Label>
+                            <Input
+                              id="name"
+                              name="name"
+                              value={ticketFormData.name}
+                              onChange={handleTicketFormChange}
+                              required
+                            />
+                            <p className="text-muted-foreground text-xs">
+                              The name of this ticket type (e.g., VIP, Early
+                              Bird, General Admission)
+                            </p>
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label htmlFor="description">Description</Label>
+                            <Textarea
+                              id="description"
+                              name="description"
+                              value={ticketFormData.description}
+                              onChange={handleTicketFormChange}
+                              rows={3}
+                            />
+                            <p className="text-muted-foreground text-xs">
+                              Describe what's included with this ticket type,
+                              special perks, or any restrictions
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div className="grid gap-2">
-                              <Label htmlFor="name">Ticket Name</Label>
+                              <Label htmlFor="price">Price</Label>
                               <Input
-                                id="name"
-                                name="name"
-                                value={ticketFormData.name}
+                                id="price"
+                                name="price"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={ticketFormData.price}
                                 onChange={handleTicketFormChange}
                                 required
                               />
+                              <p className="text-muted-foreground text-xs">
+                                The price per ticket in IDR
+                              </p>
                             </div>
                             <div className="grid gap-2">
-                              <Label htmlFor="description">Description</Label>
-                              <Textarea
-                                id="description"
-                                name="description"
-                                value={ticketFormData.description}
+                              <Label htmlFor="quantity">Quantity</Label>
+                              <Input
+                                id="quantity"
+                                name="quantity"
+                                type="number"
+                                min="1"
+                                value={ticketFormData.quantity}
                                 onChange={handleTicketFormChange}
-                                rows={3}
+                                required
                               />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="grid gap-2">
-                                <Label htmlFor="price">Price</Label>
-                                <Input
-                                  id="price"
-                                  name="price"
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={ticketFormData.price}
-                                  onChange={handleTicketFormChange}
-                                  required
-                                />
-                              </div>
-                              <div className="grid gap-2">
-                                <Label htmlFor="quantity">Quantity</Label>
-                                <Input
-                                  id="quantity"
-                                  name="quantity"
-                                  type="number"
-                                  min="1"
-                                  value={ticketFormData.quantity}
-                                  onChange={handleTicketFormChange}
-                                  required
-                                />
-                              </div>
+                              <p className="text-muted-foreground text-xs">
+                                Total number of tickets available for sale
+                              </p>
                             </div>
                           </div>
-                          <DialogFooter>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => setIsTicketDialogOpen(false)}
-                            >
-                              Cancel
-                            </Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                              {isSubmitting ? "Creating..." : "Create Ticket"}
-                            </Button>
-                          </DialogFooter>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </div>
 
-                <div className="px-4 lg:px-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Tickets</CardTitle>
-                      <CardDescription>
-                        Manage ticket types for {event.title}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {isTicketsLoading ? (
-                        <div className="flex items-center justify-center py-8">
-                          <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="grid gap-2">
+                              <Label htmlFor="maxPerPurchase">
+                                Max Per Purchase
+                              </Label>
+                              <Input
+                                id="maxPerPurchase"
+                                name="maxPerPurchase"
+                                type="number"
+                                min="1"
+                                value={ticketFormData.maxPerPurchase}
+                                onChange={handleTicketFormChange}
+                                required
+                              />
+                              <p className="text-muted-foreground text-xs">
+                                Maximum number of tickets a buyer can purchase
+                                in a single transaction
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      ) : ticketsError ? (
-                        <div className="rounded-md bg-red-50 p-4 text-sm text-red-500">
-                          Error loading tickets: {ticketsError.message}
-                        </div>
-                      ) : !tickets || tickets.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                          <Ticket className="text-muted-foreground mb-2 h-8 w-8" />
-                          <h3 className="mb-2 text-lg font-semibold">
-                            No tickets yet
+
+                        <Separator className="my-2" />
+
+                        {/* Features & Perks Section */}
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-medium">
+                            Features & Perks
                           </h3>
-                          <p className="text-muted-foreground text-sm">
-                            You haven't created any tickets for this event yet.
-                          </p>
-                          <Button
-                            className="mt-4"
-                            onClick={() => setIsTicketDialogOpen(true)}
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Create Your First Ticket
-                          </Button>
+
+                          <div className="grid gap-2">
+                            <Label htmlFor="ticketFeatures">
+                              Ticket Features
+                            </Label>
+                            <Input
+                              id="ticketFeatures"
+                              name="ticketFeatures"
+                              value={ticketFormData.ticketFeatures}
+                              onChange={handleTicketFormChange}
+                            />
+                            <p className="text-muted-foreground text-xs">
+                              A comma-separated list of features included with
+                              this ticket (e.g., "Reserved Seating, Merchandise,
+                              Early Entry")
+                            </p>
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label htmlFor="perks">Perks Description</Label>
+                            <Textarea
+                              id="perks"
+                              name="perks"
+                              value={ticketFormData.perks}
+                              onChange={handleTicketFormChange}
+                              rows={2}
+                            />
+                            <p className="text-muted-foreground text-xs">
+                              Detailed description of special perks or benefits
+                              included with this ticket type
+                            </p>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="rounded-md border">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Quantity</TableHead>
-                                <TableHead>Sold</TableHead>
-                                <TableHead>Available</TableHead>
-                                <TableHead className="text-right">
-                                  Actions
-                                </TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {tickets.map((ticket: any) => (
-                                <TableRow key={ticket.id}>
-                                  <TableCell className="font-medium">
-                                    {ticket.name}
-                                    {ticket.description && (
-                                      <p className="text-muted-foreground text-xs">
-                                        {ticket.description}
-                                      </p>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    {formatCurrency(ticket.price)}
-                                  </TableCell>
-                                  <TableCell>{ticket.quantity}</TableCell>
-                                  <TableCell>{ticket.sold || 0}</TableCell>
-                                  <TableCell>
-                                    {ticket.quantity - (ticket.sold || 0)}
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex justify-end gap-2">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                          handleEditTicket(ticket.id)
-                                        }
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                        <span className="sr-only">Edit</span>
-                                      </Button>
-                                      <AlertDialog
-                                        open={
-                                          isDeleteDialogOpen &&
-                                          selectedTicketId === ticket.id
-                                        }
-                                        onOpenChange={(open: boolean) => {
-                                          setIsDeleteDialogOpen(open);
-                                          if (!open) setSelectedTicketId(null);
-                                        }}
-                                      >
-                                        <AlertDialogTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-red-500 hover:text-red-600"
-                                            onClick={() =>
-                                              setSelectedTicketId(ticket.id)
-                                            }
-                                          >
-                                            <Trash className="h-4 w-4" />
-                                            <span className="sr-only">
-                                              Delete
-                                            </span>
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>
-                                              Are you sure?
-                                            </AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              This action cannot be undone. This
-                                              will permanently delete the ticket
-                                              type and remove it from our
-                                              servers.
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>
-                                              Cancel
-                                            </AlertDialogCancel>
-                                            <AlertDialogAction
-                                              onClick={handleDeleteTicket}
-                                              className="bg-red-500 hover:bg-red-600"
-                                            >
-                                              Delete
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+
+                        <Separator className="my-2" />
+
+                        {/* Sale Period Section */}
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-medium">Sale Period</h3>
+
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="grid gap-2">
+                              <Label htmlFor="saleStartDate">
+                                Sale Start Date
+                              </Label>
+                              <Input
+                                id="saleStartDate"
+                                name="saleStartDate"
+                                type="datetime-local"
+                                value={ticketFormData.saleStartDate}
+                                onChange={handleTicketFormChange}
+                              />
+                              <p className="text-muted-foreground text-xs">
+                                When this ticket type will become available for
+                                purchase
+                              </p>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="saleEndDate">Sale End Date</Label>
+                              <Input
+                                id="saleEndDate"
+                                name="saleEndDate"
+                                type="datetime-local"
+                                value={ticketFormData.saleEndDate}
+                                onChange={handleTicketFormChange}
+                              />
+                              <p className="text-muted-foreground text-xs">
+                                When this ticket type will no longer be
+                                available for purchase
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label htmlFor="earlyBirdDeadline">
+                              Early Bird Deadline
+                            </Label>
+                            <Input
+                              id="earlyBirdDeadline"
+                              name="earlyBirdDeadline"
+                              type="datetime-local"
+                              value={ticketFormData.earlyBirdDeadline}
+                              onChange={handleTicketFormChange}
+                            />
+                            <p className="text-muted-foreground text-xs">
+                              If this is an early bird ticket, when the special
+                              pricing ends
+                            </p>
+                          </div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
+
+                        <Separator className="my-2" />
+
+                        {/* Visibility & Transfer Options */}
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-medium">
+                            Visibility & Transfer Options
+                          </h3>
+
+                          <div className="flex items-start space-x-2">
+                            <div className="pt-1">
+                              <Checkbox
+                                id="isVisible"
+                                checked={ticketFormData.isVisible}
+                                onCheckedChange={(checked) =>
+                                  setTicketFormData((prev) => ({
+                                    ...prev,
+                                    isVisible: checked === true,
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="isVisible">
+                                Visible to buyers
+                              </Label>
+                              <p className="text-muted-foreground text-xs">
+                                When checked, this ticket type will be visible
+                                on the public event page. Uncheck to hide it
+                                temporarily.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start space-x-2">
+                            <div className="pt-1">
+                              <Checkbox
+                                id="allowTransfer"
+                                checked={ticketFormData.allowTransfer}
+                                onCheckedChange={(checked) =>
+                                  setTicketFormData((prev) => ({
+                                    ...prev,
+                                    allowTransfer: checked === true,
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="allowTransfer">
+                                Allow ticket transfer
+                              </Label>
+                              <p className="text-muted-foreground text-xs">
+                                When checked, buyers can transfer their tickets
+                                to other users. Useful for group purchases.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator className="my-2" />
+
+                        {/* Ticket Image Upload */}
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-medium">Ticket Image</h3>
+
+                          <div className="grid gap-2">
+                            <DeferredTicketImageUpload
+                              onChange={handleTicketImageChange}
+                              value={ticketImage}
+                              previewUrl={ticketImagePreview}
+                              disabled={isSubmitting}
+                            />
+                            <p className="text-muted-foreground text-xs">
+                              Upload an image that will be displayed on the
+                              ticket. This could be a custom design, event logo,
+                              or any visual that helps identify this ticket
+                              type. The image will be stored in Cloudinary and
+                              associated with this ticket type.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsTicketDialogOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                          {isSubmitting ? "Creating..." : "Create Ticket Type"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
+
+            <div className="mb-4 px-4 lg:px-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Understanding Tickets</CardTitle>
+                  <CardDescription>
+                    How ticket types and individual tickets work in the system
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-medium">
+                        Ticket Types vs. Individual Tickets
+                      </h3>
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        In this system, there are two related but distinct
+                        concepts:
+                      </p>
+                      <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">
+                        <li>
+                          <span className="font-medium">Ticket Types</span>:
+                          These are the categories or classes of tickets you
+                          create for your event (e.g., VIP, General Admission,
+                          Early Bird). Each type has its own price, quantity,
+                          and features. This is what you're managing on this
+                          page.
+                        </li>
+                        <li>
+                          <span className="font-medium">
+                            Individual Tickets
+                          </span>
+                          : When a buyer purchases a ticket, an individual
+                          ticket record is created based on the ticket type.
+                          Each ticket has a unique QR code and belongs to a
+                          specific user. These are generated automatically
+                          during purchase.
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium">Workflow</h3>
+                      <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
+                        <li>
+                          You create ticket types for your event (this page)
+                        </li>
+                        <li>Buyers purchase tickets of a specific type</li>
+                        <li>
+                          Individual tickets are generated for each purchase
+                        </li>
+                        <li>
+                          Buyers receive their tickets with unique QR codes
+                        </li>
+                        <li>
+                          The system tracks inventory by reducing available
+                          quantity
+                        </li>
+                      </ol>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="px-4 lg:px-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ticket Types</CardTitle>
+                  <CardDescription>
+                    Manage ticket types for {event?.title}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isTicketsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
+                    </div>
+                  ) : ticketsError ? (
+                    <div className="rounded-md bg-red-50 p-4 text-sm text-red-500">
+                      Error loading tickets: {ticketsError.message}
+                    </div>
+                  ) : !tickets || tickets.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                      <Ticket className="text-muted-foreground mb-2 h-8 w-8" />
+                      <h3 className="mb-2 text-lg font-semibold">
+                        No ticket types yet
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        You haven't created any ticket types for this event yet.
+                        Ticket types define the categories of tickets available
+                        for purchase.
+                      </p>
+                      <Button
+                        className="mt-4"
+                        onClick={() => setIsTicketDialogOpen(true)}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Your First Ticket Type
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Price</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Sold</TableHead>
+                            <TableHead>Available</TableHead>
+                            <TableHead className="text-right">
+                              Actions
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tickets.map((ticket: any) => (
+                            <TableRow key={ticket.id}>
+                              <TableCell className="font-medium">
+                                {ticket.name}
+                                {ticket.description && (
+                                  <p className="text-muted-foreground text-xs">
+                                    {ticket.description}
+                                  </p>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {formatCurrency(ticket.price)}
+                              </TableCell>
+                              <TableCell>{ticket.quantity}</TableCell>
+                              <TableCell>{ticket.sold || 0}</TableCell>
+                              <TableCell>
+                                {ticket.quantity - (ticket.sold || 0)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">Actions</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                      Actions
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        handleEditTicket(ticket.id)
+                                      }
+                                    >
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      Edit Ticket
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <AlertDialog
+                                      open={
+                                        isDeleteDialogOpen &&
+                                        selectedTicketId === ticket.id
+                                      }
+                                      onOpenChange={(open: boolean) => {
+                                        setIsDeleteDialogOpen(open);
+                                        if (!open) setSelectedTicketId(null);
+                                      }}
+                                    >
+                                      <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem
+                                          className="text-destructive focus:text-destructive"
+                                          onClick={() =>
+                                            setSelectedTicketId(ticket.id)
+                                          }
+                                          onSelect={(e) => e.preventDefault()}
+                                        >
+                                          <Trash className="mr-2 h-4 w-4" />
+                                          Delete Ticket
+                                        </DropdownMenuItem>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>
+                                            Are you sure?
+                                          </AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This action cannot be undone. This
+                                            will permanently delete the ticket
+                                            type and remove it from our servers.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>
+                                            Cancel
+                                          </AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={handleDeleteTicket}
+                                            className="bg-red-500 hover:bg-red-600"
+                                          >
+                                            Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </SidebarInset>
-      </SidebarProvider>
-    </OrganizerRoute>
+        </div>
+      </div>
+    </div>
   );
 }

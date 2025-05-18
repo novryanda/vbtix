@@ -7,12 +7,12 @@ import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
 
 /**
- * GET /api/admin/organizers/[organizersId]
+ * GET /api/admin/organizers/[organizerId]
  * Get organizer details by ID
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { organizersId: string } },
+  { params }: { params: { organizerId: string } },
 ) {
   try {
     // Check authentication and authorization
@@ -32,15 +32,15 @@ export async function GET(
       );
     }
 
-    const { organizersId } = params;
-    const organizer = await handleGetOrganizerById(organizersId);
+    const { organizerId } = params;
+    const organizer = await handleGetOrganizerById(organizerId);
 
     return NextResponse.json({
       success: true,
       data: organizer,
     });
   } catch (error: any) {
-    console.error(`Error getting organizer ${params.organizersId}:`, error);
+    console.error(`Error getting organizer ${params.organizerId}:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -52,12 +52,12 @@ export async function GET(
 }
 
 /**
- * DELETE /api/admin/organizers/[organizersId]
+ * DELETE /api/admin/organizers/[organizerId]
  * Delete organizer by ID
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { organizersId: string } },
+  { params }: { params: { organizerId: string } },
 ) {
   try {
     // Check authentication and authorization
@@ -77,15 +77,15 @@ export async function DELETE(
       );
     }
 
-    const { organizersId } = params;
-    await handleDeleteOrganizer(organizersId);
+    const { organizerId } = params;
+    await handleDeleteOrganizer(organizerId);
 
     return NextResponse.json({
       success: true,
       message: "Organizer deleted successfully",
     });
   } catch (error: any) {
-    console.error(`Error deleting organizer ${params.organizersId}:`, error);
+    console.error(`Error deleting organizer ${params.organizerId}:`, error);
     return NextResponse.json(
       {
         success: false,

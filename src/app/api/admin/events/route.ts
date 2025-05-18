@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleGetEvents, handleCreateEvent } from "~/server/api/events";
 import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
-import { createEventSchema, eventQuerySchema } from "~/lib/validations/event.schema";
+import {
+  createEventSchema,
+  eventQuerySchema,
+} from "~/lib/validations/event.schema";
 
 /**
  * GET /api/admin/events
@@ -15,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -23,7 +26,7 @@ export async function GET(request: NextRequest) {
     if (session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -35,10 +38,17 @@ export async function GET(request: NextRequest) {
       status: searchParams.get("status"),
       organizerId: searchParams.get("organizerId"),
       search: searchParams.get("search"),
-      featured: searchParams.has("featured") ? searchParams.get("featured") : undefined,
+      featured: searchParams.has("featured")
+        ? searchParams.get("featured")
+        : undefined,
     };
 
     console.log("Query params:", queryParams);
+    console.log(
+      "Raw search params:",
+      Object.fromEntries(searchParams.entries()),
+    );
+    console.log("Request URL:", request.nextUrl.toString());
 
     // Validate query parameters
     const validatedParams = eventQuerySchema.safeParse(queryParams);
@@ -51,12 +61,22 @@ export async function GET(request: NextRequest) {
           error: "Invalid query parameters",
           details: validatedParams.error.format(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
+    // Log validated params
+    console.log(
+      "Validated params:",
+      JSON.stringify(validatedParams.data, null, 2),
+    );
+
     // Call business logic
     const result = await handleGetEvents(validatedParams.data);
+
+    // Log result
+    console.log("Found events:", result.events.length);
+    console.log("Total events:", result.meta.total);
 
     // Return response
     return NextResponse.json({
@@ -68,7 +88,7 @@ export async function GET(request: NextRequest) {
     console.error("Error getting events:", error);
     return NextResponse.json(
       { success: false, error: "Failed to get events" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -84,15 +104,18 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     // Only admins and organizers can create events
-    if (![UserRole.ADMIN, UserRole.ORGANIZER].includes(session.user.role)) {
+    if (
+      session.user.role !== UserRole.ADMIN &&
+      session.user.role !== UserRole.ORGANIZER
+    ) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -114,14 +137,14 @@ export async function POST(request: NextRequest) {
     } catch (validationError) {
       return NextResponse.json(
         { success: false, error: "Validation error", details: validationError },
-        { status: 400 }
+        { status: 400 },
       );
     }
   } catch (error) {
     console.error("Error creating event:", error);
     return NextResponse.json(
       { success: false, error: "Failed to create event" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
