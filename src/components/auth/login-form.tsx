@@ -60,10 +60,12 @@ export function LoginForm({
 
       if (!result.success) {
         setErrorMessage(result.error || "Login gagal. Silakan coba lagi.");
+        setIsLoading(false);
       }
+      // Don't set isLoading to false on success as we're redirecting
+      // This prevents the button from becoming clickable again during navigation
     } catch (err) {
       setErrorMessage("Terjadi kesalahan saat login. Silakan coba lagi.");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -74,6 +76,7 @@ export function LoginForm({
 
     try {
       await loginWithGoogle(callbackUrl);
+      // We don't set isLoading to false here because we're redirecting to Google
     } catch (err) {
       setErrorMessage(
         "Terjadi kesalahan saat login dengan Google. Silakan coba lagi.",

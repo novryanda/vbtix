@@ -12,10 +12,16 @@ const publicRoutes = [
   "/unauthorized",
 ];
 
+// Buyer routes are public but can have enhanced features when logged in
+const publicBuyerRoutes = ["/buyer", "/buyer/events", "/buyer/about"];
+
 // Memeriksa apakah rute adalah rute publik
 function isPublicRoute(path: string) {
   // Cek apakah path cocok dengan salah satu rute publik
   if (publicRoutes.includes(path)) return true;
+
+  // Cek apakah path cocok dengan salah satu rute buyer publik
+  if (publicBuyerRoutes.includes(path)) return true;
 
   // Cek apakah path dimulai dengan salah satu prefiks publik
   if (
@@ -23,7 +29,8 @@ function isPublicRoute(path: string) {
     path.startsWith("/api/webhooks/") ||
     path.startsWith("/api/revalidate/") ||
     path.startsWith("/reset-password/") ||
-    path.startsWith("/verify/")
+    path.startsWith("/verify/") ||
+    path.startsWith("/buyer/events/") // Allow access to individual event pages
   ) {
     return true;
   }
@@ -190,8 +197,20 @@ export async function organizerMiddleware(req: NextRequest) {
 
 /**
  * Middleware untuk rute buyer
+ *
+ * Buyer routes are special - they're public by default, but some features
+ * may require authentication (like viewing tickets or orders)
  */
 export async function buyerMiddleware(req: NextRequest) {
+  const path = req.nextUrl.pathname;
+
+  // Check if this is a public buyer route
+  if (isPublicRoute(path)) {
+    return NextResponse.next();
+  }
+
+  // For protected buyer routes (like /buyer/tickets or /buyer/orders)
+  // we use the role middleware to ensure the user is authenticated
   return roleMiddleware(req, [
     UserRole.BUYER,
     UserRole.ORGANIZER,
@@ -210,7 +229,14 @@ export async function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // Gunakan authMiddleware yang sudah ada untuk menangani autentikasi dan otorisasi
+    const path = req.nextUrl.pathname;
+
+    // Handle buyer routes specially
+    if (path.startsWith("/buyer")) {
+      return await buyerMiddleware(req);
+    }
+
+    // For all other routes, use the standard auth middleware
     return await authMiddleware(req);
   } catch (error) {
     console.error("Middleware error:", error);

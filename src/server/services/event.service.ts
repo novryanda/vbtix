@@ -1,6 +1,9 @@
 import { prisma as db } from "~/server/db";
 import { EventStatus, Prisma } from "@prisma/client";
-import { CreateEventSchema, UpdateEventSchema } from "~/lib/validations/event.schema";
+import {
+  CreateEventSchema,
+  UpdateEventSchema,
+} from "~/lib/validations/event.schema";
 import { createSlug } from "~/lib/utils";
 
 export const eventService = {
@@ -11,7 +14,33 @@ export const eventService = {
     try {
       return await db.event.findUnique({
         where: { id },
-        include: { organizer: true }
+        include: {
+          organizer: {
+            select: {
+              id: true,
+              orgName: true,
+              verified: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  image: true,
+                },
+              },
+            },
+          },
+          ticketTypes: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              quantity: true,
+              sold: true,
+              isVisible: true,
+            },
+          },
+        },
       });
     } catch (error) {
       console.error("Database error:", error);
@@ -31,7 +60,15 @@ export const eventService = {
     featured?: boolean;
     published?: boolean;
   }) {
-    const { page = 1, limit = 10, status, organizerId, search, featured, published } = params;
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      organizerId,
+      search,
+      featured,
+      published,
+    } = params;
     const skip = (page - 1) * limit;
 
     try {
@@ -78,7 +115,7 @@ export const eventService = {
           where,
           skip,
           take: limit,
-          orderBy: { startDate: 'asc' },
+          orderBy: { startDate: "asc" },
           include: {
             organizer: {
               select: {
@@ -90,10 +127,10 @@ export const eventService = {
                     id: true,
                     name: true,
                     email: true,
-                    image: true
-                  }
-                }
-              }
+                    image: true,
+                  },
+                },
+              },
             },
             ticketTypes: {
               select: {
@@ -101,18 +138,18 @@ export const eventService = {
                 name: true,
                 price: true,
                 quantity: true,
-                sold: true
-              }
+                sold: true,
+              },
             },
             _count: {
               select: {
                 ticketTypes: true,
-                transactions: true
-              }
-            }
-          }
+                transactions: true,
+              },
+            },
+          },
         }),
-        db.event.count({ where })
+        db.event.count({ where }),
       ]);
 
       console.log(`Found ${events.length} events out of ${total} total`);
@@ -134,7 +171,7 @@ export const eventService = {
 
       // Check if slug already exists
       const existingEvent = await db.event.findUnique({
-        where: { slug }
+        where: { slug },
       });
 
       if (existingEvent) {
@@ -161,12 +198,12 @@ export const eventService = {
                   id: true,
                   name: true,
                   email: true,
-                  image: true
-                }
-              }
-            }
-          }
-        }
+                  image: true,
+                },
+              },
+            },
+          },
+        },
       });
     } catch (error) {
       console.error("Database error:", error);
@@ -184,8 +221,8 @@ export const eventService = {
         const existingEvent = await db.event.findFirst({
           where: {
             slug: data.slug,
-            id: { not: id }
-          }
+            id: { not: id },
+          },
         });
 
         if (existingEvent) {
@@ -215,13 +252,13 @@ export const eventService = {
                   id: true,
                   name: true,
                   email: true,
-                  image: true
-                }
-              }
-            }
+                  image: true,
+                },
+              },
+            },
           },
-          ticketTypes: true
-        }
+          ticketTypes: true,
+        },
       });
     } catch (error) {
       console.error("Database error:", error);
@@ -299,12 +336,12 @@ export const eventService = {
       // Create approval record
       await db.approval.create({
         data: {
-          entityType: 'EVENT',
+          entityType: "EVENT",
           entityId: id,
-          status: status === EventStatus.PUBLISHED ? 'APPROVED' : 'REJECTED',
+          status: status === EventStatus.PUBLISHED ? "APPROVED" : "REJECTED",
           notes,
-          reviewedAt: new Date()
-        }
+          reviewedAt: new Date(),
+        },
       });
 
       return event;
@@ -334,16 +371,19 @@ export const eventService = {
   /**
    * Find events by organizer user ID
    */
-  async findByOrganizerUserId(userId: string, params: {
-    page?: number;
-    limit?: number;
-    status?: EventStatus;
-    search?: string;
-  }) {
+  async findByOrganizerUserId(
+    userId: string,
+    params: {
+      page?: number;
+      limit?: number;
+      status?: EventStatus;
+      search?: string;
+    },
+  ) {
     try {
       // Find organizer by user ID
       const organizer = await db.organizer.findUnique({
-        where: { userId }
+        where: { userId },
       });
 
       if (!organizer) {
@@ -353,7 +393,7 @@ export const eventService = {
       // Find events by organizer ID
       return this.findAll({
         ...params,
-        organizerId: organizer.id
+        organizerId: organizer.id,
       });
     } catch (error) {
       console.error("Database error:", error);
@@ -378,27 +418,27 @@ export const eventService = {
               sold: true,
               _count: {
                 select: {
-                  orderItems: true
-                }
-              }
-            }
+                  orderItems: true,
+                },
+              },
+            },
           },
           transactions: {
             where: {
-              status: 'SUCCESS'
+              status: "SUCCESS",
             },
             select: {
               id: true,
               amount: true,
-              createdAt: true
-            }
+              createdAt: true,
+            },
           },
           _count: {
             select: {
-              transactions: true
-            }
-          }
-        }
+              transactions: true,
+            },
+          },
+        },
       });
 
       if (!event) {
@@ -406,13 +446,22 @@ export const eventService = {
       }
 
       // Calculate total tickets sold
-      const totalTicketsSold = event.ticketTypes.reduce((acc, type) => acc + type.sold, 0);
+      const totalTicketsSold = event.ticketTypes.reduce(
+        (acc, type) => acc + type.sold,
+        0,
+      );
 
       // Calculate total capacity
-      const totalCapacity = event.ticketTypes.reduce((acc, type) => acc + type.quantity, 0);
+      const totalCapacity = event.ticketTypes.reduce(
+        (acc, type) => acc + type.quantity,
+        0,
+      );
 
       // Calculate total revenue
-      const totalRevenue = event.transactions.reduce((acc, tx) => acc + Number(tx.amount), 0);
+      const totalRevenue = event.transactions.reduce(
+        (acc, tx) => acc + Number(tx.amount),
+        0,
+      );
 
       return {
         event,
@@ -420,13 +469,14 @@ export const eventService = {
           totalTicketsSold,
           totalCapacity,
           totalRevenue,
-          soldPercentage: totalCapacity > 0 ? (totalTicketsSold / totalCapacity) * 100 : 0,
-          totalTransactions: event._count.transactions
-        }
+          soldPercentage:
+            totalCapacity > 0 ? (totalTicketsSold / totalCapacity) * 100 : 0,
+          totalTransactions: event._count.transactions,
+        },
       };
     } catch (error) {
       console.error("Database error:", error);
       throw error;
     }
-  }
+  },
 };

@@ -2,7 +2,11 @@ import { eventService } from "~/server/services/event.service";
 import { organizerService } from "~/server/services/organizer.service";
 import { EventStatus } from "@prisma/client";
 import { formatDate } from "~/lib/utils";
-import type { EventQuerySchema, CreateEventSchema, UpdateEventSchema } from "~/lib/validations/event.schema";
+import type {
+  EventQuerySchema,
+  CreateEventSchema,
+  UpdateEventSchema,
+} from "~/lib/validations/event.schema";
 
 /**
  * Mendapatkan daftar event dengan pagination
@@ -15,25 +19,27 @@ export async function handleGetEvents(params: EventQuerySchema) {
     page: params.page,
     limit: params.limit,
     status: params.status,
-    organizerId: params.organizerId,
+    organizerId: params.organizerId || undefined, // Convert null to undefined
     search: params.search,
-    featured: params.featured
+    featured: params.featured,
   });
 
   // Transformasi data jika diperlukan
-  const processedEvents = events.map(event => ({
+  const processedEvents = events.map((event) => ({
     ...event,
     formattedStartDate: formatDate(event.startDate),
     formattedEndDate: formatDate(event.endDate),
-    ticketPrice: event.ticketTypes && event.ticketTypes.length > 0
-      ? {
-          min: Math.min(...event.ticketTypes.map(t => Number(t.price))),
-          max: Math.max(...event.ticketTypes.map(t => Number(t.price)))
-        }
-      : null,
-    ticketsAvailable: event.ticketTypes && event.ticketTypes.length > 0
-      ? event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)
-      : 0
+    ticketPrice:
+      event.ticketTypes && event.ticketTypes.length > 0
+        ? {
+            min: Math.min(...event.ticketTypes.map((t) => Number(t.price))),
+            max: Math.max(...event.ticketTypes.map((t) => Number(t.price))),
+          }
+        : null,
+    ticketsAvailable:
+      event.ticketTypes && event.ticketTypes.length > 0
+        ? event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)
+        : 0,
   }));
 
   // Menghitung metadata pagination
@@ -45,15 +51,18 @@ export async function handleGetEvents(params: EventQuerySchema) {
       page: params.page,
       limit: params.limit,
       total,
-      totalPages
-    }
+      totalPages,
+    },
   };
 }
 
 /**
  * Membuat event baru
  */
-export async function handleCreateEvent(data: CreateEventSchema, userId: string) {
+export async function handleCreateEvent(
+  data: CreateEventSchema,
+  userId: string,
+) {
   console.log("handleCreateEvent data:", data);
   console.log("handleCreateEvent userId:", userId);
 
@@ -69,7 +78,7 @@ export async function handleCreateEvent(data: CreateEventSchema, userId: string)
   return {
     ...event,
     formattedStartDate: formatDate(event.startDate),
-    formattedEndDate: formatDate(event.endDate)
+    formattedEndDate: formatDate(event.endDate),
   };
 }
 
@@ -89,14 +98,18 @@ export async function handleGetEventById(id: string) {
     ...event,
     formattedStartDate: formatDate(event.startDate),
     formattedEndDate: formatDate(event.endDate),
-    statistics: statistics.stats
+    statistics: statistics.stats,
   };
 }
 
 /**
  * Memperbarui event
  */
-export async function handleUpdateEvent(id: string, data: UpdateEventSchema, userId: string) {
+export async function handleUpdateEvent(
+  id: string,
+  data: UpdateEventSchema,
+  userId: string,
+) {
   if (!id) throw new Error("Event ID is required");
 
   // Verifikasi event ada
@@ -105,7 +118,7 @@ export async function handleUpdateEvent(id: string, data: UpdateEventSchema, use
 
   // Verifikasi user adalah pemilik event atau admin
   const organizer = await organizerService.findByUserId(userId);
-  if (!organizer || (existingEvent.organizerId !== organizer.id)) {
+  if (!organizer || existingEvent.organizerId !== organizer.id) {
     throw new Error("You don't have permission to update this event");
   }
 
@@ -114,7 +127,7 @@ export async function handleUpdateEvent(id: string, data: UpdateEventSchema, use
   return {
     ...updatedEvent,
     formattedStartDate: formatDate(updatedEvent.startDate),
-    formattedEndDate: formatDate(updatedEvent.endDate)
+    formattedEndDate: formatDate(updatedEvent.endDate),
   };
 }
 
@@ -130,7 +143,7 @@ export async function handleDeleteEvent(id: string, userId: string) {
 
   // Verifikasi user adalah pemilik event atau admin
   const organizer = await organizerService.findByUserId(userId);
-  if (!organizer || (existingEvent.organizerId !== organizer.id)) {
+  if (!organizer || existingEvent.organizerId !== organizer.id) {
     throw new Error("You don't have permission to delete this event");
   }
 
@@ -152,7 +165,7 @@ export async function handleSetEventFeatured(id: string, featured: boolean) {
   return {
     ...updatedEvent,
     formattedStartDate: formatDate(updatedEvent.startDate),
-    formattedEndDate: formatDate(updatedEvent.endDate)
+    formattedEndDate: formatDate(updatedEvent.endDate),
   };
 }
 
@@ -172,7 +185,11 @@ export async function handleGetEventStatistics(id: string) {
 /**
  * Menyetujui atau menolak event
  */
-export async function handleReviewEvent(id: string, status: EventStatus, notes?: string) {
+export async function handleReviewEvent(
+  id: string,
+  status: EventStatus,
+  notes?: string,
+) {
   if (!id) throw new Error("Event ID is required");
 
   // Verifikasi event ada
@@ -190,7 +207,7 @@ export async function handleReviewEvent(id: string, status: EventStatus, notes?:
   return {
     ...updatedEvent,
     formattedStartDate: formatDate(updatedEvent.startDate),
-    formattedEndDate: formatDate(updatedEvent.endDate)
+    formattedEndDate: formatDate(updatedEvent.endDate),
   };
 }
 
@@ -206,8 +223,10 @@ export async function handleSubmitEventForReview(id: string, userId: string) {
 
   // Verifikasi user adalah pemilik event
   const organizer = await organizerService.findByUserId(userId);
-  if (!organizer || (existingEvent.organizerId !== organizer.id)) {
-    throw new Error("You don't have permission to submit this event for review");
+  if (!organizer || existingEvent.organizerId !== organizer.id) {
+    throw new Error(
+      "You don't have permission to submit this event for review",
+    );
   }
 
   // Verifikasi event dalam status DRAFT
@@ -220,6 +239,6 @@ export async function handleSubmitEventForReview(id: string, userId: string) {
   return {
     ...updatedEvent,
     formattedStartDate: formatDate(updatedEvent.startDate),
-    formattedEndDate: formatDate(updatedEvent.endDate)
+    formattedEndDate: formatDate(updatedEvent.endDate),
   };
 }

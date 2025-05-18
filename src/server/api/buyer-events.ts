@@ -43,18 +43,18 @@ export async function handleGetPublishedEvents(params: {
 
   // Process events for response
   const processedEvents = events.map((event) => {
+    // Check if ticketTypes exists
+    const ticketTypes = event.ticketTypes || [];
+
     // Calculate lowest ticket price
     const lowestPrice =
-      event.ticketTypes.length > 0
-        ? Math.min(...event.ticketTypes.map((t) => Number(t.price)))
+      ticketTypes.length > 0
+        ? Math.min(...ticketTypes.map((t) => Number(t.price)))
         : 0;
 
     // Calculate total tickets and sold tickets
-    const totalTickets = event.ticketTypes.reduce(
-      (sum, t) => sum + t.quantity,
-      0,
-    );
-    const soldTickets = event.ticketTypes.reduce((sum, t) => sum + t.sold, 0);
+    const totalTickets = ticketTypes.reduce((sum, t) => sum + t.quantity, 0);
+    const soldTickets = ticketTypes.reduce((sum, t) => sum + t.sold, 0);
     const availableTickets = totalTickets - soldTickets;
 
     return {
@@ -138,8 +138,16 @@ export async function handleGetEventById(params: {
     ...event,
     formattedStartDate: formatDate(event.startDate),
     formattedEndDate: formatDate(event.endDate),
-    ticketTypes: event.ticketTypes
-      .filter((ticketType) => ticketType.isVisible)
+    ticketTypes: (event.ticketTypes || [])
+      .filter((ticketType) => {
+        // Use type assertion to handle the case where isVisible might not exist
+        const ticketTypeWithIsVisible = ticketType as {
+          isVisible?: boolean;
+        } & typeof ticketType;
+        return ticketTypeWithIsVisible.isVisible !== undefined
+          ? ticketTypeWithIsVisible.isVisible
+          : true;
+      })
       .map((ticketType) => {
         const stats = ticketStats.find(
           (stat) => stat.ticketTypeId === ticketType.id,
@@ -170,10 +178,13 @@ export async function handleGetFeaturedEvents(limit: number = 5) {
 
   // Process events for response
   const processedEvents = events.map((event) => {
+    // Check if ticketTypes exists
+    const ticketTypes = event.ticketTypes || [];
+
     // Calculate lowest ticket price
     const lowestPrice =
-      event.ticketTypes.length > 0
-        ? Math.min(...event.ticketTypes.map((t) => Number(t.price)))
+      ticketTypes.length > 0
+        ? Math.min(...ticketTypes.map((t) => Number(t.price)))
         : 0;
 
     return {

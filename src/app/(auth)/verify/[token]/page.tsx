@@ -2,15 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Metadata } from "next";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-
-export const metadata: Metadata = {
-  title: "Verifikasi Email - VBTix",
-  description: "Verifikasi email Anda",
-};
 
 export default function VerifyTokenPage({
   params,

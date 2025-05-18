@@ -12,7 +12,17 @@ export const ticketService = {
         include: {
           ticketType: {
             include: {
-              event: true,
+              event: {
+                include: {
+                  organizer: {
+                    select: {
+                      id: true,
+                      orgName: true,
+                      verified: true,
+                    },
+                  },
+                },
+              },
             },
           },
           transaction: true,
@@ -104,6 +114,18 @@ export const ticketService = {
                     title: true,
                     startDate: true,
                     endDate: true,
+                    venue: true,
+                    address: true,
+                    city: true,
+                    province: true,
+                    posterUrl: true,
+                    organizer: {
+                      select: {
+                        id: true,
+                        orgName: true,
+                        verified: true,
+                      },
+                    },
                   },
                 },
               },
@@ -115,6 +137,7 @@ export const ticketService = {
                 email: true,
               },
             },
+            transaction: true,
           },
         }),
         prisma.ticket.count({ where }),
