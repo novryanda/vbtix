@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  handleGetOrganizerEventById,
-  handleUpdateOrganizerEvent,
-  handleDeleteOrganizerEvent,
-} from "~/server/api/organizer-events";
+  handleGetTicketTypeById,
+  handleUpdateTicketType,
+  handleDeleteTicketType,
+} from "~/server/api/tickets";
 import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
-import { updateEventSchema } from "~/lib/validations/event.schema";
+import { updateTicketTypeSchema } from "~/lib/validations/ticket.schema";
 
 /**
- * GET /api/organizer/[organizerId]/events/[eventId]
- * Get event details for the authenticated organizer
+ * GET /api/organizer/[id]/events/[eventId]/tickets/[ticketId]
+ * Get a specific ticket type for an event
  */
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string; eventId: string }> },
+  { params }: { params: { id: string; eventId: string; ticketId: string } },
 ) {
   try {
     // Check authentication and authorization
@@ -37,35 +37,36 @@ export async function GET(
       );
     }
 
-    // Get params - await params to avoid "sync-dynamic-apis" error
-    const { eventId } = await params;
+    const { ticketId } = params;
 
     // Call business logic
-    const event = await handleGetOrganizerEventById({
+    const ticketType = await handleGetTicketTypeById({
       userId: session.user.id,
-      eventId: eventId,
+      ticketTypeId: ticketId,
     });
 
     return NextResponse.json({
       success: true,
-      data: event,
+      data: ticketType,
     });
   } catch (error: any) {
-    console.error(`Error fetching event:`, error);
+    console.error(`Error fetching ticket type:`, error);
 
     // Handle specific errors
-    if (error.message === "Event not found") {
+    if (error.message === "Ticket type not found") {
       return NextResponse.json(
-        { success: false, error: "Event not found" },
+        { success: false, error: "Ticket type not found" },
         { status: 404 },
       );
     }
 
-    if (error.message === "Event does not belong to this organizer") {
+    if (
+      error.message === "Ticket type does not belong to this organizer's event"
+    ) {
       return NextResponse.json(
         {
           success: false,
-          error: "You don't have permission to access this event",
+          error: "You don't have permission to access this ticket type",
         },
         { status: 403 },
       );
@@ -74,7 +75,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to fetch event details",
+        error: error.message || "Failed to get ticket type",
       },
       { status: 500 },
     );
@@ -82,12 +83,12 @@ export async function GET(
 }
 
 /**
- * PUT /api/organizer/[organizerId]/events/[eventId]
- * Update an event for the authenticated organizer
+ * PUT /api/organizer/[id]/events/[eventId]/tickets/[ticketId]
+ * Update a specific ticket type for an event
  */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string; eventId: string }> },
+  { params }: { params: { id: string; eventId: string; ticketId: string } },
 ) {
   try {
     // Check authentication and authorization
@@ -99,7 +100,7 @@ export async function PUT(
       );
     }
 
-    // Only organizers and admins can update events
+    // Only organizers and admins can update ticket types
     if (
       session.user.role !== UserRole.ORGANIZER &&
       session.user.role !== UserRole.ADMIN
@@ -110,23 +111,23 @@ export async function PUT(
       );
     }
 
-    const { eventId } = await params;
+    const { ticketId } = params;
     const body = await req.json();
 
     try {
       // Validate input using Zod schema
-      const validatedData = updateEventSchema.parse(body);
+      const validatedData = updateTicketTypeSchema.parse(body);
 
       // Call business logic
-      const updatedEvent = await handleUpdateOrganizerEvent({
+      const updatedTicketType = await handleUpdateTicketType({
         userId: session.user.id,
-        eventId: eventId,
-        eventData: validatedData,
+        ticketTypeId: ticketId,
+        ticketTypeData: validatedData,
       });
 
       return NextResponse.json({
         success: true,
-        data: updatedEvent,
+        data: updatedTicketType,
       });
     } catch (validationError: any) {
       return NextResponse.json(
@@ -139,40 +140,45 @@ export async function PUT(
       );
     }
   } catch (error: any) {
-    console.error(`Error updating event:`, error);
+    console.error(`Error updating ticket type:`, error);
 
     // Handle specific errors
-    if (error.message === "Event not found") {
+    if (error.message === "Ticket type not found") {
       return NextResponse.json(
-        { success: false, error: "Event not found" },
+        { success: false, error: "Ticket type not found" },
         { status: 404 },
       );
     }
 
-    if (error.message === "Event does not belong to this organizer") {
+    if (
+      error.message === "Ticket type does not belong to this organizer's event"
+    ) {
       return NextResponse.json(
         {
           success: false,
-          error: "You don't have permission to update this event",
+          error: "You don't have permission to update this ticket type",
         },
         { status: 403 },
       );
     }
 
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to update event" },
+      {
+        success: false,
+        error: error.message || "Failed to update ticket type",
+      },
       { status: 500 },
     );
   }
 }
 
 /**
- * DELETE /api/organizer/[organizerId]/events/[eventId]
- * Delete an event for the authenticated organizer
+ * DELETE /api/organizer/[id]/events/[eventId]/tickets/[ticketId]
+ * Delete a specific ticket type for an event
  */
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string; eventId: string }> },
+  { params }: { params: { id: string; eventId: string; ticketId: string } },
 ) {
   try {
     // Check authentication and authorization
@@ -184,7 +190,7 @@ export async function DELETE(
       );
     }
 
-    // Only organizers and admins can delete events
+    // Only organizers and admins can delete ticket types
     if (
       session.user.role !== UserRole.ORGANIZER &&
       session.user.role !== UserRole.ADMIN
@@ -195,41 +201,56 @@ export async function DELETE(
       );
     }
 
-    const { eventId } = await params;
+    const { ticketId } = params;
 
     // Call business logic
-    await handleDeleteOrganizerEvent({
+    await handleDeleteTicketType({
       userId: session.user.id,
-      eventId: eventId,
+      ticketTypeId: ticketId,
     });
 
     return NextResponse.json({
       success: true,
-      message: "Event deleted successfully",
+      message: "Ticket type deleted successfully",
     });
   } catch (error: any) {
-    console.error(`Error deleting event:`, error);
+    console.error(`Error deleting ticket type:`, error);
 
     // Handle specific errors
-    if (error.message === "Event not found") {
+    if (error.message === "Ticket type not found") {
       return NextResponse.json(
-        { success: false, error: "Event not found" },
+        { success: false, error: "Ticket type not found" },
         { status: 404 },
       );
     }
 
-    if (error.message === "Event does not belong to this organizer") {
+    if (
+      error.message === "Ticket type does not belong to this organizer's event"
+    ) {
       return NextResponse.json(
         {
           success: false,
-          error: "You don't have permission to delete this event",
+          error: "You don't have permission to delete this ticket type",
         },
         { status: 403 },
       );
     }
 
+    if (error.message === "Cannot delete ticket type with sold tickets") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Cannot delete ticket type with sold tickets",
+        },
+        { status: 400 },
+      );
+    }
+
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to delete event" },
+      {
+        success: false,
+        error: error.message || "Failed to delete ticket type",
+      },
       { status: 500 },
     );
   }

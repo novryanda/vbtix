@@ -10,12 +10,12 @@ const verifySchema = z.object({
 });
 
 /**
- * PUT /api/admin/organizers/[organizersId]/verify
+ * PUT /api/admin/organizers/[organizerId]/verify
  * Verify or reject an organizer
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { organizersId: string } },
+  { params }: { params: { organizerId: string } },
 ) {
   try {
     // Check authentication and authorization
@@ -35,7 +35,7 @@ export async function PUT(
       );
     }
 
-    const { organizersId } = params;
+    const { organizerId } = params;
     const body = await request.json();
 
     try {
@@ -44,7 +44,7 @@ export async function PUT(
 
       // Update verification status
       const result = await handleVerifyOrganizer(
-        organizersId,
+        organizerId,
         verified,
         notes,
         session.user.id,
@@ -61,7 +61,7 @@ export async function PUT(
       );
     }
   } catch (error: any) {
-    console.error(`Error verifying organizer ${params.organizersId}:`, error);
+    console.error(`Error verifying organizer ${params.organizerId}:`, error);
     return NextResponse.json(
       {
         success: false,

@@ -161,6 +161,25 @@ export const useEventTickets = (
   return { data, error, isLoading, mutate };
 };
 
+// Hook to fetch a specific ticket type for an event
+export const useEventTicketDetail = (
+  organizerId: string,
+  eventId: string,
+  ticketId: string,
+) => {
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    data: TicketType;
+    error?: string;
+  }>(
+    organizerId && eventId && ticketId
+      ? ORGANIZER_ENDPOINTS.EVENT_TICKET_DETAIL(organizerId, eventId, ticketId)
+      : null,
+    fetcher,
+  );
+  return { data, error, isLoading, mutate };
+};
+
 // Hook to fetch sales data for a specific event
 export const useEventSales = (
   organizerId: string,

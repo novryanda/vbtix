@@ -75,6 +75,8 @@ export interface Ticket {
   transactionId: string;
   userId: string;
   qrCode: string;
+  imageUrl?: string | null;
+  imagePublicId?: string | null;
   status: TicketStatus;
   checkedIn: boolean;
   checkInTime?: string;
@@ -132,6 +134,8 @@ export interface TicketType {
   earlyBirdDeadline?: string;
   saleStartDate?: string;
   saleEndDate?: string;
+  imageUrl?: string | null;
+  imagePublicId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

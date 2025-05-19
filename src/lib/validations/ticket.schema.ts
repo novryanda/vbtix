@@ -1,14 +1,14 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Enum for ticket status matching the Prisma schema
  */
 export const TicketStatus = z.enum([
-  'ACTIVE',
-  'USED',
-  'CANCELLED',
-  'EXPIRED',
-  'REFUNDED',
+  "ACTIVE",
+  "USED",
+  "CANCELLED",
+  "EXPIRED",
+  "REFUNDED",
 ]);
 
 /**
@@ -19,7 +19,9 @@ export const ticketSchema = z.object({
   ticketTypeId: z.string(),
   transactionId: z.string(),
   userId: z.string(),
-  qrCode: z.string().min(1, { message: 'QR Code cannot be empty' }),
+  qrCode: z.string().min(1, { message: "QR Code cannot be empty" }),
+  imageUrl: z.string().nullable().optional(),
+  imagePublicId: z.string().nullable().optional(),
   status: TicketStatus,
   checkedIn: z.boolean(),
   checkInTime: z.date().nullable().optional(),
@@ -39,8 +41,10 @@ export const createTicketSchema = z.object({
   ticketTypeId: z.string(),
   transactionId: z.string(),
   userId: z.string(),
-  qrCode: z.string().min(1, { message: 'QR Code cannot be empty' }),
-  status: TicketStatus.optional().default('ACTIVE'),
+  qrCode: z.string().min(1, { message: "QR Code cannot be empty" }),
+  imageUrl: z.string().nullable().optional(),
+  imagePublicId: z.string().nullable().optional(),
+  status: TicketStatus.optional().default("ACTIVE"),
   checkedIn: z.boolean().optional().default(false),
 });
 
@@ -51,6 +55,8 @@ export const updateTicketSchema = z.object({
   status: TicketStatus.optional(),
   checkedIn: z.boolean().optional(),
   checkInTime: z.date().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  imagePublicId: z.string().nullable().optional(),
 });
 
 /**
@@ -59,7 +65,10 @@ export const updateTicketSchema = z.object({
 export const checkInTicketSchema = z.object({
   ticketId: z.string(),
   checkedIn: z.boolean().default(true),
-  checkInTime: z.date().optional().default(() => new Date()),
+  checkInTime: z
+    .date()
+    .optional()
+    .default(() => new Date()),
 });
 
 /**
@@ -83,13 +92,19 @@ export const deleteTicketSchema = z.object({
 export const ticketTypeSchema = z.object({
   id: z.string(),
   eventId: z.string(),
-  name: z.string().min(1, { message: 'Name cannot be empty' }),
+  name: z.string().min(1, { message: "Name cannot be empty" }),
   description: z.string().nullable().optional(),
-  price: z.number().or(z.string().transform(val => parseFloat(val))).refine(val => val >= 0, {
-    message: 'Price must be a positive number',
-  }),
-  currency: z.string().default('IDR'),
-  quantity: z.number().int().positive({ message: 'Quantity must be a positive integer' }),
+  price: z
+    .number()
+    .or(z.string().transform((val) => parseFloat(val)))
+    .refine((val) => val >= 0, {
+      message: "Price must be a positive number",
+    }),
+  currency: z.string().default("IDR"),
+  quantity: z
+    .number()
+    .int()
+    .positive({ message: "Quantity must be a positive integer" }),
   sold: z.number().int().default(0),
   maxPerPurchase: z.number().int().positive().default(10),
   isVisible: z.boolean().default(true),
@@ -112,13 +127,19 @@ export type TicketTypeSchema = z.infer<typeof ticketTypeSchema>;
  * Schema for creating a new ticket type
  */
 export const createTicketTypeSchema = z.object({
-  name: z.string().min(1, { message: 'Name cannot be empty' }),
+  name: z.string().min(1, { message: "Name cannot be empty" }),
   description: z.string().optional(),
-  price: z.number().or(z.string().transform(val => parseFloat(val))).refine(val => val >= 0, {
-    message: 'Price must be a positive number',
-  }),
-  currency: z.string().optional().default('IDR'),
-  quantity: z.number().int().positive({ message: 'Quantity must be a positive integer' }),
+  price: z
+    .number()
+    .or(z.string().transform((val) => parseFloat(val)))
+    .refine((val) => val >= 0, {
+      message: "Price must be a positive number",
+    }),
+  currency: z.string().optional().default("IDR"),
+  quantity: z
+    .number()
+    .int()
+    .positive({ message: "Quantity must be a positive integer" }),
   maxPerPurchase: z.number().int().positive().optional().default(10),
   isVisible: z.boolean().optional().default(true),
   allowTransfer: z.boolean().optional().default(false),
@@ -133,13 +154,21 @@ export const createTicketTypeSchema = z.object({
  * Schema for updating an existing ticket type
  */
 export const updateTicketTypeSchema = z.object({
-  name: z.string().min(1, { message: 'Name cannot be empty' }).optional(),
+  name: z.string().min(1, { message: "Name cannot be empty" }).optional(),
   description: z.string().optional(),
-  price: z.number().or(z.string().transform(val => parseFloat(val))).refine(val => val >= 0, {
-    message: 'Price must be a positive number',
-  }).optional(),
+  price: z
+    .number()
+    .or(z.string().transform((val) => parseFloat(val)))
+    .refine((val) => val >= 0, {
+      message: "Price must be a positive number",
+    })
+    .optional(),
   currency: z.string().optional(),
-  quantity: z.number().int().positive({ message: 'Quantity must be a positive integer' }).optional(),
+  quantity: z
+    .number()
+    .int()
+    .positive({ message: "Quantity must be a positive integer" })
+    .optional(),
   maxPerPurchase: z.number().int().positive().optional(),
   isVisible: z.boolean().optional(),
   allowTransfer: z.boolean().optional(),

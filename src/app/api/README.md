@@ -5,6 +5,7 @@ This directory contains the API routes for the VBTix application. The API is org
 ## 1. Admin API (`/api/admin/`)
 
 API endpoints for administrative operations, such as:
+
 - Managing users
 - Approving organizers
 - Viewing system-wide reports
@@ -13,8 +14,9 @@ API endpoints for administrative operations, such as:
 ## 2. Buyer API (`/api/buyer/`)
 
 API endpoints for ticket buyers, including:
+
 - Browsing events (`/api/buyer/events/`)
-- Viewing event details (`/api/buyer/events/[id]`)
+- Viewing event details (`/api/buyer/events/[eventId]`)
 - Purchasing tickets (`/api/buyer/tickets/`)
 - Managing orders (`/api/buyer/orders/`)
 - Accessing e-tickets (`/api/buyer/etickets/`)
@@ -23,6 +25,7 @@ API endpoints for ticket buyers, including:
 ## 3. Organizer API (`/api/organizer/`)
 
 API endpoints for event organizers, including:
+
 - Creating and managing events (`/api/organizer/events/`)
 - Creating and managing ticket types (`/api/organizer/tickets/`)
 - Managing ticket inventory (`/api/organizer/inventory/`)
@@ -32,6 +35,7 @@ API endpoints for event organizers, including:
 ## Common API Endpoints
 
 Some API endpoints are not grouped and remain at the top level:
+
 - Authentication (`/api/auth/`)
 - Payment processing (`/api/payments/`)
 - Webhooks for external services (`/api/webhooks/`)

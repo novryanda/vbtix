@@ -4,6 +4,7 @@ import { UserRole } from "@prisma/client";
 
 // Daftar rute publik yang tidak memerlukan autentikasi
 const publicRoutes = [
+  "/",
   "/login",
   "/register",
   "/forgot-password",
@@ -81,6 +82,11 @@ export async function authMiddleware(req: NextRequest) {
 
     const isAuthenticated = !!token;
 
+    // Special handling for root path - always redirect to buyer page if not authenticated
+    if (path === "/" && !isAuthenticated) {
+      return NextResponse.redirect(new URL("/buyer", req.url));
+    }
+
     // Jika pengguna sudah login dan mencoba mengakses halaman publik, alihkan ke dashboard
     if (isPublicRoute(path) && isAuthenticated && token && token.role) {
       const dashboardRoute = getDashboardRoute(
@@ -98,7 +104,8 @@ export async function authMiddleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    if (path === "/" || path === "/dashboard") {
+    // Handle /dashboard path
+    if (path === "/dashboard") {
       if (isAuthenticated && token && token.role) {
         const dashboardRoute = getDashboardRoute(
           token.role as UserRole,
@@ -106,8 +113,8 @@ export async function authMiddleware(req: NextRequest) {
         );
         return NextResponse.redirect(new URL(dashboardRoute, req.url));
       } else {
-        // Redirect ke halaman login jika belum login
-        return NextResponse.redirect(new URL("/login", req.url));
+        // Redirect to buyer page instead of login
+        return NextResponse.redirect(new URL("/buyer", req.url));
       }
     }
 

@@ -346,6 +346,8 @@ model Ticket {
   userId        String
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   qrCode        String       @unique
+  imageUrl      String?      // URL of the ticket image
+  imagePublicId String?      // Cloudinary public ID for the ticket image
   status        TicketStatus @default(ACTIVE)
   checkedIn     Boolean      @default(false)
   checkInTime   DateTime?

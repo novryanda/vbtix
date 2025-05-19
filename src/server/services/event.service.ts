@@ -72,12 +72,21 @@ export const eventService = {
     const skip = (page - 1) * limit;
 
     try {
-      console.log("Finding events with params:", params);
+      console.log(
+        "Finding events with params:",
+        JSON.stringify(params, null, 2),
+      );
 
       const where: Prisma.EventWhereInput = {};
 
+      console.log("Status parameter:", status);
       if (status) {
         where.status = status;
+        console.log("Added status filter:", status);
+      } else {
+        // When no status is provided, include all statuses
+        console.log("No status filter provided, including all statuses");
+        // Don't add any status filter to the where clause
       }
 
       if (organizerId) {
@@ -102,13 +111,28 @@ export const eventService = {
       }
 
       // For buyer-facing endpoints, only show published events
-      if (published === undefined && status === undefined) {
+      // But don't add this filter for admin endpoints when no status is specified
+      // Check if this is an admin request by checking if organizerId is not provided
+      if (
+        published === undefined &&
+        status === undefined &&
+        organizerId !== undefined
+      ) {
         // If neither published nor status filter is specified, default to published events
+        // But only for non-admin requests
         where.published = true;
         where.status = EventStatus.PUBLISHED;
       }
 
       console.log("Query where condition:", JSON.stringify(where, null, 2));
+
+      // Create a debug query to log the SQL
+      const debugQuery = Prisma.sql`
+        SELECT COUNT(*) FROM "Event"
+        ${Object.keys(where).length > 0 ? Prisma.sql`WHERE ${Prisma.raw(JSON.stringify(where))}` : Prisma.empty}
+      `;
+
+      console.log("Debug SQL query:", debugQuery);
 
       const [events, total] = await Promise.all([
         db.event.findMany({
@@ -153,6 +177,15 @@ export const eventService = {
       ]);
 
       console.log(`Found ${events.length} events out of ${total} total`);
+
+      // Log the first few events for debugging
+      if (events.length > 0) {
+        console.log("First event:", {
+          id: events[0].id,
+          title: events[0].title,
+          status: events[0].status,
+        });
+      }
 
       return { events, total };
     } catch (error) {

@@ -1,8 +1,10 @@
 import { userService } from "~/server/services/user.service";
 import { UserRole } from "@prisma/client";
+import { generateRandomPassword } from "~/lib/utils/generators";
 
 /**
  * Generate a random password
+ * @see src/lib/utils/generators.ts
  */
 
 /**

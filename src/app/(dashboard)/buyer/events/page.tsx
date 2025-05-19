@@ -3,7 +3,15 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar, MapPin, Search, Filter, X } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Search,
+  Filter,
+  X,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
@@ -21,24 +29,46 @@ import {
   Pagination,
   PaginationContent,
   PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
 } from "~/components/ui/pagination";
+import { formatCurrency } from "~/lib/utils";
 
 // Event type definition
 interface Event {
   id: string;
+  slug: string;
   title: string;
-  description: string;
-  date: string;
-  location: string;
-  price: number;
-  image: string;
-  category: string;
+  description?: string;
+  posterUrl?: string;
+  bannerUrl?: string;
+  category?: string;
+  venue: string;
+  address?: string;
+  city?: string;
+  province: string;
+  country: string;
+  tags: string[];
+  featured: boolean;
+  startDate: string;
+  endDate: string;
+  formattedStartDate: string;
+  formattedEndDate: string;
   organizer: {
     id: string;
-    name: string;
+    orgName: string;
+    verified: boolean;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      image?: string;
+    };
+  };
+  ticketInfo: {
+    lowestPrice: number;
+    totalTickets: number;
+    soldTickets: number;
+    availableTickets: number;
+    percentageSold: number;
   };
 }
 
@@ -135,7 +165,7 @@ export default function EventsPage() {
     <Card className="h-full overflow-hidden transition-all hover:shadow-md">
       <div className="relative h-48 w-full overflow-hidden">
         <img
-          src={event.image || "https://placehold.co/400x300?text=No+Image"}
+          src={event.posterUrl || "https://placehold.co/400x300?text=No+Image"}
           alt={event.title}
           className="h-full w-full object-cover transition-transform hover:scale-105"
         />
@@ -152,11 +182,13 @@ export default function EventsPage() {
         <div className="mb-3 space-y-1 text-sm text-gray-500">
           <div className="flex items-center">
             <Calendar size={14} className="mr-1.5 text-blue-500" />
-            <span>{event.date}</span>
+            <span>{event.formattedStartDate}</span>
           </div>
           <div className="flex items-center">
             <MapPin size={14} className="mr-1.5 text-blue-500" />
-            <span className="line-clamp-1">{event.location}</span>
+            <span className="line-clamp-1">
+              {event.venue}, {event.city}
+            </span>
           </div>
         </div>
         <p className="line-clamp-2 text-sm text-gray-600">
@@ -165,7 +197,9 @@ export default function EventsPage() {
       </CardContent>
       <CardFooter className="flex items-center justify-between border-t p-4">
         <div className="text-sm font-medium text-blue-600">
-          {event.price > 0 ? `Rp ${event.price.toLocaleString()}` : "Gratis"}
+          {event.ticketInfo.lowestPrice > 0
+            ? `${formatCurrency(event.ticketInfo.lowestPrice)}`
+            : "Free"}
         </div>
         <Button size="sm" asChild>
           <Link href={`/buyer/events/${event.id}`}>Detail</Link>
@@ -302,42 +336,49 @@ export default function EventsPage() {
           <Pagination className="mt-8">
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious
+                <Button
+                  variant="outline"
+                  size="icon"
                   onClick={() =>
                     handlePageChange(Math.max(1, meta.currentPage - 1))
                   }
-                  className={
-                    meta.currentPage === 1
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
+                  disabled={meta.currentPage === 1}
+                  className="gap-1"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Previous</span>
+                </Button>
               </PaginationItem>
 
               {Array.from({ length: meta.totalPages }).map((_, index) => (
                 <PaginationItem key={index}>
-                  <PaginationLink
-                    isActive={meta.currentPage === index + 1}
+                  <Button
+                    variant={
+                      meta.currentPage === index + 1 ? "default" : "outline"
+                    }
+                    size="icon"
                     onClick={() => handlePageChange(index + 1)}
                   >
                     {index + 1}
-                  </PaginationLink>
+                  </Button>
                 </PaginationItem>
               ))}
 
               <PaginationItem>
-                <PaginationNext
+                <Button
+                  variant="outline"
+                  size="icon"
                   onClick={() =>
                     handlePageChange(
                       Math.min(meta.totalPages, meta.currentPage + 1),
                     )
                   }
-                  className={
-                    meta.currentPage === meta.totalPages
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
+                  disabled={meta.currentPage === meta.totalPages}
+                  className="gap-1"
+                >
+                  <span>Next</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
               </PaginationItem>
             </PaginationContent>
           </Pagination>

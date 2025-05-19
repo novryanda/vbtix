@@ -2,21 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleGetEventById } from "~/server/api/buyer-events";
 
 /**
- * GET /api/buyer/events/[id]
+ * GET /api/buyer/events/[eventId]
  * Get a specific event by ID
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
-    const { id } = params;
+    // Get event ID from params - await params to avoid "sync-dynamic-apis" error
+    const { eventId } = await params;
 
-    // Get event by ID or slug
-    const event = await handleGetEventById({
-      id: id.startsWith("evt_") ? id : undefined,
-      slug: !id.startsWith("evt_") ? id : undefined,
-    });
+    if (!eventId) {
+      return NextResponse.json(
+        { success: false, error: "Event ID is required" },
+        { status: 400 },
+      );
+    }
+
+    // Get event details
+    const event = await handleGetEventById({ id: eventId });
 
     // Return response
     return NextResponse.json({
@@ -24,14 +29,14 @@ export async function GET(
       data: event,
     });
   } catch (error: any) {
-    console.error(`Error getting event with ID ${params.id}:`, error);
+    console.error("Error getting event:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || "Failed to get event details" 
+      {
+        success: false,
+        error: error.message || "Failed to get event",
       },
-      { 
-        status: error.message === "Event not found" ? 404 : 500 
+      {
+        status: error.message === "Event not found" ? 404 : 500,
       },
     );
   }

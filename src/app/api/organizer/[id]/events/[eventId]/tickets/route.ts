@@ -13,7 +13,7 @@ import { createTicketTypeSchema } from "~/lib/validations/ticket.schema";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: { id: string; eventId: string } },
 ) {
   try {
     // Check authentication and authorization
@@ -36,7 +36,8 @@ export async function GET(
       );
     }
 
-    const { id: eventId } = params;
+    // Get params
+    const { eventId } = params;
 
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -57,7 +58,7 @@ export async function GET(
       meta: result.meta,
     });
   } catch (error: any) {
-    console.error(`Error getting tickets for event ${params.id}:`, error);
+    console.error(`Error getting tickets:`, error);
 
     // Handle specific errors
     if (error.message === "Event not found") {
@@ -80,7 +81,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: { id: string; eventId: string } },
 ) {
   try {
     // Check authentication and authorization
@@ -103,7 +104,7 @@ export async function POST(
       );
     }
 
-    const { id: eventId } = params;
+    const { eventId } = params;
     const body = await request.json();
 
     try {
@@ -136,7 +137,7 @@ export async function POST(
       );
     }
   } catch (error: any) {
-    console.error(`Error creating ticket type for event ${params.id}:`, error);
+    console.error(`Error creating ticket type:`, error);
 
     // Handle specific errors
     if (error.message === "Event not found") {

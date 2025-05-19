@@ -123,6 +123,8 @@ export const useAdminEvents = (params?: {
     }
   }
 
+  console.log("useAdminEvents URL:", url);
+
   const { data, error, isLoading, mutate } = useSWR<{
     success: boolean;
     data: any[];

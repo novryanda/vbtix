@@ -57,12 +57,20 @@ export const ORGANIZER_ENDPOINTS = {
   // Event Tickets
   EVENT_TICKETS: (organizerId: string, eventId: string) =>
     `${API_BASE}/organizer/${organizerId}/events/${eventId}/tickets`,
+  EVENT_TICKET_DETAIL: (
+    organizerId: string,
+    eventId: string,
+    ticketId: string,
+  ) =>
+    `${API_BASE}/organizer/${organizerId}/events/${eventId}/tickets/${ticketId}`,
 
   // Tickets
   TICKETS: (organizerId: string) =>
     `${API_BASE}/organizer/${organizerId}/tickets`,
   TICKET_DETAIL: (organizerId: string, id: string) =>
     `${API_BASE}/organizer/${organizerId}/tickets/${id}`,
+  TICKET_IMAGE: (organizerId: string, id: string) =>
+    `${API_BASE}/organizer/${organizerId}/tickets/${id}/image`,
   CREATE_TICKET: (organizerId: string) =>
     `${API_BASE}/organizer/${organizerId}/tickets/create`,
   UPDATE_TICKET: (organizerId: string, id: string) =>
@@ -95,7 +103,7 @@ export const ORGANIZER_ENDPOINTS = {
 // Buyer endpoints
 export const BUYER_ENDPOINTS = {
   EVENTS: `${API_BASE}/buyer/events`,
-  EVENT_DETAIL: (id: string) => `${API_BASE}/buyer/events/${id}`,
+  EVENT_DETAIL: (eventId: string) => `${API_BASE}/buyer/events/${eventId}`,
   PURCHASE_TICKET: `${API_BASE}/buyer/tickets/purchase`,
   CANCEL_TICKET: (id: string) => `${API_BASE}/buyer/tickets/${id}/cancel`,
 };
