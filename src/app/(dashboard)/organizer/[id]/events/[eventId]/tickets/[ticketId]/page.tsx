@@ -21,7 +21,7 @@ import { ArrowLeft, AlertCircle, ImageIcon } from "lucide-react";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { formatCurrency } from "~/lib/utils";
 import { Checkbox } from "~/components/ui/checkbox";
-import { TicketImageUpload } from "~/components/ui/ticket-image-upload";
+import { TicketImageUploader } from "~/components/ui/ticket-image-uploader";
 import { Separator } from "~/components/ui/separator";
 import Image from "next/image";
 
@@ -359,7 +359,7 @@ export default function EditTicketPage({
 
                         {/* Ticket Image Upload Component */}
                         <div className="mt-4">
-                          <TicketImageUpload
+                          <TicketImageUploader
                             organizerId={id}
                             ticketId={ticketId}
                             currentImageUrl={ticket?.imageUrl}

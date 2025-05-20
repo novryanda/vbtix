@@ -65,7 +65,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { DeferredTicketImageUpload } from "~/components/ui/deferred-ticket-image-upload";
+import { DeferredTicketUploader } from "~/components/ui/deferred-ticket-uploader";
 import { Separator } from "~/components/ui/separator";
 
 export default function EventTicketsPage({
@@ -663,7 +663,7 @@ export default function EventTicketsPage({
                           <h3 className="text-sm font-medium">Ticket Image</h3>
 
                           <div className="grid gap-2">
-                            <DeferredTicketImageUpload
+                            <DeferredTicketUploader
                               onChange={handleTicketImageChange}
                               value={ticketImage}
                               previewUrl={ticketImagePreview}

@@ -3,11 +3,12 @@
 import { useState, useRef } from "react";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
-import { ImageIcon, X, Upload, Loader2 } from "lucide-react";
+import { X, Upload, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
+import { uploadToCloudinary, UploadEndpoint } from "~/lib/upload-helpers";
 
-interface TicketImageUploadProps {
+interface TicketImageUploaderProps {
   organizerId: string;
   ticketId: string;
   currentImageUrl?: string | null;
@@ -15,15 +16,17 @@ interface TicketImageUploadProps {
   onError?: (error: string) => void;
 }
 
-export function TicketImageUpload({
+export function TicketImageUploader({
   organizerId,
   ticketId,
   currentImageUrl,
   onSuccess,
   onError,
-}: TicketImageUploadProps) {
+}: TicketImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(currentImageUrl || null);
+  const [imageUrl, setImageUrl] = useState<string | null>(
+    currentImageUrl || null,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,29 +36,38 @@ export function TicketImageUpload({
     try {
       setIsUploading(true);
 
-      // Create a FormData object to send the file
-      const formData = new FormData();
-      formData.append("file", file);
+      // Use standardized upload helper with ticket endpoint
+      const result = await uploadToCloudinary(file, {
+        endpoint: UploadEndpoint.TICKET,
+      });
 
-      // Upload to server
+      // Update the ticket with the image URL via API
       const response = await fetch(
         ORGANIZER_ENDPOINTS.TICKET_IMAGE(organizerId, ticketId),
         {
           method: "PUT",
-          body: formData,
-        }
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            imageUrl: result.url,
+            imagePublicId: result.publicId,
+          }),
+        },
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to upload image");
+        throw new Error(
+          errorData.error || "Failed to update ticket with image",
+        );
       }
 
       const data = await response.json();
-      
+
       // Update local state
       setImageUrl(data.data.imageUrl);
-      
+
       // Call success callback
       if (onSuccess) {
         onSuccess(data.data.imageUrl);
@@ -83,7 +95,7 @@ export function TicketImageUpload({
         ORGANIZER_ENDPOINTS.TICKET_IMAGE(organizerId, ticketId),
         {
           method: "DELETE",
-        }
+        },
       );
 
       if (!response.ok) {
@@ -93,7 +105,7 @@ export function TicketImageUpload({
 
       // Update local state
       setImageUrl(null);
-      
+
       // Call success callback
       if (onSuccess) {
         onSuccess("");
@@ -118,7 +130,7 @@ export function TicketImageUpload({
       <div className="mb-4">
         {imageUrl ? (
           <div className="relative h-[200px] w-full overflow-hidden rounded-md">
-            <div className="absolute right-2 top-2 z-10">
+            <div className="absolute top-2 right-2 z-10">
               <Button
                 type="button"
                 onClick={handleRemoveImage}

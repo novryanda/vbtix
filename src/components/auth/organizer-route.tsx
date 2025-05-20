@@ -25,6 +25,7 @@ export function OrganizerRoute({ children }: { children: React.ReactNode }) {
       session.user.role !== UserRole.ADMIN
     ) {
       router.push("/");
+      return;
     }
   }, [session, status, router]);
 

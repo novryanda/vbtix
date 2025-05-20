@@ -11,7 +11,7 @@ import { uploadImage } from "~/lib/cloudinary-utils";
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; ticketId: string } }
+  { params }: { params: { id: string; ticketId: string } },
 ) {
   try {
     // Check authentication and authorization
@@ -19,7 +19,7 @@ export async function PUT(
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -30,7 +30,7 @@ export async function PUT(
     ) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -38,10 +38,13 @@ export async function PUT(
 
     // Verify organizer
     const organizer = await organizerService.findByUserId(session.user.id);
-    if (!organizer || (organizer.id !== organizerId && session.user.role !== UserRole.ADMIN)) {
+    if (
+      !organizer ||
+      (organizer.id !== organizerId && session.user.role !== UserRole.ADMIN)
+    ) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -50,40 +53,66 @@ export async function PUT(
     if (!ticket) {
       return NextResponse.json(
         { success: false, error: "Ticket not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Verify that the ticket belongs to an event organized by this organizer
-    if (ticket.ticketType.event.organizer.id !== organizer.id && session.user.role !== UserRole.ADMIN) {
+    if (
+      ticket.ticketType.event.organizer.id !== organizer.id &&
+      session.user.role !== UserRole.ADMIN
+    ) {
       return NextResponse.json(
         { success: false, error: "Ticket does not belong to this organizer" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
-    // Get the form data
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    
-    if (!file) {
-      return NextResponse.json(
-        { success: false, error: "No file provided" },
-        { status: 400 }
-      );
+    // Check if the request is JSON or FormData
+    let imageUrl: string | null = null;
+    let imagePublicId: string | null = null;
+
+    const contentType = request.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      // Handle JSON request (from client-side upload)
+      const body = await request.json();
+      imageUrl = body.imageUrl;
+      imagePublicId = body.imagePublicId;
+
+      if (!imageUrl || !imagePublicId) {
+        return NextResponse.json(
+          { success: false, error: "Missing image URL or public ID" },
+          { status: 400 },
+        );
+      }
+    } else {
+      // Handle FormData request (direct upload)
+      const formData = await request.formData();
+      const file = formData.get("file") as File;
+
+      if (!file) {
+        return NextResponse.json(
+          { success: false, error: "No file provided" },
+          { status: 400 },
+        );
+      }
+
+      // Convert file to buffer
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      // Upload to Cloudinary using standardized utility
+      const result = await uploadImage(buffer, "vbtix/tickets");
+
+      imageUrl = result.secure_url;
+      imagePublicId = result.public_id;
     }
-
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Upload to Cloudinary
-    const result = await uploadImage(buffer, "vbtix/tickets");
 
     // Update ticket with image URL and public ID
     const updatedTicket = await ticketService.updateTicket(ticketId, {
-      imageUrl: result.secure_url,
-      imagePublicId: result.public_id,
+      imageUrl,
+      imagePublicId,
     });
 
     // Return response
@@ -98,8 +127,11 @@ export async function PUT(
   } catch (error: any) {
     console.error("Error updating ticket image:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to update ticket image" },
-      { status: 500 }
+      {
+        success: false,
+        error: error.message || "Failed to update ticket image",
+      },
+      { status: 500 },
     );
   }
 }
@@ -110,7 +142,7 @@ export async function PUT(
  */
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string; ticketId: string } }
+  { params }: { params: { id: string; ticketId: string } },
 ) {
   try {
     // Check authentication and authorization
@@ -118,7 +150,7 @@ export async function DELETE(
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -129,7 +161,7 @@ export async function DELETE(
     ) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -137,10 +169,13 @@ export async function DELETE(
 
     // Verify organizer
     const organizer = await organizerService.findByUserId(session.user.id);
-    if (!organizer || (organizer.id !== organizerId && session.user.role !== UserRole.ADMIN)) {
+    if (
+      !organizer ||
+      (organizer.id !== organizerId && session.user.role !== UserRole.ADMIN)
+    ) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -149,15 +184,18 @@ export async function DELETE(
     if (!ticket) {
       return NextResponse.json(
         { success: false, error: "Ticket not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Verify that the ticket belongs to an event organized by this organizer
-    if (ticket.ticketType.event.organizer.id !== organizer.id && session.user.role !== UserRole.ADMIN) {
+    if (
+      ticket.ticketType.event.organizer.id !== organizer.id &&
+      session.user.role !== UserRole.ADMIN
+    ) {
       return NextResponse.json(
         { success: false, error: "Ticket does not belong to this organizer" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -177,8 +215,11 @@ export async function DELETE(
   } catch (error: any) {
     console.error("Error removing ticket image:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to remove ticket image" },
-      { status: 500 }
+      {
+        success: false,
+        error: error.message || "Failed to remove ticket image",
+      },
+      { status: 500 },
     );
   }
 }

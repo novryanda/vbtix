@@ -292,6 +292,24 @@ export const useVerifyOrganizer = () => {
   return { verifyOrganizer };
 };
 
+// Hook to fetch organizer verification history
+export const useOrganizerVerificationHistory = (id: string) => {
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    data: any[];
+  }>(
+    id ? `${ADMIN_ENDPOINTS.ORGANIZER_DETAIL(id)}/verification-history` : null,
+    fetcher,
+  );
+
+  return {
+    verificationHistory: data?.data,
+    error,
+    isLoading,
+    mutate,
+  };
+};
+
 // Hook to fetch organizer statistics
 export const useOrganizerStats = () => {
   const { data, error, isLoading, mutate } = useSWR<{

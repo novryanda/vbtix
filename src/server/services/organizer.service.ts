@@ -67,6 +67,7 @@ export const organizerService = {
           },
         },
         bankAccount: true,
+        verification: true,
       },
     });
   },
@@ -84,6 +85,8 @@ export const organizerService = {
             image: true,
           },
         },
+        verification: true,
+        bankAccount: true,
       },
     });
   },

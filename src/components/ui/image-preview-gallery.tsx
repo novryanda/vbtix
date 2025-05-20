@@ -23,13 +23,13 @@ export function ImagePreviewGallery({
   const [isMounted, setIsMounted] = useState(false);
 
   // Combine all images into a single array
-  const allImages = [
+  const allImages: Array<{ url: string; label: string }> = [
     ...(poster ? [{ url: poster.previewUrl, label: "Event Poster" }] : []),
     ...(banner ? [{ url: banner.previewUrl, label: "Event Banner" }] : []),
-    ...(additionalImages.map((img, idx) => ({ 
-      url: img.previewUrl, 
-      label: `Additional Image ${idx + 1}` 
-    }))),
+    ...additionalImages.map((img, idx) => ({
+      url: img.previewUrl,
+      label: `Additional Image ${idx + 1}`,
+    })),
   ];
 
   // Ensure component is mounted before rendering to avoid hydration issues
@@ -46,6 +46,11 @@ export function ImagePreviewGallery({
     return null;
   }
 
+  // Ensure activeIndex is within bounds
+  if (activeIndex >= allImages.length) {
+    setActiveIndex(0);
+  }
+
   const nextImage = () => {
     setActiveIndex((prev) => (prev + 1) % allImages.length);
   };
@@ -56,28 +61,32 @@ export function ImagePreviewGallery({
 
   return (
     <div className={cn("w-full overflow-hidden rounded-lg border", className)}>
-      <div className="relative aspect-video w-full overflow-hidden bg-muted">
+      <div className="bg-muted relative aspect-video w-full overflow-hidden">
         {/* Main image */}
-        <Image
-          src={allImages[activeIndex].url}
-          alt={allImages[activeIndex].label}
-          fill
-          className="object-contain"
-          priority
-        />
-        
-        {/* Image label */}
-        <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-2 text-center text-sm text-white">
-          {allImages[activeIndex].label}
-        </div>
-        
+        {allImages[activeIndex] && (
+          <>
+            <Image
+              src={allImages[activeIndex].url}
+              alt={allImages[activeIndex].label}
+              fill
+              className="object-contain"
+              priority
+            />
+
+            {/* Image label */}
+            <div className="absolute right-0 bottom-0 left-0 bg-black/50 p-2 text-center text-sm text-white">
+              {allImages[activeIndex].label}
+            </div>
+          </>
+        )}
+
         {/* Navigation arrows */}
         {allImages.length > 1 && (
           <>
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-black/30 text-white hover:bg-black/50"
+              className="absolute top-1/2 left-2 h-8 w-8 -translate-y-1/2 rounded-full bg-black/30 text-white hover:bg-black/50"
               onClick={prevImage}
             >
               <ChevronLeft className="h-5 w-5" />
@@ -85,7 +94,7 @@ export function ImagePreviewGallery({
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-black/30 text-white hover:bg-black/50"
+              className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2 rounded-full bg-black/30 text-white hover:bg-black/50"
               onClick={nextImage}
             >
               <ChevronRight className="h-5 w-5" />
@@ -93,16 +102,16 @@ export function ImagePreviewGallery({
           </>
         )}
       </div>
-      
+
       {/* Thumbnails */}
       {allImages.length > 1 && (
-        <div className="flex overflow-x-auto p-2 gap-2 bg-muted/20">
+        <div className="bg-muted/20 flex gap-2 overflow-x-auto p-2">
           {allImages.map((image, idx) => (
             <button
               key={idx}
               className={cn(
                 "relative h-16 w-16 flex-shrink-0 overflow-hidden rounded border-2",
-                activeIndex === idx ? "border-primary" : "border-transparent"
+                activeIndex === idx ? "border-primary" : "border-transparent",
               )}
               onClick={() => setActiveIndex(idx)}
             >

@@ -8,50 +8,40 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// User Models
 model User {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String        @unique
   emailVerified DateTime?
   image         String?
   password      String?
   phone         String?
-  role          UserRole  @default(BUYER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  organizer    Organizer?
-  accounts     Account[]
-  sessions     Session[]
-  tickets      Ticket[] // Relasi ke Ticket
-  transactions Transaction[] // Relasi ke Transaction
-  validator    Validator?
+  role          UserRole      @default(BUYER)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  accounts      Account[]
+  organizer     Organizer?
+  sessions      Session[]
+  tickets       Ticket[]
+  transactions  Transaction[]
+  validator     Validator?
 }
 
-enum UserRole {
-  ADMIN
-  ORGANIZER
-  BUYER
-}
-
-// Necessary for NextAuth
 model Account {
   id                       String  @id @default(cuid())
   userId                   String
   type                     String
   provider                 String
   providerAccountId        String
-  refresh_token            String? @db.Text
-  access_token             String? @db.Text
+  refresh_token            String?
+  access_token             String?
   expires_at               Int?
   token_type               String?
   scope                    String?
-  id_token                 String? @db.Text
+  id_token                 String?
   session_state            String?
   refresh_token_expires_in Int?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -73,105 +63,89 @@ model VerificationToken {
 }
 
 model Organizer {
-  id               String       @id @default(cuid())
-  userId           String       @unique
-  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orgName          String
-  legalName        String?
-  npwp             String?
-  bankAccount      BankAccount?
-  socialMedia      Json?
-  verificationDocs String?
-  verified         Boolean      @default(false)
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-
-  events      Event[] // Relasi ke Event
-  crew        Crew[] // Relasi ke Crew
-  vouchers    Voucher[] // Relasi ke Voucher
-  withdrawals Withdrawal[] // Relasi ke Withdrawal
+  id           String                 @id @default(cuid())
+  userId       String                 @unique
+  orgName      String
+  legalName    String?
+  npwp         String?
+  socialMedia  Json?
+  verified     Boolean                @default(false)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  bankAccount  BankAccount?
+  crew         Crew[]
+  events       Event[]
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verification OrganizerVerification?
+  vouchers     Voucher[]
+  withdrawals  Withdrawal[]
 }
 
-// Event Models
 model Event {
-  id           String      @id @default(cuid())
-  slug         String      @unique
-  organizerId  String
-  organizer    Organizer   @relation(fields: [organizerId], references: [id])
-  title        String
-  description  String?     @db.Text
-  posterUrl    String?
-  bannerUrl    String?
-  posterPublicId String?   // Cloudinary public ID for poster image
-  bannerPublicId String?   // Cloudinary public ID for banner image
-  category     String?
-  venue        String
-  address      String?     @db.Text
-  city         String?
-  province     String
-  country      String
-  tags         String[]
-  images       String[]    // URLs of additional images
-  imagePublicIds String[]  // Cloudinary public IDs for additional images
-  featured     Boolean     @default(false)
-  published    Boolean     @default(false)
-  seatingMap   String?
-  maxAttendees Int?
-  website      String?
-  terms        String?
-  startDate    DateTime
-  endDate      DateTime
-  status       EventStatus @default(DRAFT)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  ticketTypes  TicketType[] // Relasi ke TicketType
-  transactions Transaction[] // Relasi ke Transaction
-  crew         Crew[] // Relasi ke Crew
-  vouchers     Voucher[] // Relasi ke Voucher
-}
-
-enum EventStatus {
-  DRAFT
-  PENDING_REVIEW
-  PUBLISHED
-  REJECTED
-  COMPLETED
-  CANCELLED
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  organizerId    String
+  title          String
+  description    String?
+  posterUrl      String?
+  bannerUrl      String?
+  posterPublicId String?
+  bannerPublicId String?
+  category       String?
+  venue          String
+  address        String?
+  city           String?
+  province       String
+  country        String
+  tags           String[]
+  images         String[]
+  imagePublicIds String[]
+  featured       Boolean       @default(false)
+  published      Boolean       @default(false)
+  seatingMap     String?
+  maxAttendees   Int?
+  website        String?
+  terms          String?
+  startDate      DateTime
+  endDate        DateTime
+  status         EventStatus   @default(DRAFT)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  crew           Crew[]
+  organizer      Organizer     @relation(fields: [organizerId], references: [id])
+  ticketTypes    TicketType[]
+  transactions   Transaction[]
+  vouchers       Voucher[]
 }
 
 model TicketType {
-  id                String    @id @default(cuid())
+  id                String      @id @default(cuid())
   eventId           String
-  event             Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   name              String
-  description       String?   @db.Text
-  price             Decimal   @db.Decimal(10, 2)
-  currency          String    @default("IDR")
+  description       String?
+  price             Decimal     @db.Decimal(10, 2)
+  currency          String      @default("IDR")
   quantity          Int
-  sold              Int       @default(0)
-  maxPerPurchase    Int       @default(10)
-  isVisible         Boolean   @default(true)
-  allowTransfer     Boolean   @default(false)
+  sold              Int         @default(0)
+  maxPerPurchase    Int         @default(10)
+  isVisible         Boolean     @default(true)
+  allowTransfer     Boolean     @default(false)
   ticketFeatures    String?
-  perks             String?   @db.Text
+  perks             String?
   earlyBirdDeadline DateTime?
   saleStartDate     DateTime?
   saleEndDate       DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  orderItems OrderItem[] // Relasi ke OrderItem
-  tickets    Ticket[] // Relasi ke Ticket
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  orderItems        OrderItem[]
+  tickets           Ticket[]
+  event             Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
-// Transaction Models
 model Transaction {
   id               String        @id @default(cuid())
   userId           String
-  user             User          @relation(fields: [userId], references: [id])
   eventId          String
-  event            Event         @relation(fields: [eventId], references: [id])
   amount           Decimal       @db.Decimal(10, 2)
   currency         String        @default("IDR")
   paymentMethod    String
@@ -181,37 +155,29 @@ model Transaction {
   details          Json?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-
-  tickets    Ticket[] // Relasi ke Ticket
-  orderItems OrderItem[] // Relasi ke OrderItem
-  payments   Payment[] // Relasi ke Payment
-  eTickets   ETicket[] // Relasi ke ETicket
-}
-
-enum PaymentStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  EXPIRED
-  REFUNDED
+  eTickets         ETicket[]
+  orderItems       OrderItem[]
+  payments         Payment[]
+  tickets          Ticket[]
+  event            Event         @relation(fields: [eventId], references: [id])
+  user             User          @relation(fields: [userId], references: [id])
 }
 
 model OrderItem {
   id           String      @id @default(cuid())
   orderId      String
-  order        Transaction @relation(fields: [orderId], references: [id], onDelete: Cascade)
   ticketTypeId String
-  ticketType   TicketType  @relation(fields: [ticketTypeId], references: [id])
   quantity     Int
   price        Decimal     @db.Decimal(10, 2)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+  order        Transaction @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ticketType   TicketType  @relation(fields: [ticketTypeId], references: [id])
 }
 
 model Payment {
   id              String        @id @default(cuid())
   orderId         String
-  order           Transaction   @relation(fields: [orderId], references: [id])
   gateway         String
   amount          Decimal       @db.Decimal(10, 2)
   status          PaymentStatus @default(PENDING)
@@ -221,40 +187,35 @@ model Payment {
   receivedAt      DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  order           Transaction   @relation(fields: [orderId], references: [id])
 }
 
 model ETicket {
   id          String      @id @default(cuid())
   orderId     String
-  order       Transaction @relation(fields: [orderId], references: [id])
   qrCodeData  String
   fileUrl     String?
   generatedAt DateTime    @default(now())
   delivered   Boolean     @default(false)
   deliveredAt DateTime?
   scannedAt   DateTime?
+  order       Transaction @relation(fields: [orderId], references: [id])
 }
 
-// Admin Models
 model Approval {
-  id         String         @id @default(cuid())
-  entityType String
-  entityId   String
-  reviewerId String?
-  status     ApprovalStatus @default(PENDING)
-  notes      String?        @db.Text
-  reviewedAt DateTime?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  id          String         @id @default(cuid())
+  entityType  String
+  entityId    String
+  reviewerId  String?
+  status      ApprovalStatus @default(PENDING)
+  notes       String?
+  reviewedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  submittedAt DateTime?
+  submitterId String?
 }
 
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-// System Models
 model Log {
   id        String   @id @default(cuid())
   userId    String?
@@ -265,7 +226,6 @@ model Log {
   timestamp DateTime @default(now())
 }
 
-// New Models
 model Validator {
   id        String   @id @default(cuid())
   userId    String   @unique
@@ -314,8 +274,8 @@ model Crew {
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  event        Event     @relation(fields: [eventId], references: [id])
   organizer    Organizer @relation(fields: [organizerId], references: [id])
-  event        Event     @relation(fields: [eventId], references: [id]) // Relasi ke Event
 }
 
 model Voucher {
@@ -333,26 +293,80 @@ model Voucher {
   isActive          Boolean      @default(true)
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
+  event             Event?       @relation(fields: [eventId], references: [id])
   organizer         Organizer    @relation(fields: [organizerId], references: [id])
-  event             Event?       @relation(fields: [eventId], references: [id]) // Relasi ke Event
 }
 
 model Ticket {
   id            String       @id @default(cuid())
   ticketTypeId  String
-  ticketType    TicketType   @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
   transactionId String
-  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   userId        String
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   qrCode        String       @unique
-  imageUrl      String?      // URL of the ticket image
-  imagePublicId String?      // Cloudinary public ID for the ticket image
   status        TicketStatus @default(ACTIVE)
   checkedIn     Boolean      @default(false)
   checkInTime   DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+  imagePublicId String?
+  imageUrl      String?
+  ticketType    TicketType   @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OrganizerVerification {
+  id                String             @id @default(cuid())
+  organizerId       String             @unique
+  ktpNumber         String?
+  ktpName           String?
+  ktpAddress        String?
+  ktpImageUrl       String?
+  ktpImagePublicId  String?
+  npwpNumber        String?
+  npwpName          String?
+  npwpAddress       String?
+  npwpImageUrl      String?
+  npwpImagePublicId String?
+  termsAccepted     Boolean            @default(false)
+  termsAcceptedAt   DateTime?
+  status            VerificationStatus @default(PENDING)
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  reviewedBy        String?
+  rejectionReason   String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  organizer         Organizer          @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  ADMIN
+  ORGANIZER
+  BUYER
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum TicketStatus {
@@ -374,4 +388,10 @@ enum WithdrawalStatus {
 enum DiscountType {
   PERCENTAGE
   FIXED_AMOUNT
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

@@ -228,3 +228,68 @@ export const useEventSales = (
   }>(url, fetcher);
   return { data, error, isLoading, mutate };
 };
+
+// Hook to fetch organizer settings and verification status
+export const useOrganizerSettings = (organizerId: string) => {
+  // Define a type for organizer settings
+  type OrganizerSettings = {
+    id: string;
+    userId: string;
+    orgName: string;
+    legalName?: string;
+    npwp?: string;
+    bankAccount?: {
+      bankName: string;
+      accountName: string;
+      accountNumber: string;
+      branch?: string;
+    };
+    socialMedia?: Record<string, string>;
+    verificationDocs?: string;
+    verified: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    data: OrganizerSettings;
+    error?: string;
+  }>(organizerId ? ORGANIZER_ENDPOINTS.SETTINGS(organizerId) : null, fetcher);
+
+  return {
+    settings: data?.data,
+    error,
+    isLoading,
+    mutate,
+  };
+};
+
+// Hook to fetch organizer verification status
+export const useOrganizerVerification = (organizerId: string) => {
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    data: {
+      id: string;
+      verificationDocs?: string;
+      verified: boolean;
+      approval?: {
+        status: string;
+        notes?: string;
+        submittedAt?: string;
+        reviewedAt?: string;
+      };
+    };
+    error?: string;
+  }>(
+    organizerId ? ORGANIZER_ENDPOINTS.VERIFICATION(organizerId) : null,
+    fetcher,
+  );
+
+  return {
+    verification: data?.data,
+    error,
+    isLoading,
+    mutate,
+  };
+};

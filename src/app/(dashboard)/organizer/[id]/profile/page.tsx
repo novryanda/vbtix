@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
 import {
   ArrowLeft,
   User,
@@ -22,6 +24,11 @@ import {
   Building,
   CreditCard,
   Globe,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Clock,
+  ShieldCheck,
 } from "lucide-react";
 import { OrganizerRoute } from "~/components/auth/organizer-route";
 
@@ -174,6 +181,35 @@ export default function OrganizerProfilePage() {
           </Button>
         </div>
 
+        {/* Verification Warning */}
+        {profile?.organizer && !profile.organizer.verified && (
+          <Alert className="mb-6 border-red-200 bg-red-50">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertTitle className="text-red-800">
+              Account Not Verified
+            </AlertTitle>
+            <AlertDescription className="flex flex-col space-y-2 text-red-700">
+              <p>
+                Your organizer account is not verified. You cannot create or
+                publish events until your account is verified. Please complete
+                the verification process to unlock all features.
+              </p>
+              <div>
+                <Button
+                  variant="outline"
+                  className="mt-2 border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={() =>
+                    router.push(`/organizer/${organizerId}/verification`)
+                  }
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Verify Your Account
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           {/* Left Column - Profile Card */}
           <div className="md:col-span-1">
@@ -210,24 +246,33 @@ export default function OrganizerProfilePage() {
                     Organizer
                   </div>
                 </div>
-                {profile?.organizer?.verified && (
-                  <div className="mt-2 w-full">
+                <div className="mt-2 w-full">
+                  {profile?.organizer?.verified ? (
                     <div className="flex items-center justify-center gap-2 rounded-full bg-green-100 px-3 py-1 text-center text-sm text-green-700">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-                        <path d="m9 12 2 2 4-4" />
-                      </svg>
+                      <CheckCircle className="h-4 w-4" />
                       Verified
                     </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2 rounded-full bg-red-100 px-3 py-1 text-center text-sm text-red-700">
+                      <XCircle className="h-4 w-4" />
+                      Not Verified
+                    </div>
+                  )}
+                </div>
+
+                {!profile?.organizer?.verified && (
+                  <div className="mt-3 w-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      onClick={() =>
+                        router.push(`/organizer/${organizerId}/verification`)
+                      }
+                    >
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Verify Account
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -350,44 +395,97 @@ export default function OrganizerProfilePage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6">
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="orgName">Organization Name</Label>
-                          <Input
-                            id="orgName"
-                            name="orgName"
-                            value={formData.orgName}
-                            disabled={true}
-                            className="bg-muted/50"
-                          />
+                    <div className="space-y-6">
+                      {/* Organization Details */}
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="orgName">Organization Name</Label>
+                            <Input
+                              id="orgName"
+                              name="orgName"
+                              value={formData.orgName}
+                              disabled={true}
+                              className="bg-muted/50"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="legalName">Legal Name</Label>
+                            <Input
+                              id="legalName"
+                              name="legalName"
+                              value={formData.legalName}
+                              disabled={true}
+                              className="bg-muted/50"
+                            />
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="legalName">Legal Name</Label>
-                          <Input
-                            id="legalName"
-                            name="legalName"
-                            value={formData.legalName}
-                            disabled={true}
-                            className="bg-muted/50"
-                          />
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="npwp">NPWP</Label>
+                            <Input
+                              id="npwp"
+                              name="npwp"
+                              value={formData.npwp}
+                              disabled={true}
+                              className="bg-muted/50"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground text-sm">
+                          To update organization details, please contact
+                          support.
+                        </p>
+                      </div>
+
+                      {/* Verification Status */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-medium">
+                          Verification Status
+                        </h3>
+                        <div className="rounded-md border p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              {profile?.organizer?.verified ? (
+                                <Badge className="bg-green-500 hover:bg-green-600">
+                                  <CheckCircle className="mr-1 h-3 w-3" />
+                                  Verified
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="border-red-500 text-red-500"
+                                >
+                                  <XCircle className="mr-1 h-3 w-3" />
+                                  Not Verified
+                                </Badge>
+                              )}
+                              <span className="text-sm">
+                                {profile?.organizer?.verified
+                                  ? "Your organizer account is verified. You can create and publish events."
+                                  : "Your organizer account is not verified. You cannot create or publish events."}
+                              </span>
+                            </div>
+                          </div>
+
+                          {!profile?.organizer?.verified && (
+                            <div className="mt-4">
+                              <Button
+                                variant="outline"
+                                className="w-full border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 sm:w-auto"
+                                onClick={() =>
+                                  router.push(
+                                    `/organizer/${organizerId}/verification`,
+                                  )
+                                }
+                              >
+                                <ShieldCheck className="mr-2 h-4 w-4" />
+                                Go to Verification Page
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="npwp">NPWP</Label>
-                          <Input
-                            id="npwp"
-                            name="npwp"
-                            value={formData.npwp}
-                            disabled={true}
-                            className="bg-muted/50"
-                          />
-                        </div>
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        To update organization details, please contact support.
-                      </p>
                     </div>
                   </CardContent>
                 </Card>

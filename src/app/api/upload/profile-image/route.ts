@@ -1,31 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
-import { UserRole } from "@prisma/client";
 import { uploadImage } from "~/lib/cloudinary-utils";
 
 /**
- * POST /api/upload/ticket-image
- * Upload a ticket image to Cloudinary
+ * POST /api/upload/profile-image
+ * Upload a profile image to Cloudinary
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication and authorization
+    // Check authentication
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 },
-      );
-    }
-
-    // Only organizers and admins can upload ticket images
-    if (
-      session.user.role !== UserRole.ORGANIZER &&
-      session.user.role !== UserRole.ADMIN
-    ) {
-      return NextResponse.json(
-        { success: false, error: "Forbidden" },
-        { status: 403 },
+        { status: 401 }
       );
     }
 
@@ -33,14 +21,14 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const customFolder = formData.get("folder") as string;
-
-    // Use the provided folder or default to tickets folder
-    const folder = customFolder || "vbtix/tickets";
-
+    
+    // Use the provided folder or default to profiles folder
+    const folder = customFolder || "vbtix/profiles";
+    
     if (!file) {
       return NextResponse.json(
         { success: false, error: "No file provided" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -63,13 +51,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error("Error uploading ticket image:", error);
+    console.error("Error uploading profile image:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "Failed to upload ticket image",
-      },
-      { status: 500 },
+      { success: false, error: error.message || "Failed to upload profile image" },
+      { status: 500 }
     );
   }
 }

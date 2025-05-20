@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
-import { PlusIcon, SearchIcon } from "lucide-react";
+import { PlusIcon, SearchIcon, ShieldAlert } from "lucide-react";
 
 import { OrganizerRoute } from "~/components/auth/organizer-route";
-import { useOrganizerEvents } from "~/lib/api/hooks/organizer";
+import { OrganizerPageWrapper } from "~/components/dashboard/organizer/organizer-page-wrapper";
+import {
+  useOrganizerEvents,
+  useOrganizerSettings,
+} from "~/lib/api/hooks/organizer";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { EventStatus } from "@prisma/client";
@@ -18,6 +22,12 @@ import {
 } from "~/components/ui/select";
 import { EventsTable } from "~/components/dashboard/organizer/events-table";
 import { PaginationControls } from "~/components/dashboard/organizer/pagination";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 
 export default function EventsPage() {
   const params = useParams();
@@ -41,6 +51,10 @@ export default function EventsPage() {
     status: status || undefined,
     search: search || undefined,
   });
+
+  // Fetch organizer settings to check verification status
+  const { settings, isLoading: isLoadingSettings } =
+    useOrganizerSettings(organizerId);
 
   // Type assertion for TypeScript
   const eventsData = data as
@@ -90,18 +104,32 @@ export default function EventsPage() {
 
   return (
     <OrganizerRoute>
-      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+      <OrganizerPageWrapper>
         <div className="px-4 lg:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-2xl font-semibold">Events</h1>
-            <Button
-              onClick={() =>
-                router.push(`/organizer/${organizerId}/events/new`)
-              }
-            >
-              <PlusIcon className="mr-2 h-4 w-4" />
-              Create Event
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button
+                      onClick={() =>
+                        router.push(`/organizer/${organizerId}/events/new`)
+                      }
+                      disabled={settings && !settings.verified}
+                    >
+                      <PlusIcon className="mr-2 h-4 w-4" />
+                      Create Event
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                {settings && !settings.verified && (
+                  <TooltipContent side="left">
+                    <p>Your account must be verified to create events</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -173,15 +201,29 @@ export default function EventsPage() {
                 You haven't created any events yet or no events match your
                 search criteria.
               </p>
-              <Button
-                className="mt-4"
-                onClick={() =>
-                  router.push(`/organizer/${organizerId}/events/new`)
-                }
-              >
-                <PlusIcon className="mr-2 h-4 w-4" />
-                Create Your First Event
-              </Button>
+              {settings && !settings.verified ? (
+                <Button
+                  className="mt-4"
+                  variant="outline"
+                  onClick={() =>
+                    router.push(`/organizer/${organizerId}/verification`)
+                  }
+                >
+                  <ShieldAlert className="mr-2 h-4 w-4" />
+                  Verify Your Account
+                </Button>
+              ) : (
+                <Button
+                  className="mt-4"
+                  onClick={() =>
+                    router.push(`/organizer/${organizerId}/events/new`)
+                  }
+                  disabled={settings && !settings.verified}
+                >
+                  <PlusIcon className="mr-2 h-4 w-4" />
+                  Create Your First Event
+                </Button>
+              )}
             </div>
           ) : (
             <>
@@ -201,7 +243,7 @@ export default function EventsPage() {
             </>
           )}
         </div>
-      </div>
+      </OrganizerPageWrapper>
     </OrganizerRoute>
   );
 }
