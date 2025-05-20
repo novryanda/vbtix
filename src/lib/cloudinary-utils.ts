@@ -1,6 +1,10 @@
 // ~/lib/cloudinary-utils.ts
 import cloudinary from "./cloudinary";
+import { v4 as uuidv4 } from "uuid";
 
+/**
+ * Standard response format for Cloudinary uploads
+ */
 export interface UploadResult {
   secure_url: string;
   public_id: string;
@@ -12,20 +16,30 @@ export interface UploadResult {
 
 /**
  * Upload an image to Cloudinary from the server
- * @param {File | Buffer} file - The file to upload (Buffer for server-side)
+ * @param {Buffer} file - The file buffer to upload
  * @param {string} folder - The folder to upload to in Cloudinary
+ * @param {object} options - Additional upload options
  * @returns {Promise<UploadResult>} - The upload result with image URL and details
  */
 export async function uploadImage(
   file: Buffer,
   folder = "vbtix",
+  options: {
+    publicId?: string;
+    transformation?: Record<string, any>;
+  } = {},
 ): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
+    // Generate a unique ID if not provided
+    const publicId = options.publicId || uuidv4();
+
     cloudinary.uploader
       .upload_stream(
         {
           folder,
+          public_id: publicId,
           resource_type: "auto",
+          transformation: options.transformation,
         },
         (error, result) => {
           if (error || !result)
@@ -43,6 +57,8 @@ export async function uploadImage(
  * @returns {Promise<boolean>} - Success status
  */
 export async function deleteImage(publicId: string): Promise<boolean> {
+  if (!publicId) return false;
+
   try {
     const result = await cloudinary.uploader.destroy(publicId);
     return result.result === "ok";
@@ -65,6 +81,7 @@ export function getImageUrl(
     height?: number;
     crop?: string;
     quality?: number;
+    format?: string;
   } = {},
 ): string {
   if (!publicId) return "";
@@ -75,6 +92,6 @@ export function getImageUrl(
     height: options.height,
     crop: options.crop || "fill",
     quality: options.quality || "auto",
-    fetch_format: "auto",
+    fetch_format: options.format || "auto",
   });
 }

@@ -3,33 +3,35 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
-import { ImageIcon, X, Upload } from "lucide-react";
+import { X, Upload } from "lucide-react";
 import Image from "next/image";
-import { env } from "~/env";
+import { uploadToCloudinary, UploadEndpoint } from "~/lib/upload-helpers";
 
-interface ImageFile {
-  file: File;
-  previewUrl: string;
-}
+// ===== MULTI-IMAGE UPLOAD COMPONENTS =====
 
-interface ImageUploadProps {
-  onChange: (value: ImageFile | null) => void;
-  onRemove: () => void;
-  value?: ImageFile | null;
+interface MultiImageUploadProps {
+  onChange: (value: { url: string; publicId: string }[]) => void;
+  onRemove: (index: number) => void;
+  values: { url: string; publicId: string }[];
   disabled?: boolean;
   label?: string;
   className?: string;
+  maxImages?: number;
+  endpoint?: UploadEndpoint;
 }
 
-export function DeferredImageUpload({
+export function MultiImageUpload({
   onChange,
   onRemove,
-  value,
+  values = [],
   disabled,
-  label = "Image",
+  label = "Images",
   className,
-}: ImageUploadProps) {
+  maxImages = 5,
+  endpoint = UploadEndpoint.GENERAL,
+}: MultiImageUploadProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Ensure component is mounted before rendering to avoid hydration issues
@@ -37,32 +39,39 @@ export function DeferredImageUpload({
     setIsMounted(true);
   }, []);
 
-  // Clean up object URLs when component unmounts
-  useEffect(() => {
-    return () => {
-      if (value?.previewUrl) {
-        URL.revokeObjectURL(value.previewUrl);
-      }
-    };
-  }, [value]);
-
   if (!isMounted) {
     return null;
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Create a local preview URL
-    const previewUrl = URL.createObjectURL(file);
-    
-    // Call the onChange callback with the file and preview URL
-    onChange({ file, previewUrl });
-    
-    // Reset the file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    try {
+      setIsUploading(true);
+
+      // Use standardized upload helper
+      const result = await uploadToCloudinary(file, { endpoint });
+
+      // Add the new image to the current images
+      const newImage = {
+        url: result.url,
+        publicId: result.publicId,
+      };
+
+      const updatedImages = [...values, newImage];
+
+      // Call the onChange callback with the updated images
+      onChange(updatedImages);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -73,13 +82,16 @@ export function DeferredImageUpload({
   return (
     <div className={className}>
       {label && <Label className="mb-2 block">{label}</Label>}
-      <div className="mb-4 flex items-center gap-4">
-        {value?.previewUrl ? (
-          <div className="relative h-[200px] w-[200px] overflow-hidden rounded-md">
-            <div className="absolute right-2 top-2 z-10">
+      <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        {values.map((image, index) => (
+          <div
+            key={index}
+            className="relative h-[150px] w-full overflow-hidden rounded-md"
+          >
+            <div className="absolute top-2 right-2 z-10">
               <Button
                 type="button"
-                onClick={onRemove}
+                onClick={() => onRemove(index)}
                 variant="destructive"
                 size="icon"
                 className="h-7 w-7 rounded-full"
@@ -91,11 +103,12 @@ export function DeferredImageUpload({
             <Image
               fill
               className="object-cover"
-              alt="Image"
-              src={value.previewUrl}
+              alt={`Image ${index + 1}`}
+              src={image.url}
             />
           </div>
-        ) : (
+        ))}
+        {values.length < maxImages && (
           <div>
             <input
               type="file"
@@ -103,17 +116,26 @@ export function DeferredImageUpload({
               onChange={handleFileChange}
               accept="image/*"
               className="hidden"
-              disabled={disabled}
+              disabled={disabled || isUploading}
             />
             <Button
               type="button"
-              disabled={disabled}
+              disabled={disabled || isUploading}
               variant="outline"
               onClick={handleButtonClick}
-              className="hover:bg-muted/50 flex h-[200px] w-[200px] flex-col items-center justify-center gap-2 rounded-md border border-dashed p-4"
+              className="hover:bg-muted/50 flex h-[150px] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed p-4"
             >
-              <Upload className="h-6 w-6" />
-              <span>Upload {label}</span>
+              {isUploading ? (
+                <>
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  <span>Uploading...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-6 w-6" />
+                  <span>Add Image</span>
+                </>
+              )}
             </Button>
           </div>
         )}
@@ -122,12 +144,7 @@ export function DeferredImageUpload({
   );
 }
 
-interface MultiImageFile {
-  files: File[];
-  previewUrls: string[];
-}
-
-interface MultiImageUploadProps {
+interface DeferredMultiImageProps {
   onChange: (value: { file: File; previewUrl: string }[]) => void;
   onRemove: (index: number) => void;
   values: { file: File; previewUrl: string }[];
@@ -145,7 +162,7 @@ export function DeferredMultiImageUpload({
   label = "Images",
   className,
   maxImages = 5,
-}: MultiImageUploadProps) {
+}: DeferredMultiImageProps) {
   const [isMounted, setIsMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -193,18 +210,6 @@ export function DeferredMultiImageUpload({
     fileInputRef.current?.click();
   };
 
-  const handleRemove = (index: number) => {
-    const newImages = [...values];
-    
-    // Revoke the object URL to prevent memory leaks
-    if (newImages[index].previewUrl) {
-      URL.revokeObjectURL(newImages[index].previewUrl);
-    }
-    
-    newImages.splice(index, 1);
-    onRemove(index);
-  };
-
   return (
     <div className={className}>
       {label && <Label className="mb-2 block">{label}</Label>}
@@ -217,7 +222,7 @@ export function DeferredMultiImageUpload({
             <div className="absolute top-2 right-2 z-10">
               <Button
                 type="button"
-                onClick={() => handleRemove(index)}
+                onClick={() => onRemove(index)}
                 variant="destructive"
                 size="icon"
                 className="h-7 w-7 rounded-full"

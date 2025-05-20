@@ -98,6 +98,10 @@ export const ORGANIZER_ENDPOINTS = {
     `${API_BASE}/organizer/${organizerId}/settings`,
   UPDATE_SETTINGS: (organizerId: string) =>
     `${API_BASE}/organizer/${organizerId}/settings/update`,
+
+  // Verification
+  VERIFICATION: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/verification`,
 };
 
 // Buyer endpoints

@@ -15,6 +15,7 @@ import {
   SearchIcon,
   SettingsIcon,
   TicketIcon,
+  ShieldCheckIcon,
 } from "lucide-react";
 
 import { NavDocuments } from "~/components/dashboard/organizer/nav-document";
@@ -66,6 +67,11 @@ const getNavigationData = (organizerId: string) => ({
     },
   ],
   navSecondary: [
+    {
+      title: "Verification",
+      url: `/organizer/${organizerId}/verification`,
+      icon: ShieldCheckIcon,
+    },
     {
       title: "Settings",
       url: `/organizer/${organizerId}/settings`,

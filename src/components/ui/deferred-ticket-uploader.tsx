@@ -3,23 +3,22 @@
 import { useState, useRef } from "react";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
-import { ImageIcon, X, Upload, Loader2 } from "lucide-react";
+import { X, Upload } from "lucide-react";
 import Image from "next/image";
 
-interface DeferredTicketImageUploadProps {
+interface DeferredTicketUploaderProps {
   onChange: (file: File | null) => void;
   value: File | null;
   previewUrl: string | null;
   disabled?: boolean;
 }
 
-export function DeferredTicketImageUpload({
+export function DeferredTicketUploader({
   onChange,
   value,
   previewUrl,
   disabled = false,
-}: DeferredTicketImageUploadProps) {
-  const [isUploading, setIsUploading] = useState(false);
+}: DeferredTicketUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { OrganizerRoute } from "~/components/auth/organizer-route";
+import { OrganizerPageWrapper } from "~/components/dashboard/organizer/organizer-page-wrapper";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -22,6 +23,7 @@ import {
   MapPin,
   Save,
   ImageIcon,
+  ShieldAlert,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,16 +37,16 @@ import {
   FormLabel,
   FormMessage,
 } from "~/components/ui/form";
-import {
-  DeferredImageUpload,
-  DeferredMultiImageUpload,
-} from "~/components/ui/deferred-image-upload";
+import { DeferredImageUpload } from "~/components/ui/image-upload";
+import { DeferredMultiImageUpload } from "~/components/ui/multi-image-upload";
 import {
   uploadToCloudinary,
   uploadMultipleToCloudinary,
 } from "~/lib/upload-helpers";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { ImagePreviewGallery } from "~/components/ui/image-preview-gallery";
+import { useOrganizerSettings } from "~/lib/api/hooks/organizer";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 
 // Create a schema for event creation
 const createEventSchema = z.object({
@@ -74,6 +76,22 @@ export default function CreateEventPage() {
   const organizerId = params.id as string;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch organizer settings to check verification status
+  const { settings, isLoading: isLoadingSettings } =
+    useOrganizerSettings(organizerId);
+
+  // Check if organizer is verified and redirect if not
+  useEffect(() => {
+    if (settings && !settings.verified) {
+      // Redirect to verification page after a short delay
+      const timer = setTimeout(() => {
+        router.push(`/organizer/${organizerId}/verification`);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [settings, organizerId, router]);
 
   // State for image uploads
   const [isUploading, setIsUploading] = useState(false);
@@ -220,7 +238,7 @@ export default function CreateEventPage() {
 
   return (
     <OrganizerRoute>
-      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+      <OrganizerPageWrapper>
         <div className="px-4 lg:px-6">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => router.back()}>
@@ -239,6 +257,31 @@ export default function CreateEventPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {settings && !settings.verified && (
+                <Alert className="mb-6 border-red-200 bg-red-50">
+                  <ShieldAlert className="h-4 w-4 text-red-600" />
+                  <AlertTitle className="text-red-800">
+                    Account Not Verified
+                  </AlertTitle>
+                  <AlertDescription className="text-red-700">
+                    <p className="mb-2">
+                      Your organizer account is not verified. You will be
+                      redirected to the verification page.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-2 border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      onClick={() =>
+                        router.push(`/organizer/${organizerId}/verification`)
+                      }
+                    >
+                      <ShieldAlert className="mr-2 h-4 w-4" />
+                      Verify Your Account
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {error && (
                 <div className="bg-destructive/15 text-destructive mb-4 rounded-md p-3 text-sm">
                   <p>{error}</p>
@@ -516,7 +559,17 @@ export default function CreateEventPage() {
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={isSubmitting}>
+                    <Button
+                      type="submit"
+                      disabled={
+                        isSubmitting || (settings && !settings.verified)
+                      }
+                      title={
+                        settings && !settings.verified
+                          ? "Your account must be verified to create events"
+                          : ""
+                      }
+                    >
                       {isSubmitting ? (
                         <>
                           <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
@@ -537,7 +590,7 @@ export default function CreateEventPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </OrganizerPageWrapper>
     </OrganizerRoute>
   );
 }

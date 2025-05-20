@@ -1,28 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "~/server/auth";
-import cloudinary from "~/lib/cloudinary";
-import { v4 as uuidv4 } from "uuid";
+import { auth } from "~/server/auth";
+import { uploadImage } from "~/lib/cloudinary-utils";
 
+/**
+ * POST /api/upload
+ * General-purpose image upload endpoint
+ */
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session) {
       return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
       );
     }
 
     // Get the form data
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    
+    const folder = (formData.get("folder") as string) || "vbtix";
+
     if (!file) {
       return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
+        { success: false, error: "No file provided" },
+        { status: 400 },
       );
     }
 
@@ -30,43 +33,28 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Generate a unique filename
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${uuidv4()}.${fileExt}`;
+    // Upload to Cloudinary using our standardized utility
+    const result = await uploadImage(buffer, folder);
 
-    // Upload to Cloudinary using the SDK (server-side, signed upload)
-    const result = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: "vbtix",
-          public_id: fileName.split(".")[0],
-          resource_type: "auto",
-        },
-        (error, result) => {
-          if (error) {
-            console.error("Cloudinary upload error:", error);
-            reject(error);
-          } else {
-            resolve(result);
-          }
-        }
-      );
-
-      // Write the buffer to the upload stream
-      uploadStream.write(buffer);
-      uploadStream.end();
+    // Return the result with standardized response format
+    return NextResponse.json({
+      success: true,
+      data: {
+        secure_url: result.secure_url,
+        public_id: result.public_id,
+        format: result.format,
+        width: result.width,
+        height: result.height,
+      },
     });
-
-    // Return the result
-    return NextResponse.json({ 
-      success: true, 
-      data: result 
-    });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Upload error:", error);
     return NextResponse.json(
-      { error: "Failed to upload file" },
-      { status: 500 }
+      {
+        success: false,
+        error: error.message || "Failed to upload file",
+      },
+      { status: 500 },
     );
   }
 }

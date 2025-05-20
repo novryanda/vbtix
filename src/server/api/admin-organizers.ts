@@ -1,7 +1,7 @@
 import { organizerService } from "~/server/services/organizer.service";
 import { eventService } from "~/server/services/event.service";
 import { formatDate } from "~/lib/utils";
-import { ApprovalStatus } from "@prisma/client";
+import { ApprovalStatus, VerificationStatus } from "@prisma/client";
 import { prisma } from "~/server/db";
 
 /**
@@ -92,25 +92,118 @@ export async function handleVerifyOrganizer(
   const existingOrganizer = await organizerService.findById(id);
   if (!existingOrganizer) throw new Error("Organizer not found");
 
-  // Memperbarui status verifikasi
-  const updatedOrganizer = await organizerService.verifyOrganizer(id, verified);
+  // Memperbarui status verifikasi pada organizer
+  await organizerService.verifyOrganizer(id, verified);
 
-  // Membuat catatan approval menggunakan approval service
-  await prisma.approval.create({
-    data: {
+  // Get all approvals for debugging
+  const allApprovals = await prisma.approval.findMany({
+    where: {
       entityType: "ORGANIZER",
       entityId: id,
-      status: verified ? ApprovalStatus.APPROVED : ApprovalStatus.REJECTED,
-      notes,
-      reviewerId: adminId,
-      reviewedAt: new Date(),
+    },
+    orderBy: {
+      submittedAt: "desc",
     },
   });
 
+  console.log(
+    "Admin - All approvals before update:",
+    allApprovals.map((a) => ({
+      id: a.id,
+      status: a.status,
+      submittedAt: a.submittedAt,
+      reviewedAt: a.reviewedAt,
+    })),
+  );
+
+  // Find any pending approval and update it
+  const pendingApproval = await prisma.approval.findFirst({
+    where: {
+      entityType: "ORGANIZER",
+      entityId: id,
+      status: "PENDING",
+    },
+    orderBy: {
+      submittedAt: "desc",
+    },
+  });
+
+  if (pendingApproval) {
+    // Update the existing pending approval
+    console.log(
+      `Updating existing approval ${pendingApproval.id} to ${verified ? "APPROVED" : "REJECTED"}`,
+    );
+    await prisma.approval.update({
+      where: { id: pendingApproval.id },
+      data: {
+        status: verified ? ApprovalStatus.APPROVED : ApprovalStatus.REJECTED,
+        notes,
+        reviewerId: adminId,
+        reviewedAt: new Date(),
+      },
+    });
+  } else {
+    // Create a new approval record
+    console.log(`Creating new approval for organizer ${id}`);
+    await prisma.approval.create({
+      data: {
+        entityType: "ORGANIZER",
+        entityId: id,
+        status: verified ? ApprovalStatus.APPROVED : ApprovalStatus.REJECTED,
+        notes,
+        reviewerId: adminId,
+        reviewedAt: new Date(),
+      },
+    });
+  }
+
+  // Get all approvals after update for debugging
+  const updatedApprovals = await prisma.approval.findMany({
+    where: {
+      entityType: "ORGANIZER",
+      entityId: id,
+    },
+    orderBy: {
+      submittedAt: "desc",
+    },
+  });
+
+  console.log(
+    "Admin - All approvals after update:",
+    updatedApprovals.map((a) => ({
+      id: a.id,
+      status: a.status,
+      submittedAt: a.submittedAt,
+      reviewedAt: a.reviewedAt,
+    })),
+  );
+
+  // Update verification status in OrganizerVerification if it exists
+  if (existingOrganizer.verification) {
+    await prisma.organizerVerification.update({
+      where: { organizerId: id },
+      data: {
+        status: verified
+          ? VerificationStatus.APPROVED
+          : VerificationStatus.REJECTED,
+        reviewedAt: new Date(),
+        reviewedBy: adminId,
+        rejectionReason: !verified ? notes : undefined,
+      },
+    });
+  }
+
+  // Get the updated organizer with verification details
+  const refreshedOrganizer = await organizerService.findById(id);
+
+  if (!refreshedOrganizer) {
+    throw new Error("Failed to retrieve updated organizer");
+  }
+
   return {
-    ...updatedOrganizer,
-    formattedCreatedAt: formatDate(updatedOrganizer.createdAt),
-    formattedUpdatedAt: formatDate(updatedOrganizer.updatedAt),
+    ...refreshedOrganizer,
+    formattedCreatedAt: formatDate(refreshedOrganizer.createdAt),
+    formattedUpdatedAt: formatDate(refreshedOrganizer.updatedAt),
   };
 }
 
