@@ -16,7 +16,15 @@ import {
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
-import { ArrowLeft, CalendarDays, Clock, MapPin, Save } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CalendarDays,
+  CheckCircle,
+  Clock,
+  MapPin,
+  Save,
+} from "lucide-react";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { EventStatus } from "@prisma/client";
 import {
@@ -26,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { toast } from "sonner";
 
 export default function EditEventPage() {
   const router = useRouter();
@@ -50,8 +59,12 @@ export default function EditEventPage() {
     venue: "",
     city: "",
     province: "",
+    country: "",
     category: "",
-    status: "",
+    status: EventStatus.DRAFT as string,
+    tags: [] as string[],
+    images: [] as string[],
+    imagePublicIds: [] as string[],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -105,8 +118,12 @@ export default function EditEventPage() {
           venue: event.venue || "",
           city: event.city || "",
           province: event.province || "",
+          country: event.country || "",
           category: event.category || "",
-          status: event.status || EventStatus.DRAFT,
+          status: event.status || (EventStatus.DRAFT as string),
+          tags: event.tags || [],
+          images: event.images || [],
+          imagePublicIds: (event as any).imagePublicIds || [],
         });
       } catch (error) {
         console.error("Error formatting event dates:", error);
@@ -124,8 +141,12 @@ export default function EditEventPage() {
           venue: event.venue || "",
           city: event.city || "",
           province: event.province || "",
+          country: event.country || "",
           category: event.category || "",
-          status: event.status || EventStatus.DRAFT,
+          status: event.status || (EventStatus.DRAFT as string),
+          tags: event.tags || [],
+          images: event.images || [],
+          imagePublicIds: (event as any).imagePublicIds || [],
         });
       }
     }
@@ -144,10 +165,19 @@ export default function EditEventPage() {
   };
 
   const handleStatusChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      status: value,
-    }));
+    // Ensure the value is a valid EventStatus enum value
+    if (value && Object.values(EventStatus).includes(value as EventStatus)) {
+      setFormData((prev) => ({
+        ...prev,
+        status: value,
+      }));
+    } else {
+      // Default to DRAFT if invalid value
+      setFormData((prev) => ({
+        ...prev,
+        status: EventStatus.DRAFT,
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -167,16 +197,34 @@ export default function EditEventPage() {
         throw new Error("End date must be after start date");
       }
 
+      // Generate a slug from the title if needed
+      const slug =
+        event?.slug || formData.title.toLowerCase().replace(/\s+/g, "-");
+
+      // Ensure status is a valid enum value
+      let status = formData.status;
+      if (!status || status === "") {
+        status = EventStatus.DRAFT;
+      }
+
       const data = {
         title: formData.title,
         description: formData.description,
+        slug: slug, // Include the slug
         startDate: startDateTime.toISOString(),
         endDate: endDateTime.toISOString(),
         venue: formData.venue,
         city: formData.city,
         province: formData.province,
+        country: formData.country,
         category: formData.category,
-        status: formData.status,
+        status: status, // Use the validated status
+        tags: formData.tags,
+        images: formData.images,
+        imagePublicIds: formData.imagePublicIds,
+        // Include these fields with default values if they're required
+        featured: event?.featured !== undefined ? event.featured : false,
+        published: event?.published !== undefined ? event.published : false,
       };
 
       // Send request to update event
@@ -194,17 +242,54 @@ export default function EditEventPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to update event");
+        const error = new Error(result.error || "Failed to update event");
+        // Add details property to the error object if available
+        if (result.details) {
+          (error as any).details = result.details;
+        }
+        throw error;
       }
 
       // Refresh event data
       mutate();
 
+      // Show success toast notification
+      toast.success("Event updated successfully", {
+        description: "Your event has been updated.",
+        icon: <CheckCircle className="h-4 w-4 text-green-500" />,
+      });
+
       // Redirect to the event detail page
       router.push(`/organizer/${organizerId}/events/${eventId}`);
     } catch (err: any) {
       console.error("Error updating event:", err);
-      setFormError(err.message || "Failed to update event. Please try again.");
+
+      // Try to extract detailed validation errors if available
+      let errorMessage = "Failed to update event. Please try again.";
+
+      if (err.message) {
+        errorMessage = err.message;
+      }
+
+      // If there's a response with details, try to extract them
+      if (err.details) {
+        console.error(
+          "Validation details:",
+          JSON.stringify(err.details, null, 2),
+        );
+        errorMessage += " Validation errors found.";
+      }
+
+      // Show error toast notification
+      toast.error("Error updating event", {
+        description: errorMessage,
+        icon: <AlertCircle className="h-4 w-4 text-red-500" />,
+      });
+
+      setFormError(errorMessage);
+
+      // Log the data we're trying to send for debugging
+      console.log("Data being sent:", JSON.stringify(data, null, 2));
     } finally {
       setIsSubmitting(false);
     }
@@ -406,7 +491,7 @@ export default function EditEventPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="venue">Venue</Label>
                           <div className="flex items-center gap-2">
@@ -430,12 +515,24 @@ export default function EditEventPage() {
                             required
                           />
                         </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="province">Province</Label>
                           <Input
                             id="province"
                             name="province"
                             value={formData.province}
+                            onChange={handleChange}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="country">Country</Label>
+                          <Input
+                            id="country"
+                            name="country"
+                            value={formData.country}
                             onChange={handleChange}
                             required
                           />
