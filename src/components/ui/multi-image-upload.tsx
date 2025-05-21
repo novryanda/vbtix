@@ -134,12 +134,21 @@ export function MultiImageUpload({
                 <>
                   <Upload className="h-6 w-6" />
                   <span>Add Image</span>
+                  <p className="text-muted-foreground mt-1 text-center text-xs">
+                    Recommended: 1200×800px, max 2MB
+                  </p>
                 </>
               )}
             </Button>
           </div>
         )}
       </div>
+      {values.length === 0 && (
+        <p className="text-muted-foreground mb-4 text-xs">
+          For best results, use images with 3:2 aspect ratio (1200×800px) and
+          under 2MB.
+        </p>
+      )}
     </div>
   );
 }
@@ -174,7 +183,7 @@ export function DeferredMultiImageUpload({
   // Clean up object URLs when component unmounts
   useEffect(() => {
     return () => {
-      values.forEach(item => {
+      values.forEach((item) => {
         if (item.previewUrl) {
           URL.revokeObjectURL(item.previewUrl);
         }
@@ -192,14 +201,14 @@ export function DeferredMultiImageUpload({
 
     // Create a local preview URL
     const previewUrl = URL.createObjectURL(file);
-    
+
     // Add the new image to the current images
     const newImage = { file, previewUrl };
     const updatedImages = [...values, newImage];
-    
+
     // Call the onChange callback with the updated images
     onChange(updatedImages);
-    
+
     // Reset the file input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -258,10 +267,19 @@ export function DeferredMultiImageUpload({
             >
               <Upload className="h-6 w-6" />
               <span>Add Image</span>
+              <p className="text-muted-foreground mt-1 text-center text-xs">
+                Recommended: 1200×800px, max 2MB
+              </p>
             </Button>
           </div>
         )}
       </div>
+      {values.length === 0 && (
+        <p className="text-muted-foreground mb-4 text-xs">
+          For best results, use images with 3:2 aspect ratio (1200×800px) and
+          under 2MB.
+        </p>
+      )}
     </div>
   );
 }

@@ -326,10 +326,14 @@ export default function EventDetailPage() {
                               src={event.posterUrl}
                               alt={event.title}
                               fill
-                              className="object-cover"
+                              className="bg-muted/20 object-contain"
+                              sizes="(max-width: 768px) 100vw, 600px"
                             />
                           </div>
                         </div>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          Recommended size: 1200×800px (3:2 ratio), max 2MB
+                        </p>
                       </div>
                     )}
 
@@ -345,10 +349,14 @@ export default function EventDetailPage() {
                               src={event.bannerUrl}
                               alt={event.title}
                               fill
-                              className="object-cover"
+                              className="bg-muted/20 object-contain"
+                              sizes="(max-width: 768px) 100vw, 800px"
                             />
                           </div>
                         </div>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          Recommended size: 1920×640px (3:1 ratio), max 2MB
+                        </p>
                       </div>
                     )}
 
@@ -357,18 +365,23 @@ export default function EventDetailPage() {
                       <h4 className="mb-2 text-sm font-medium">
                         Additional Images
                       </h4>
+                      <p className="text-muted-foreground mb-2 text-xs">
+                        Recommended size: 1200×800px (3:2 ratio) or square, max
+                        2MB each
+                      </p>
                       {event.images && event.images.length > 0 ? (
                         <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                           {event.images.map((image, index) => (
                             <div
                               key={index}
-                              className="relative h-[120px] overflow-hidden rounded-md"
+                              className="bg-muted/20 relative h-[120px] overflow-hidden rounded-md"
                             >
                               <Image
                                 src={image}
                                 alt={`${event.title} - Image ${index + 1}`}
                                 fill
-                                className="object-cover"
+                                className="object-contain"
+                                sizes="(max-width: 768px) 50vw, 33vw"
                               />
                             </div>
                           ))}

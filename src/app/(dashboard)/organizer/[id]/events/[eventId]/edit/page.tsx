@@ -24,6 +24,8 @@ import {
   Clock,
   MapPin,
   Save,
+  Images,
+  ImageIcon,
 } from "lucide-react";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { EventStatus } from "@prisma/client";
@@ -35,12 +37,16 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { toast } from "sonner";
+import { ImageManagerDialog } from "~/components/event/image-manager-dialog";
 
 export default function EditEventPage() {
   const router = useRouter();
   const params = useParams();
   const organizerId = params.id as string;
   const eventId = params.eventId as string;
+
+  // State for image manager dialog
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
 
   const { data, isLoading, error, mutate } = useOrganizerEventDetail(
     organizerId,
@@ -381,6 +387,22 @@ export default function EditEventPage() {
       <div className="flex min-h-screen flex-col">
         <div className="flex flex-1 flex-col">
           <div className="container flex flex-1 flex-col gap-2 pt-4">
+            {/* Image Manager Dialog */}
+            <ImageManagerDialog
+              open={imageDialogOpen}
+              onOpenChange={setImageDialogOpen}
+              posterImage={event?.posterUrl}
+              posterPublicId={(event as any)?.posterPublicId}
+              bannerImage={event?.bannerUrl}
+              bannerPublicId={(event as any)?.bannerPublicId}
+              additionalImages={event?.images || []}
+              additionalImagePublicIds={(event as any)?.imagePublicIds || []}
+              eventId={eventId}
+              organizerId={organizerId}
+              onSuccess={() => mutate()}
+              eventTitle={event?.title || "Event"}
+            />
+
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="px-4 lg:px-6">
                 <div className="flex items-center gap-2">
@@ -570,6 +592,45 @@ export default function EditEventPage() {
                               </SelectItem>
                             </SelectContent>
                           </Select>
+                        </div>
+                      </div>
+
+                      {/* Event Images Section */}
+                      <div className="mt-6 space-y-4 border-t pt-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="flex items-center font-medium">
+                            <ImageIcon className="text-muted-foreground mr-2 h-4 w-4" />
+                            Event Images
+                          </h3>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setImageDialogOpen(true)}
+                            type="button"
+                          >
+                            <Images className="mr-2 h-4 w-4" />
+                            Manage Images
+                          </Button>
+                        </div>
+
+                        <div className="text-muted-foreground text-sm">
+                          <p>
+                            Manage your event images including poster, banner,
+                            and additional images.
+                          </p>
+                          <p className="mt-1">For best results:</p>
+                          <ul className="mt-1 list-disc pl-5 text-xs">
+                            <li>
+                              Event poster: 1200×800px (3:2 ratio), max 2MB
+                            </li>
+                            <li>
+                              Event banner: 1920×640px (3:1 ratio), max 2MB
+                            </li>
+                            <li>
+                              Additional images: 1200×800px or square, max 2MB
+                              each
+                            </li>
+                          </ul>
                         </div>
                       </div>
                     </CardContent>

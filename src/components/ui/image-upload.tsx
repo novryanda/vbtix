@@ -118,12 +118,21 @@ export function ImageUpload({
                 <>
                   <Upload className="h-6 w-6" />
                   <span>Upload {label}</span>
+                  <p className="text-muted-foreground mt-1 text-center text-xs">
+                    Recommended: 1200×800px, max 2MB
+                  </p>
                 </>
               )}
             </Button>
           </div>
         )}
       </div>
+      {!value && (
+        <p className="text-muted-foreground text-xs">
+          For best results, use images with 3:2 aspect ratio (1200×800px) and
+          under 2MB.
+        </p>
+      )}
     </div>
   );
 }
@@ -179,10 +188,10 @@ export function DeferredImageUpload({
 
     // Create a local preview URL
     const previewUrl = URL.createObjectURL(file);
-    
+
     // Call the onChange callback with the file and preview URL
     onChange({ file, previewUrl });
-    
+
     // Reset the file input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -199,7 +208,7 @@ export function DeferredImageUpload({
       <div className="mb-4 flex items-center gap-4">
         {value?.previewUrl ? (
           <div className="relative h-[200px] w-[200px] overflow-hidden rounded-md">
-            <div className="absolute right-2 top-2 z-10">
+            <div className="absolute top-2 right-2 z-10">
               <Button
                 type="button"
                 onClick={onRemove}
@@ -237,10 +246,19 @@ export function DeferredImageUpload({
             >
               <Upload className="h-6 w-6" />
               <span>Upload {label}</span>
+              <p className="text-muted-foreground mt-1 text-center text-xs">
+                Recommended: 1200×800px, max 2MB
+              </p>
             </Button>
           </div>
         )}
       </div>
+      {!value?.previewUrl && (
+        <p className="text-muted-foreground text-xs">
+          For best results, use images with 3:2 aspect ratio (1200×800px) and
+          under 2MB.
+        </p>
+      )}
     </div>
   );
 }
