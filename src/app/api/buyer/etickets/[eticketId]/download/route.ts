@@ -5,18 +5,23 @@ import { auth } from "~/server/auth";
 /**
  * GET /api/buyer/etickets/[id]/download
  * Download a specific e-ticket as PDF
+ * This endpoint requires authentication
  */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: { id: string } },
 ) {
   try {
     // Check authentication
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
+        {
+          success: false,
+          error: "Authentication required to download e-tickets",
+          message: "Please log in to download e-tickets",
+        },
+        { status: 401 },
       );
     }
 
@@ -30,7 +35,7 @@ export async function GET(
 
     // In a real implementation, this would generate a PDF file
     // For now, we'll return a placeholder response
-    
+
     // Generate a simple text representation of the e-ticket
     const eticketText = `
 E-Ticket: ${eticket.id}
@@ -53,12 +58,12 @@ Order: ${eticket.order.invoiceNumber}
   } catch (error: any) {
     console.error(`Error downloading e-ticket with ID ${params.id}:`, error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || "Failed to download e-ticket" 
+      {
+        success: false,
+        error: error.message || "Failed to download e-ticket",
       },
-      { 
-        status: error.message === "E-ticket not found" ? 404 : 500 
+      {
+        status: error.message === "E-ticket not found" ? 404 : 500,
       },
     );
   }

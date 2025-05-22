@@ -12,6 +12,7 @@ const eTicketsQuerySchema = z.object({
 /**
  * GET /api/buyer/etickets
  * Get e-tickets for the authenticated user
+ * This endpoint requires authentication
  */
 export async function GET(request: NextRequest) {
   try {
@@ -19,7 +20,11 @@ export async function GET(request: NextRequest) {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
+        {
+          success: false,
+          error: "Authentication required to view e-tickets",
+          message: "Please log in to view your e-tickets",
+        },
         { status: 401 },
       );
     }

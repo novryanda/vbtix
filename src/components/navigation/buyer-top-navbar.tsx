@@ -188,7 +188,7 @@ export function BuyerTopNavbar() {
           <NavigationMenu className="hidden md:block">
             <NavigationMenuList className="flex space-x-8">
               <NavigationMenuItem>
-                <Link href="/buyer/events" className={navLinkClasses}>
+                <Link href="/events" className={navLinkClasses}>
                   Jelajah
                 </Link>
               </NavigationMenuItem>
@@ -257,7 +257,7 @@ export function BuyerTopNavbar() {
                     <User size={20} />
                     Profil Saya
                   </Link>
-                  <Link href="/buyer/events" className={mobileNavLinkClasses}>
+                  <Link href="/events" className={mobileNavLinkClasses}>
                     Jelajah
                   </Link>
                   <Link href="/buyer/about" className={mobileNavLinkClasses}>

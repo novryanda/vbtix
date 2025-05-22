@@ -35,7 +35,7 @@ import {
   Check,
   X,
 } from "lucide-react";
-import { formatDate, formatCurrency } from "~/lib/utils";
+import { formatDate, formatPrice } from "~/lib/utils";
 
 // Status badge component
 function StatusBadge({ status }: { status: string }) {
@@ -358,7 +358,7 @@ export default function AdminEventDetailPage({
                           <span className="font-medium">
                             {isStatsLoading
                               ? "Loading..."
-                              : formatCurrency(statistics?.totalRevenue || 0)}
+                              : formatPrice(statistics?.totalRevenue || 0)}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -436,7 +436,7 @@ export default function AdminEventDetailPage({
                             </div>
                             <div className="text-right">
                               <div className="font-medium">
-                                {formatCurrency(ticket.price)}
+                                {formatPrice(ticket.price)}
                               </div>
                               <div className="text-muted-foreground text-sm">
                                 <Ticket className="mr-1 inline h-3 w-3" />
@@ -475,7 +475,7 @@ export default function AdminEventDetailPage({
                           Total Revenue
                         </div>
                         <div className="mt-1 text-2xl font-bold">
-                          {formatCurrency(statistics?.totalRevenue || 0)}
+                          {formatPrice(statistics?.totalRevenue || 0)}
                         </div>
                       </div>
                       <div className="rounded-lg border p-4">

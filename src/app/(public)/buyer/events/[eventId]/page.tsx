@@ -29,7 +29,7 @@ import {
   CheckCircle,
   Tag,
 } from "lucide-react";
-import { formatCurrency } from "~/lib/utils";
+import { formatPrice } from "~/lib/utils";
 
 // Type definitions
 interface TicketType {
@@ -78,7 +78,6 @@ interface Event {
   tags: string[];
   images: string[];
   featured: boolean;
-  published: boolean;
   seatingMap?: string;
   maxAttendees?: number;
   website?: string;
@@ -149,7 +148,7 @@ export default function EventDetailPage() {
 
     // Navigate to checkout page with selected ticket type
     router.push(
-      `/buyer/checkout?eventId=${eventId}&ticketTypeId=${selectedTicketType}`,
+      `/checkout?eventId=${eventId}&ticketTypeId=${selectedTicketType}`,
     );
   };
 
@@ -193,7 +192,7 @@ export default function EventDetailPage() {
                 "The event you're looking for doesn't exist or has been removed."}
             </p>
             <Button asChild>
-              <Link href="/buyer/events">Browse Events</Link>
+              <Link href="/events">Browse Events</Link>
             </Button>
           </div>
         </div>
@@ -390,7 +389,7 @@ export default function EventDetailPage() {
                         <div className="text-sm text-gray-500">
                           Starting from{" "}
                           <span className="text-lg font-bold text-blue-600">
-                            {formatCurrency(
+                            {formatPrice(
                               Math.min(
                                 ...event.ticketTypes.map(
                                   (ticket) => ticket.price,
@@ -454,7 +453,7 @@ export default function EventDetailPage() {
                                 {ticket.name}
                               </h3>
                               <span className="font-bold text-blue-600">
-                                {formatCurrency(ticket.price)}
+                                {formatPrice(ticket.price)}
                               </span>
                             </div>
                             {ticket.description && (
@@ -517,7 +516,7 @@ export default function EventDetailPage() {
                                 >
                                   <span>{ticket.name} x 1</span>
                                   <span className="font-medium">
-                                    {formatCurrency(ticket.price)}
+                                    {formatPrice(ticket.price)}
                                   </span>
                                 </div>
                               ))}
@@ -525,7 +524,7 @@ export default function EventDetailPage() {
                             <div className="flex justify-between font-bold">
                               <span>Total</span>
                               <span className="text-blue-600">
-                                {formatCurrency(
+                                {formatPrice(
                                   event.ticketTypes.find(
                                     (t) => t.id === selectedTicketType,
                                   )?.price || 0,

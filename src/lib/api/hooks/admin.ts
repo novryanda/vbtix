@@ -381,3 +381,15 @@ export const useAdminUserDetail = (id: string) => {
     mutate,
   };
 };
+
+// Alias for useAdminUsers to match the component usage
+export const useUsers = useAdminUsers;
+
+// Hook to update user role
+export const useUpdateUserRole = () => {
+  const updateUserRole = async (userId: string, role: string) => {
+    return await putData(ADMIN_ENDPOINTS.USER_DETAIL(userId), { role });
+  };
+
+  return { updateUserRole };
+};

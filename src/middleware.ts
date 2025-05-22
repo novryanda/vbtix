@@ -13,16 +13,10 @@ const publicRoutes = [
   "/unauthorized",
 ];
 
-// Buyer routes are public but can have enhanced features when logged in
-const publicBuyerRoutes = ["/buyer", "/buyer/events", "/buyer/about"];
-
 // Memeriksa apakah rute adalah rute publik
 function isPublicRoute(path: string) {
   // Cek apakah path cocok dengan salah satu rute publik
   if (publicRoutes.includes(path)) return true;
-
-  // Cek apakah path cocok dengan salah satu rute buyer publik
-  if (publicBuyerRoutes.includes(path)) return true;
 
   // Cek apakah path dimulai dengan salah satu prefiks publik
   if (
@@ -31,7 +25,8 @@ function isPublicRoute(path: string) {
     path.startsWith("/api/revalidate/") ||
     path.startsWith("/reset-password/") ||
     path.startsWith("/verify/") ||
-    path.startsWith("/buyer/events/") // Allow access to individual event pages
+    path.startsWith("/buyer/events/") || // Allow access to individual event pages
+    path.startsWith("/api/buyer/") // Allow access to all buyer API endpoints
   ) {
     return true;
   }
@@ -51,7 +46,7 @@ function getDashboardRoute(role?: UserRole | string | null, userId?: string) {
       return userId ? `/organizer/${userId}/dashboard` : "/organizer";
     case UserRole.BUYER:
     default:
-      return "/buyer";
+      return "/";
   }
 }
 
@@ -218,11 +213,7 @@ export async function buyerMiddleware(req: NextRequest) {
 
   // For protected buyer routes (like /buyer/tickets or /buyer/orders)
   // we use the role middleware to ensure the user is authenticated
-  return roleMiddleware(req, [
-    UserRole.BUYER,
-    UserRole.ORGANIZER,
-    UserRole.ADMIN,
-  ]);
+  return roleMiddleware(req, [UserRole.ORGANIZER, UserRole.ADMIN]);
 }
 
 export async function middleware(req: NextRequest) {
@@ -239,7 +230,7 @@ export async function middleware(req: NextRequest) {
     const path = req.nextUrl.pathname;
 
     // Handle buyer routes specially
-    if (path.startsWith("/buyer")) {
+    if (path.startsWith("/")) {
       return await buyerMiddleware(req);
     }
 
@@ -266,6 +257,5 @@ export const config = {
     "/reset-password",
     "/admin/:path*",
     "/organizer/:path*",
-    "/buyer/:path*",
   ],
 };

@@ -37,7 +37,7 @@ import {
   Loader2,
   CheckCircle,
 } from "lucide-react";
-import { formatDate, formatCurrency } from "~/lib/utils";
+import { formatDate, formatPrice } from "~/lib/utils";
 import { EventStatus } from "@prisma/client";
 import {
   Table,
@@ -589,9 +589,7 @@ export default function EventDetailPage() {
                           Total Sales
                         </h3>
                         <p className="text-2xl font-bold">
-                          {formatCurrency(
-                            typedSalesData?.data.totalRevenue || 0,
-                          )}
+                          {formatPrice(typedSalesData?.data.totalRevenue || 0)}
                         </p>
                       </div>
                       <div className="rounded-lg border p-4">
@@ -635,7 +633,7 @@ export default function EventDetailPage() {
                                 <TableCell>{item.count}</TableCell>
                                 <TableCell>{item.ticketsSold}</TableCell>
                                 <TableCell className="text-right">
-                                  {formatCurrency(item.revenue)}
+                                  {formatPrice(item.revenue)}
                                 </TableCell>
                               </TableRow>
                             ))}

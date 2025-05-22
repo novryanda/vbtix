@@ -230,7 +230,6 @@ export default function EditEventPage() {
         imagePublicIds: formData.imagePublicIds,
         // Include these fields with default values if they're required
         featured: event?.featured !== undefined ? event.featured : false,
-        published: event?.published !== undefined ? event.published : false,
       };
 
       // Send request to update event

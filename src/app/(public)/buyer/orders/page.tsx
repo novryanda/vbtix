@@ -24,6 +24,7 @@ import {
   PaginationPrevious,
 } from "~/components/ui/pagination";
 import { PaymentStatus } from "@prisma/client";
+import { formatPrice } from "~/lib/utils";
 
 // Order type definition
 interface Order {
@@ -203,14 +204,14 @@ export default function OrdersPage() {
               <span>
                 {item.ticketType.name} x {item.quantity}
               </span>
-              <span>Rp {item.subtotal.toLocaleString()}</span>
+              <span>{formatPrice(item.subtotal)}</span>
             </div>
           ))}
         </div>
         <div className="flex justify-between font-medium">
           <span>Total</span>
           <span className="text-blue-600">
-            Rp {order.totalAmount.toLocaleString()}
+            {formatPrice(order.totalAmount)}
           </span>
         </div>
       </CardContent>
@@ -363,7 +364,7 @@ export default function OrdersPage() {
                 {currentStatus.toLowerCase()}
               </p>
               <Button asChild>
-                <Link href="/buyer/events">Jelajahi Event</Link>
+                <Link href="/events">Jelajahi Event</Link>
               </Button>
             </div>
           )}

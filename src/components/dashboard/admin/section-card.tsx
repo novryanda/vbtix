@@ -12,9 +12,10 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { useAdminDashboard } from "~/lib/api/hooks";
+import { formatPrice } from "~/lib/utils";
 
 export function SectionCards() {
-  const { data, isLoading, error } = useAdminDashboard();
+  const { dashboardData, isLoading, error } = useAdminDashboard();
 
   // Display error message if there's an error
   if (error) {
@@ -23,18 +24,20 @@ export function SectionCards() {
 
   // Mock data for development
   const mockData = {
-    totalUsers: 20,
-    totalEvents: 10,
-    totalSales: 0,
+    stats: {
+      totalUsers: 20,
+      totalEvents: 10,
+      totalSales: 0,
+    },
   };
 
   // Use mock data if there's an error or no data
-  const dashboardData = error || !data ? mockData : data;
+  const finalData = error || !dashboardData ? mockData : dashboardData;
 
   // Extract data with fallback to mock values
-  const totalUsers = dashboardData.totalUsers;
-  const totalEvents = dashboardData.totalEvents;
-  const totalSales = dashboardData.totalSales;
+  const totalUsers = finalData.stats.totalUsers;
+  const totalEvents = finalData.stats.totalEvents;
+  const totalSales = finalData.stats.totalSales;
 
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
@@ -82,7 +85,7 @@ export function SectionCards() {
         <CardHeader className="relative">
           <CardDescription>Total Sales</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {isLoading ? "Loading..." : `Rp ${totalSales.toLocaleString()}`}
+            {isLoading ? "Loading..." : formatPrice(totalSales)}
           </CardTitle>
           <div className="absolute top-4 right-4">
             <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">

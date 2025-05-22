@@ -1,22 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleGetOrderById, handleCancelOrder } from "~/server/api/buyer-orders";
+import {
+  handleGetOrderById,
+  handleCancelOrder,
+} from "~/server/api/buyer-orders";
 import { auth } from "~/server/auth";
 
 /**
  * GET /api/buyer/orders/[id]
  * Get a specific order by ID
+ * This endpoint requires authentication
  */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: { id: string } },
 ) {
   try {
     // Check authentication
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
+        {
+          success: false,
+          error: "Authentication required to view order details",
+          message: "Please log in to view order details",
+        },
+        { status: 401 },
       );
     }
 
@@ -36,12 +44,12 @@ export async function GET(
   } catch (error: any) {
     console.error(`Error getting order with ID ${params.id}:`, error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || "Failed to get order details" 
+      {
+        success: false,
+        error: error.message || "Failed to get order details",
       },
-      { 
-        status: error.message === "Order not found" ? 404 : 500 
+      {
+        status: error.message === "Order not found" ? 404 : 500,
       },
     );
   }
@@ -50,18 +58,23 @@ export async function GET(
 /**
  * DELETE /api/buyer/orders/[id]
  * Cancel an order
+ * This endpoint requires authentication
  */
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: { id: string } },
 ) {
   try {
     // Check authentication
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
+        {
+          success: false,
+          error: "Authentication required to cancel orders",
+          message: "Please log in to cancel orders",
+        },
+        { status: 401 },
       );
     }
 
@@ -85,13 +98,17 @@ export async function DELETE(
   } catch (error: any) {
     console.error(`Error cancelling order with ID ${params.id}:`, error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || "Failed to cancel order" 
+      {
+        success: false,
+        error: error.message || "Failed to cancel order",
       },
-      { 
-        status: error.message === "Order not found" ? 404 : 
-                error.message === "Only pending orders can be cancelled" ? 400 : 500 
+      {
+        status:
+          error.message === "Order not found"
+            ? 404
+            : error.message === "Only pending orders can be cancelled"
+              ? 400
+              : 500,
       },
     );
   }

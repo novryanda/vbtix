@@ -8,7 +8,7 @@ import { UserRole } from "@prisma/client";
  * Fungsi ini digunakan di client-side
  */
 export const getDashboardRoute = (role?: UserRole | string | null) => {
-  if (!role) return "/";
+  if (!role) return "/"; // Public buyer page
 
   switch (role) {
     case UserRole.ADMIN:
@@ -16,15 +16,20 @@ export const getDashboardRoute = (role?: UserRole | string | null) => {
     case UserRole.ORGANIZER:
       return "/organizer";
     case UserRole.BUYER:
+      return "/"; // Buyers go to public page
     default:
-      return "/buyer";
+      return "/";
   }
 };
 
 /**
  * Fungsi untuk login dengan kredensial (email/password)
  */
-export const login = async (email: string, password: string, callbackUrl?: string) => {
+export const login = async (
+  email: string,
+  password: string,
+  callbackUrl?: string,
+) => {
   try {
     const result = await signIn("credentials", {
       email,

@@ -20,7 +20,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { useAuth } from "~/lib/hooks/use-auth";
 
-// Schema validasi form register
+// Schema validasi form register organizer
 const registerSchema = z
   .object({
     name: z.string().min(2, "Nama minimal 2 karakter"),
@@ -29,6 +29,10 @@ const registerSchema = z
     confirmPassword: z
       .string()
       .min(6, "Konfirmasi password minimal 6 karakter"),
+    orgName: z.string().min(2, "Nama organisasi minimal 2 karakter"),
+    legalName: z.string().optional(),
+    phone: z.string().optional(),
+    npwp: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Password dan konfirmasi password tidak sama",
@@ -58,6 +62,10 @@ export function RegisterForm({
       email: "",
       password: "",
       confirmPassword: "",
+      orgName: "",
+      legalName: "",
+      phone: "",
+      npwp: "",
     },
   });
 
@@ -76,6 +84,10 @@ export function RegisterForm({
           name: data.name,
           email: data.email,
           password: data.password,
+          orgName: data.orgName,
+          legalName: data.legalName,
+          phone: data.phone,
+          npwp: data.npwp,
         }),
       });
 
@@ -85,7 +97,7 @@ export function RegisterForm({
         setError(result.error || "Terjadi kesalahan saat mendaftar");
       } else {
         setSuccess(
-          "Pendaftaran berhasil! Silakan cek email Anda untuk verifikasi.",
+          "Pendaftaran organizer berhasil! Silakan cek email Anda untuk verifikasi.",
         );
         // Redirect ke halaman login setelah 3 detik
         setTimeout(() => {
@@ -101,8 +113,10 @@ export function RegisterForm({
 
   const handleGoogleRegister = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      await loginWithGoogle("/");
+      // Redirect to Google OAuth with a special parameter to indicate organizer registration
+      await loginWithGoogle("/register/complete");
     } catch (err) {
       setError("Terjadi kesalahan saat mendaftar dengan Google");
       setIsLoading(false);
@@ -114,10 +128,10 @@ export function RegisterForm({
       <Card className="overflow-hidden border-none bg-white shadow-lg">
         <CardHeader className="border-b border-blue-50 bg-gradient-to-r from-blue-800 to-blue-700 pt-5 pb-4">
           <CardTitle className="text-center text-lg font-bold text-white">
-            Buat Akun Baru
+            Daftar sebagai Organizer
           </CardTitle>
           <CardDescription className="text-center text-xs text-blue-100">
-            Daftar untuk mulai menggunakan VBTix
+            Bergabung sebagai organizer event di VBTix
           </CardDescription>
         </CardHeader>
 
@@ -253,6 +267,96 @@ export function RegisterForm({
                   </p>
                 )}
               </div>
+
+              <div className="space-y-1">
+                <Label
+                  htmlFor="orgName"
+                  className="text-xs font-medium text-gray-700"
+                >
+                  Nama Organisasi *
+                </Label>
+                <Input
+                  id="orgName"
+                  type="text"
+                  placeholder="Nama Organisasi/Event Organizer"
+                  autoComplete="organization"
+                  disabled={isLoading}
+                  className="h-7 w-full rounded-md border-gray-200 bg-white px-2 text-xs shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                  {...register("orgName")}
+                />
+                {errors.orgName && (
+                  <p className="text-xs font-medium text-red-500">
+                    {errors.orgName.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <Label
+                  htmlFor="legalName"
+                  className="text-xs font-medium text-gray-700"
+                >
+                  Nama Legal (Opsional)
+                </Label>
+                <Input
+                  id="legalName"
+                  type="text"
+                  placeholder="Nama legal perusahaan"
+                  disabled={isLoading}
+                  className="h-7 w-full rounded-md border-gray-200 bg-white px-2 text-xs shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                  {...register("legalName")}
+                />
+                {errors.legalName && (
+                  <p className="text-xs font-medium text-red-500">
+                    {errors.legalName.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <Label
+                  htmlFor="phone"
+                  className="text-xs font-medium text-gray-700"
+                >
+                  Nomor Telepon (Opsional)
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="08xxxxxxxxxx"
+                  autoComplete="tel"
+                  disabled={isLoading}
+                  className="h-7 w-full rounded-md border-gray-200 bg-white px-2 text-xs shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                  {...register("phone")}
+                />
+                {errors.phone && (
+                  <p className="text-xs font-medium text-red-500">
+                    {errors.phone.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <Label
+                  htmlFor="npwp"
+                  className="text-xs font-medium text-gray-700"
+                >
+                  NPWP (Opsional)
+                </Label>
+                <Input
+                  id="npwp"
+                  type="text"
+                  placeholder="Nomor NPWP"
+                  disabled={isLoading}
+                  className="h-7 w-full rounded-md border-gray-200 bg-white px-2 text-xs shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                  {...register("npwp")}
+                />
+                {errors.npwp && (
+                  <p className="text-xs font-medium text-red-500">
+                    {errors.npwp.message}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -264,7 +368,7 @@ export function RegisterForm({
                 {isLoading && (
                   <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                 )}
-                Daftar
+                Daftar sebagai Organizer
               </Button>
 
               <div className="relative flex items-center justify-center py-1">
@@ -308,7 +412,7 @@ export function RegisterForm({
 
             <div className="mt-2 text-center">
               <p className="text-xs text-gray-600">
-                Sudah punya akun?{" "}
+                Sudah punya akun organizer?{" "}
                 <Link
                   href="/login"
                   className="font-medium text-blue-600 transition-colors hover:text-blue-800"

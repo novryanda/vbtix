@@ -14,6 +14,7 @@ const ordersQuerySchema = z.object({
 /**
  * GET /api/buyer/orders
  * Get orders for the authenticated user
+ * This endpoint requires authentication
  */
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +22,11 @@ export async function GET(request: NextRequest) {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
+        {
+          success: false,
+          error: "Authentication required to view orders",
+          message: "Please log in to view your orders",
+        },
         { status: 401 },
       );
     }

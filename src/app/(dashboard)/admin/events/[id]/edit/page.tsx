@@ -10,6 +10,7 @@ import {
   Save,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatPrice } from "~/lib/utils";
 import { useAdminEventDetail } from "~/lib/api/hooks/admin";
 import { EventDetailErrorState } from "~/components/dashboard/admin/event-detail-loading";
 import { AdminRoute } from "~/components/auth/admin-route";
@@ -556,20 +557,14 @@ export default function EditEventPage({
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="totalRevenue">Revenue</Label>
-                      <div className="relative">
-                        <span className="absolute top-1/2 left-3 -translate-y-1/2">
-                          Rp
-                        </span>
-                        <Input
-                          id="totalRevenue"
-                          name="totalRevenue"
-                          className="pl-10"
-                          value={statistics.totalRevenue.toLocaleString()}
-                          onChange={handleRevenueChange}
-                          readOnly
-                          disabled
-                        />
-                      </div>
+                      <Input
+                        id="totalRevenue"
+                        name="totalRevenue"
+                        value={formatPrice(statistics.totalRevenue)}
+                        onChange={handleRevenueChange}
+                        readOnly
+                        disabled
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="totalTransactions">Transactions</Label>

@@ -63,7 +63,10 @@ export const isPublicRoute = (path: string) => {
 /**
  * Memeriksa apakah pengguna memiliki peran yang diizinkan
  */
-export const hasAllowedRole = (userRole: UserRole | string | null | undefined, allowedRoles: UserRole[] | string[]) => {
+export const hasAllowedRole = (
+  userRole: UserRole | string | null | undefined,
+  allowedRoles: UserRole[] | string[],
+) => {
   if (!userRole) return false;
   return allowedRoles.includes(userRole as UserRole);
 };

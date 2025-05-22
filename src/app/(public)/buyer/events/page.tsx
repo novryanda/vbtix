@@ -30,7 +30,7 @@ import {
   PaginationContent,
   PaginationItem,
 } from "~/components/ui/pagination";
-import { formatCurrency } from "~/lib/utils";
+import { formatPrice } from "~/lib/utils";
 
 // Event type definition
 interface Event {
@@ -138,21 +138,21 @@ export default function EventsPage() {
     if (searchQuery) params.append("search", searchQuery);
     if (category) params.append("category", category);
 
-    router.push(`/buyer/events?${params.toString()}`);
+    router.push(`/events?${params.toString()}`);
   };
 
   // Reset filters
   const resetFilters = () => {
     setSearchQuery("");
     setCategory("");
-    router.push("/buyer/events");
+    router.push("/events");
   };
 
   // Handle page change
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams);
     params.set("page", page.toString());
-    router.push(`/buyer/events?${params.toString()}`);
+    router.push(`/events?${params.toString()}`);
   };
 
   // Fetch events on mount and when search params change
@@ -198,11 +198,11 @@ export default function EventsPage() {
       <CardFooter className="flex items-center justify-between border-t p-4">
         <div className="text-sm font-medium text-blue-600">
           {event.ticketInfo.lowestPrice > 0
-            ? `${formatCurrency(event.ticketInfo.lowestPrice)}`
+            ? `${formatPrice(event.ticketInfo.lowestPrice)}`
             : "Free"}
         </div>
         <Button size="sm" asChild>
-          <Link href={`/buyer/events/${event.id}`}>Detail</Link>
+          <Link href={`/events/${event.id}`}>Detail</Link>
         </Button>
       </CardFooter>
     </Card>

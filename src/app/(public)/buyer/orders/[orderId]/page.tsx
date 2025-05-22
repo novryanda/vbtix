@@ -25,6 +25,7 @@ import {
   SheetFooter,
 } from "~/components/ui/sheet";
 import Link from "next/link";
+import { formatPrice } from "~/lib/utils";
 
 // This would be replaced with actual API call in a real implementation
 const fetchEventDetails = async (id: string) => {
@@ -969,15 +970,14 @@ export default function OrderPage() {
                                     {ticket.name}
                                   </div>
                                   <div className="text-xs text-gray-500">
-                                    {selectedTicket.count} tiket × Rp{" "}
-                                    {ticket.price.toLocaleString()}
+                                    {selectedTicket.count} tiket ×{" "}
+                                    {formatPrice(ticket.price)}
                                   </div>
                                 </div>
                                 <div className="text-right font-semibold text-blue-600">
-                                  Rp{" "}
-                                  {(
-                                    ticket.price * selectedTicket.count
-                                  ).toLocaleString()}
+                                  {formatPrice(
+                                    ticket.price * selectedTicket.count,
+                                  )}
                                 </div>
                               </div>
                             );
@@ -1019,7 +1019,7 @@ export default function OrderPage() {
                             Subtotal
                           </span>
                           <span className="font-medium text-gray-700">
-                            Rp {subtotal.toLocaleString()}
+                            {formatPrice(subtotal)}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -1027,7 +1027,7 @@ export default function OrderPage() {
                             Biaya Layanan
                           </span>
                           <span className="font-medium text-gray-700">
-                            Rp {serviceFee.toLocaleString()}
+                            {formatPrice(serviceFee)}
                           </span>
                         </div>
                         <Separator className="my-2 bg-gray-100" />
@@ -1036,7 +1036,7 @@ export default function OrderPage() {
                             Total
                           </span>
                           <span className="text-lg font-bold text-blue-600">
-                            Rp {total.toLocaleString()}
+                            {formatPrice(total)}
                           </span>
                         </div>
                       </div>
@@ -1139,13 +1139,12 @@ export default function OrderPage() {
                           {ticket.name}
                         </div>
                         <div className="mt-1 text-sm text-gray-600">
-                          {selectedTicket.count} tiket × Rp{" "}
-                          {ticket.price.toLocaleString()}
+                          {selectedTicket.count} tiket ×{" "}
+                          {formatPrice(ticket.price)}
                         </div>
                       </div>
                       <div className="text-right font-semibold text-blue-600">
-                        Rp{" "}
-                        {(ticket.price * selectedTicket.count).toLocaleString()}
+                        {formatPrice(ticket.price * selectedTicket.count)}
                       </div>
                     </div>
                   );
@@ -1162,20 +1161,20 @@ export default function OrderPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium text-gray-800">
-                    Rp {subtotal.toLocaleString()}
+                    {formatPrice(subtotal)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Biaya Layanan</span>
                   <span className="font-medium text-gray-800">
-                    Rp {serviceFee.toLocaleString()}
+                    {formatPrice(serviceFee)}
                   </span>
                 </div>
                 <Separator className="my-2" />
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-800">Total</span>
                   <span className="text-lg font-bold text-blue-600">
-                    Rp {total.toLocaleString()}
+                    {formatPrice(total)}
                   </span>
                 </div>
               </div>

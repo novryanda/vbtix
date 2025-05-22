@@ -7,14 +7,15 @@ import { z } from "zod";
 
 // Validation schema for query parameters
 const eventsQuerySchema = z.object({
-  page: z.string().optional(),
-  limit: z.string().optional(),
-  search: z.string().optional(),
-  category: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  page: z.string().nullable().optional(),
+  limit: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
   featured: z
     .string()
+    .nullable()
     .optional()
     .transform((val) => {
       if (val === undefined || val === null || val === "") return undefined;
@@ -28,8 +29,14 @@ const eventsQuerySchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
+    console.log("GET /api/buyer/events - Request received");
+
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
+    console.log(
+      "Query parameters:",
+      Object.fromEntries(searchParams.entries()),
+    );
 
     // Parse and validate query parameters
     const parsedParams = eventsQuerySchema.safeParse({
@@ -43,6 +50,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!parsedParams.success) {
+      console.error("Invalid parameters:", parsedParams.error.format());
       return NextResponse.json(
         {
           success: false,
@@ -53,14 +61,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log("Parsed parameters:", parsedParams.data);
     const { page, limit, search, category, startDate, endDate, featured } =
       parsedParams.data;
 
     // Check if we need to get featured events only
     if (featured === true) {
+      console.log("Fetching featured events with limit:", limit);
       const featuredEvents = await handleGetFeaturedEvents(
         limit ? parseInt(limit, 10) : undefined,
       );
+      console.log(`Found ${featuredEvents.length} featured events`);
 
       return NextResponse.json({
         success: true,
@@ -68,15 +79,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    console.log("Fetching published events");
     // Get all events with pagination and filtering
     const result = await handleGetPublishedEvents({
-      page,
-      limit,
-      search,
-      category,
-      startDate,
-      endDate,
+      page: page || undefined,
+      limit: limit || undefined,
+      search: search || undefined,
+      category: category || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
     });
+    console.log(
+      `Found ${result.events.length} published events out of ${result.meta.total} total`,
+    );
 
     // Return response
     return NextResponse.json({

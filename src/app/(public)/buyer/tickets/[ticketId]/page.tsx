@@ -15,6 +15,7 @@ import {
   Ticket,
 } from "lucide-react";
 import Link from "next/link";
+import { formatPrice } from "~/lib/utils";
 
 // This would be replaced with actual API call in a real implementation
 const fetchEventDetails = async (id: string) => {
@@ -463,7 +464,7 @@ export default function EventDetailPage() {
                           </div>
                           <div className="text-right">
                             <div className="font-medium text-blue-600">
-                              Rp {ticket.price.toLocaleString()}
+                              {formatPrice(ticket.price)}
                             </div>
                             <div className="text-xs text-gray-500">
                               <Ticket className="mr-1 inline h-3 w-3" />

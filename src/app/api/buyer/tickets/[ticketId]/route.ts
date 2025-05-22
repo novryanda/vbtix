@@ -5,18 +5,23 @@ import { auth } from "~/server/auth";
 /**
  * GET /api/buyer/tickets/[id]
  * Get a specific ticket by ID
+ * This endpoint requires authentication
  */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: { id: string } },
 ) {
   try {
     // Check authentication
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
+        {
+          success: false,
+          error: "Authentication required to view ticket details",
+          message: "Please log in to view ticket details",
+        },
+        { status: 401 },
       );
     }
 
@@ -36,12 +41,12 @@ export async function GET(
   } catch (error: any) {
     console.error(`Error getting ticket with ID ${params.id}:`, error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || "Failed to get ticket details" 
+      {
+        success: false,
+        error: error.message || "Failed to get ticket details",
       },
-      { 
-        status: error.message === "Ticket not found" ? 404 : 500 
+      {
+        status: error.message === "Ticket not found" ? 404 : 500,
       },
     );
   }

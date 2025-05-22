@@ -24,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { formatDateTime } from "~/lib/utils";
+import { formatDateTime, formatPrice } from "~/lib/utils";
 import { useState } from "react";
 
 // Define ticket type interface
@@ -189,7 +189,7 @@ export function EventDetail({
                         </div>
                         <div className="text-right">
                           <div className="font-medium">
-                            Rp {Number(ticket.price).toLocaleString()}
+                            {formatPrice(Number(ticket.price))}
                           </div>
                           <div className="text-muted-foreground text-sm">
                             <Ticket className="mr-1 inline h-3 w-3" />
@@ -354,7 +354,7 @@ export function EventDetail({
                 <span className="font-medium">
                   {isStatsLoading
                     ? "Loading..."
-                    : `Rp ${(statistics?.totalRevenue || 0).toLocaleString()}`}
+                    : formatPrice(statistics?.totalRevenue || 0)}
                 </span>
               </div>
               <div className="flex justify-between">

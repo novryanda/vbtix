@@ -31,6 +31,7 @@ import {
   PaginationPrevious,
 } from "~/components/ui/pagination";
 import { TicketStatus } from "@prisma/client";
+import { formatPrice } from "~/lib/utils";
 
 // Ticket type definition
 interface Ticket {
@@ -196,7 +197,7 @@ export default function TicketsPage() {
           <div className="text-right">
             <div className="text-sm text-gray-500">Harga</div>
             <div className="font-medium text-blue-600">
-              Rp {ticket.ticketType.price.toLocaleString()}
+              {formatPrice(ticket.ticketType.price)}
             </div>
           </div>
         </div>

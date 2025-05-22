@@ -19,7 +19,7 @@ import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { ArrowLeft, AlertCircle, ImageIcon } from "lucide-react";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
-import { formatCurrency } from "~/lib/utils";
+import { formatPrice } from "~/lib/utils";
 import { Checkbox } from "~/components/ui/checkbox";
 import { TicketImageUploader } from "~/components/ui/ticket-image-uploader";
 import { Separator } from "~/components/ui/separator";
@@ -288,11 +288,22 @@ export default function EditTicketPage({
                             name="price"
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             value={ticketFormData.price}
                             onChange={handleTicketFormChange}
                             required
+                            placeholder="0"
                           />
+                          <p className="text-muted-foreground text-xs">
+                            Price in Indonesian Rupiah (IDR)
+                            {ticketFormData.price &&
+                              !isNaN(Number(ticketFormData.price)) && (
+                                <span className="block font-medium text-blue-600">
+                                  Preview:{" "}
+                                  {formatPrice(Number(ticketFormData.price))}
+                                </span>
+                              )}
+                          </p>
                         </div>
                         <div className="grid gap-2">
                           <Label htmlFor="quantity">Quantity</Label>

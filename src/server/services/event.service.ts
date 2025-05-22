@@ -58,7 +58,6 @@ export const eventService = {
     organizerId?: string;
     search?: string;
     featured?: boolean;
-    published?: boolean;
   }) {
     const {
       page = 1,
@@ -67,7 +66,6 @@ export const eventService = {
       organizerId,
       search,
       featured,
-      published,
     } = params;
     const skip = (page - 1) * limit;
 
@@ -106,21 +104,11 @@ export const eventService = {
         where.featured = featured;
       }
 
-      if (published !== undefined) {
-        where.published = published;
-      }
-
       // For buyer-facing endpoints, only show published events
       // But don't add this filter for admin endpoints when no status is specified
-      // Check if this is an admin request by checking if organizerId is not provided
-      if (
-        published === undefined &&
-        status === undefined &&
-        organizerId !== undefined
-      ) {
-        // If neither published nor status filter is specified, default to published events
-        // But only for non-admin requests
-        where.published = true;
+      if (status === undefined && !organizerId) {
+        // For public buyer pages (no organizerId),
+        // if no status filter is specified, default to published events
         where.status = EventStatus.PUBLISHED;
       }
 
@@ -362,7 +350,6 @@ export const eventService = {
         where: { id },
         data: {
           status,
-          published: status === EventStatus.PUBLISHED,
         },
       });
 

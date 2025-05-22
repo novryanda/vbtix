@@ -101,7 +101,6 @@ model Event {
   images         String[]
   imagePublicIds String[]
   featured       Boolean       @default(false)
-  published      Boolean       @default(false)
   seatingMap     String?
   maxAttendees   Int?
   website        String?

@@ -15,6 +15,8 @@ export async function handleGetPublishedEvents(params: {
   endDate?: string;
   featured?: boolean;
 }) {
+  console.log("handleGetPublishedEvents called with params:", params);
+
   const {
     page = 1,
     limit = 10,
@@ -28,6 +30,7 @@ export async function handleGetPublishedEvents(params: {
   // Validate parameters
   const validPage = Math.max(1, Number(page));
   const validLimit = Math.min(100, Math.max(1, Number(limit)));
+  console.log("Validated page and limit:", { validPage, validLimit });
 
   // Build where conditions for the service
   const serviceParams: any = {
@@ -35,11 +38,16 @@ export async function handleGetPublishedEvents(params: {
     limit: validLimit,
     search,
     featured,
-    published: true,
+    status: "PUBLISHED", // Explicitly set status to PUBLISHED
   };
+  console.log("Service params:", serviceParams);
 
   // Call the event service to get events
+  console.log("Calling eventService.findAll...");
   const { events, total } = await eventService.findAll(serviceParams);
+  console.log(
+    `eventService.findAll returned ${events.length} events out of ${total} total`,
+  );
 
   // Process events for response
   const processedEvents = events.map((event) => {
@@ -120,13 +128,13 @@ export async function handleGetEventById(params: {
   } else if (slug) {
     // Find by slug using the findAll method with a filter
     const { events } = await eventService.findAll({
-      published: true,
+      status: EventStatus.PUBLISHED,
       limit: 1,
     });
     event = events.find((e) => e.slug === slug);
   }
 
-  if (!event || !event.published || event.status !== EventStatus.PUBLISHED) {
+  if (!event || event.status !== EventStatus.PUBLISHED) {
     throw new Error("Event not found");
   }
 
@@ -169,12 +177,16 @@ export async function handleGetEventById(params: {
  * Get featured events
  */
 export async function handleGetFeaturedEvents(limit: number = 5) {
+  console.log("handleGetFeaturedEvents called with limit:", limit);
+
   // Get featured events using the service
+  console.log("Calling eventService.findAll for featured events...");
   const { events } = await eventService.findAll({
     featured: true,
-    published: true,
+    status: EventStatus.PUBLISHED, // Explicitly set status to PUBLISHED
     limit,
   });
+  console.log(`Found ${events.length} featured events`);
 
   // Process events for response
   const processedEvents = events.map((event) => {

@@ -29,6 +29,7 @@ export const ADMIN_ENDPOINTS = {
   ORGANIZERS: `${API_BASE}/admin/organizers`,
   ORGANIZER_DETAIL: (id: string) => `${API_BASE}/admin/organizers/${id}`,
   ORGANIZER_VERIFY: (id: string) => `${API_BASE}/admin/organizers/${id}/verify`,
+  ORGANIZER_CREATE: `${API_BASE}/admin/organizers/create`,
   ORGANIZER_STATS: `${API_BASE}/admin/organizers/stats`,
 
   // Users

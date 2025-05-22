@@ -4,9 +4,7 @@ import { UserRole } from "@prisma/client";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
-import type { JWT } from "next-auth/jwt";
 import type { NextAuthOptions } from "next-auth";
-import type { AdapterUser } from "next-auth/adapters";
 
 import { env } from "~/env";
 import { prisma } from "~/server/db/client";
@@ -105,7 +103,8 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!existingUser) {
-          // Buat user baru jika belum ada
+          // Buat user baru jika belum ada dengan role BUYER sebagai default
+          // User bisa upgrade ke ORGANIZER melalui complete registration flow
           await prisma.user.create({
             data: {
               email: user.email,

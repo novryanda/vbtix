@@ -51,42 +51,38 @@ export async function PUT(
 
     const organizerId = (await params).id;
 
-    // Verify the organizer exists and belongs to the authenticated user
-    let organizer;
-    try {
-      // First try to find by userId (which is what the ID in the URL actually is)
-      organizer = await organizerService.findByUserId(organizerId);
+    // Check if user has ORGANIZER role
+    const user = await prisma.user.findUnique({
+      where: { id: organizerId },
+    });
 
-      // If not found by userId, try to find by organizerId as fallback
-      if (!organizer) {
-        organizer = await organizerService.findById(organizerId);
-      }
-
-      if (!organizer) {
-        console.error(`Organizer not found with ID: ${organizerId}`);
-        return NextResponse.json(
-          { success: false, error: "Organizer not found" },
-          { status: 404 },
-        );
-      }
-    } catch (error) {
-      console.error(`Error finding organizer with ID: ${organizerId}`, error);
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: "Error finding organizer" },
-        { status: 500 },
+        { success: false, error: "User not found" },
+        { status: 404 },
       );
     }
 
-    // Check if the user is the owner of this organizer account or an admin
-    if (
-      organizer.userId !== session.user.id &&
-      session.user.role !== UserRole.ADMIN
-    ) {
+    if (user.role !== UserRole.ORGANIZER) {
+      return NextResponse.json(
+        { success: false, error: "User is not an organizer" },
+        { status: 403 },
+      );
+    }
+
+    // Check if user is the owner or admin
+    if (user.id !== session.user.id && session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
         { status: 403 },
       );
     }
+
+    // Try to find existing organizer record (may not exist yet)
+    let organizer = await organizerService.findByUserId(organizerId);
+
+    // If organizer record doesn't exist yet, we'll handle verification for the user
+    // The organizer record will be created when admin approves the verification
 
     // Parse and validate the request body
     const body = await request.json();
@@ -123,7 +119,58 @@ export async function PUT(
       const verificationData = validationResult.data;
       const { notes, ...verificationFields } = verificationData;
 
-      // Check if verification record already exists
+      // If no organizer record exists, create a verification request for the user
+      if (!organizer) {
+        // Check if there's already a pending verification for this user
+        const existingUserApproval = await prisma.approval.findFirst({
+          where: {
+            entityType: "USER_ORGANIZER_VERIFICATION",
+            entityId: user.id,
+            status: "PENDING",
+          },
+        });
+
+        if (existingUserApproval) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                "You already have a pending verification request. Please wait for admin response.",
+            },
+            { status: 400 },
+          );
+        }
+
+        // Create approval record for user verification
+        // Store verification data in notes as JSON
+        const verificationNotes = {
+          userNotes: notes || "Initial organizer verification request",
+          verificationData: verificationFields,
+        };
+
+        await prisma.approval.create({
+          data: {
+            entityType: "USER_ORGANIZER_VERIFICATION",
+            entityId: user.id,
+            status: ApprovalStatus.PENDING,
+            notes: JSON.stringify(verificationNotes),
+            submitterId: session.user.id,
+            submittedAt: new Date(),
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message:
+            "Verification request submitted successfully. Please wait for admin approval.",
+          data: {
+            userId: user.id,
+            status: "PENDING",
+          },
+        });
+      }
+
+      // If organizer record exists, handle normal verification flow
       let verification = await prisma.organizerVerification.findUnique({
         where: { organizerId: organizer.id },
       });
@@ -140,28 +187,6 @@ export async function PUT(
         },
       });
 
-      // Get all approvals for debugging
-      const allApprovals = await prisma.approval.findMany({
-        where: {
-          entityType: "ORGANIZER",
-          entityId: organizer.id,
-        },
-        orderBy: {
-          submittedAt: "desc",
-        },
-      });
-
-      console.log(
-        "All approvals:",
-        allApprovals.map((a) => ({
-          id: a.id,
-          status: a.status,
-          submittedAt: a.submittedAt,
-          reviewedAt: a.reviewedAt,
-        })),
-      );
-
-      // Log current verification status for debugging
       console.log("Verification submission check:", {
         verificationStatus: verification?.status,
         pendingApprovalStatus: pendingApproval?.status,
@@ -305,41 +330,65 @@ export async function GET(
 
     const organizerId = (await params).id;
 
-    // Verify the organizer exists and belongs to the authenticated user
-    let organizer;
-    try {
-      // First try to find by userId (which is what the ID in the URL actually is)
-      organizer = await organizerService.findByUserId(organizerId);
+    // Check if user has ORGANIZER role
+    const user = await prisma.user.findUnique({
+      where: { id: organizerId },
+    });
 
-      // If not found by userId, try to find by organizerId as fallback
-      if (!organizer) {
-        organizer = await organizerService.findById(organizerId);
-      }
-
-      if (!organizer) {
-        console.error(`Organizer not found with ID: ${organizerId}`);
-        return NextResponse.json(
-          { success: false, error: "Organizer not found" },
-          { status: 404 },
-        );
-      }
-    } catch (error) {
-      console.error(`Error finding organizer with ID: ${organizerId}`, error);
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: "Error finding organizer" },
-        { status: 500 },
+        { success: false, error: "User not found" },
+        { status: 404 },
       );
     }
 
-    // Check if the user is the owner of this organizer account or an admin
-    if (
-      organizer.userId !== session.user.id &&
-      session.user.role !== UserRole.ADMIN
-    ) {
+    if (user.role !== UserRole.ORGANIZER) {
+      return NextResponse.json(
+        { success: false, error: "User is not an organizer" },
+        { status: 403 },
+      );
+    }
+
+    // Check if user is the owner or admin
+    if (user.id !== session.user.id && session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
         { status: 403 },
       );
+    }
+
+    // Try to find existing organizer record (may not exist yet)
+    let organizer = await organizerService.findByUserId(organizerId);
+
+    // If no organizer record exists, check for user verification requests
+    if (!organizer) {
+      const userApproval = await prisma.approval.findFirst({
+        where: {
+          entityType: "USER_ORGANIZER_VERIFICATION",
+          entityId: user.id,
+        },
+        orderBy: {
+          submittedAt: "desc",
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          userId: user.id,
+          verified: false,
+          verification: null,
+          hasPendingRequest: userApproval?.status === "PENDING",
+          approval: userApproval
+            ? {
+                status: userApproval.status,
+                notes: userApproval.notes,
+                submittedAt: userApproval.submittedAt,
+                reviewedAt: userApproval.reviewedAt,
+              }
+            : null,
+        },
+      });
     }
 
     // Get the verification data

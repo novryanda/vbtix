@@ -4,7 +4,7 @@ import {
   handlePurchaseTickets,
 } from "~/server/api/buyer-tickets";
 import { auth } from "~/server/auth";
-import { UserRole, TicketStatus } from "@prisma/client";
+import { TicketStatus } from "@prisma/client";
 import { z } from "zod";
 
 // Validation schema for query parameters
@@ -27,6 +27,7 @@ const purchaseTicketsSchema = z.object({
 /**
  * GET /api/buyer/tickets
  * Get tickets for the authenticated user
+ * This endpoint requires authentication
  */
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +35,11 @@ export async function GET(request: NextRequest) {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
+        {
+          success: false,
+          error: "Authentication required to view tickets",
+          message: "Please log in to view your tickets",
+        },
         { status: 401 },
       );
     }
@@ -88,6 +93,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/buyer/tickets
  * Purchase tickets
+ * This endpoint requires authentication
  */
 export async function POST(request: NextRequest) {
   try {
@@ -95,7 +101,11 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
+        {
+          success: false,
+          error: "Authentication required to purchase tickets",
+          message: "Please log in to purchase tickets",
+        },
         { status: 401 },
       );
     }
