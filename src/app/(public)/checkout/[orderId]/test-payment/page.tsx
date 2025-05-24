@@ -25,7 +25,9 @@ export default function TestPaymentPage({ params }: TestPaymentPageProps) {
   const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<"pending" | "success" | "failed">("pending");
+  const [paymentStatus, setPaymentStatus] = useState<
+    "pending" | "success" | "failed"
+  >("pending");
   const [error, setError] = useState("");
 
   const paymentToken = searchParams.get("token");
@@ -45,7 +47,7 @@ export default function TestPaymentPage({ params }: TestPaymentPageProps) {
 
     try {
       // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Call payment callback API to update order status
       const response = await fetch("/api/public/checkout/callback", {
@@ -56,7 +58,7 @@ export default function TestPaymentPage({ params }: TestPaymentPageProps) {
         body: JSON.stringify({
           orderId,
           paymentId: paymentToken || `test_payment_${Date.now()}`,
-          status: success ? "COMPLETED" : "FAILED",
+          status: success ? "SUCCESS" : "FAILED",
           paymentReference: `test_ref_${Date.now()}`,
           callbackPayload: {
             test: true,
@@ -129,8 +131,8 @@ export default function TestPaymentPage({ params }: TestPaymentPageProps) {
           <Alert className="mb-6">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Test Mode:</strong> This is a simulated payment environment. 
-              No real money will be charged.
+              <strong>Test Mode:</strong> This is a simulated payment
+              environment. No real money will be charged.
             </AlertDescription>
           </Alert>
 
@@ -237,8 +239,8 @@ export default function TestPaymentPage({ params }: TestPaymentPageProps) {
                   </Button>
                 </div>
 
-                <div className="pt-4 border-t">
-                  <p className="text-xs text-gray-500 text-center">
+                <div className="border-t pt-4">
+                  <p className="text-center text-xs text-gray-500">
                     Order ID: {orderId}
                     {paymentToken && (
                       <>
