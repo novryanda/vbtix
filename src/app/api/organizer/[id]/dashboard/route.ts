@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
 import { prisma } from "~/server/db/client";
+import { organizerService } from "~/server/services/organizer.service";
 
 /**
  * GET /api/organizer/dashboard
@@ -30,11 +31,7 @@ export async function GET(_request: NextRequest) {
     }
 
     // Get organizer data
-    const organizer = await prisma.organizer.findUnique({
-      where: {
-        userId: session.user.id,
-      },
-    });
+    const organizer = await organizerService.findByUserId(session.user.id);
 
     if (!organizer) {
       return NextResponse.json(

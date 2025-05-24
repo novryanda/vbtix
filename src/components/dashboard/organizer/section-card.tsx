@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { useOrganizerDashboard } from "~/lib/api/hooks/organizer";
+import { formatPrice } from "~/lib/utils";
 
 export function SectionCards() {
   const params = useParams();
@@ -79,7 +80,7 @@ export function SectionCards() {
         <CardHeader className="relative">
           <CardDescription>Total Revenue</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {isLoading ? "Loading..." : `Rp ${totalRevenue.toLocaleString()}`}
+            {isLoading ? "Loading..." : formatPrice(totalRevenue)}
           </CardTitle>
           <div className="absolute top-4 right-4">
             <DollarSign className="text-primary size-5" />

@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { ArrowLeft, BarChart, Download, AlertCircle } from "lucide-react";
-import { formatCurrency } from "~/lib/utils";
+import { formatPrice } from "~/lib/utils";
 
 export default function EventSalesPage({
   params,
@@ -235,7 +235,7 @@ export default function EventSalesPage({
                   <CardHeader className="pb-2">
                     <CardDescription>Total Revenue</CardDescription>
                     <CardTitle className="text-2xl">
-                      {formatCurrency(totalRevenue)}
+                      {formatPrice(totalRevenue)}
                     </CardTitle>
                   </CardHeader>
                 </Card>
@@ -303,7 +303,7 @@ export default function EventSalesPage({
                               <TableCell>{item.count}</TableCell>
                               <TableCell>{item.ticketsSold}</TableCell>
                               <TableCell className="text-right">
-                                {formatCurrency(item.revenue)}
+                                {formatPrice(item.revenue)}
                               </TableCell>
                             </TableRow>
                           ))}

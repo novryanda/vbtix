@@ -486,7 +486,8 @@ export default function CreateEventPage() {
                             </h4>
                             <p className="text-muted-foreground mb-4 text-sm">
                               This will be the main image displayed for your
-                              event
+                              event. Use a 3:2 aspect ratio (1200×800px) for
+                              best results.
                             </p>
                             <DeferredImageUpload
                               onChange={(imageFile) => {
@@ -507,7 +508,8 @@ export default function CreateEventPage() {
                               Event Banner
                             </h4>
                             <p className="text-muted-foreground mb-4 text-sm">
-                              This will appear at the top of your event page
+                              This will appear at the top of your event page.
+                              Recommended size: 1920×640px (3:1 ratio), max 2MB.
                             </p>
                             <DeferredImageUpload
                               onChange={(imageFile) => {
@@ -529,7 +531,9 @@ export default function CreateEventPage() {
                             Additional Event Images
                           </h4>
                           <p className="text-muted-foreground mb-4 text-sm">
-                            Add up to 5 more images to showcase your event
+                            Add up to 5 more images to showcase your event. Use
+                            square or 3:2 ratio images (1200×800px) for best
+                            results, max 2MB each.
                           </p>
                           <DeferredMultiImageUpload
                             onChange={(imageFiles) => {

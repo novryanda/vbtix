@@ -7,24 +7,33 @@ import { UserRole } from "@prisma/client";
  * Mendapatkan rute dashboard berdasarkan peran pengguna
  * Fungsi ini digunakan di client-side
  */
-export const getDashboardRoute = (role?: UserRole | string | null) => {
-  if (!role) return "/";
+export const getDashboardRoute = (
+  role?: UserRole | string | null,
+  userId?: string,
+) => {
+  if (!role) return "/"; // Public buyer page
 
   switch (role) {
     case UserRole.ADMIN:
       return "/admin";
     case UserRole.ORGANIZER:
-      return "/organizer";
+      // If userId is available, redirect to the organizer's dashboard
+      return userId ? `/organizer/${userId}/dashboard` : "/organizer";
     case UserRole.BUYER:
+      return "/"; // Buyers go to public page
     default:
-      return "/buyer";
+      return "/";
   }
 };
 
 /**
  * Fungsi untuk login dengan kredensial (email/password)
  */
-export const login = async (email: string, password: string, callbackUrl?: string) => {
+export const login = async (
+  email: string,
+  password: string,
+  callbackUrl?: string,
+) => {
   try {
     const result = await signIn("credentials", {
       email,

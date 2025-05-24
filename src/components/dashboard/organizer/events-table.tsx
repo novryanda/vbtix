@@ -3,14 +3,16 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  CalendarIcon,
+  AlertCircle,
   MoreHorizontalIcon,
   MapPinIcon,
-  TagIcon,
   PencilIcon,
   TrashIcon,
   EyeIcon,
+  Loader2,
+  CheckCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import type {
   ColumnDef,
   ColumnFiltersState,
@@ -47,6 +49,18 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { formatDate } from "~/lib/utils";
 import type { Event } from "~/lib/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
+import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
+import { deleteData } from "~/lib/api/client";
 
 // Define the columns for the events table
 const columns: ColumnDef<Event>[] = [
@@ -102,65 +116,138 @@ const columns: ColumnDef<Event>[] = [
     cell: ({ row }) => {
       const router = useRouter();
       const event = row.original;
+      const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+      const [isDeleting, setIsDeleting] = React.useState(false);
+      const [deleteError, setDeleteError] = React.useState<string | null>(null);
+
+      // Get the organizerId from the URL
+      const getOrganizerId = (): string => {
+        const pathParts = window.location.pathname.split("/");
+        return pathParts[2] || ""; // Assuming URL is /organizer/[id]/events
+      };
+
+      // Handle delete event
+      const handleDeleteEvent = async () => {
+        const organizerId = getOrganizerId();
+        setIsDeleting(true);
+        setDeleteError(null);
+
+        try {
+          // Call the delete API endpoint
+          await deleteData(
+            ORGANIZER_ENDPOINTS.DELETE_EVENT(organizerId, event.id),
+          );
+
+          // Show success toast notification
+          toast.success("Event deleted successfully", {
+            description: "The event has been permanently deleted.",
+            icon: <CheckCircle className="h-4 w-4 text-green-500" />,
+          });
+
+          // Refresh the page to show updated list
+          window.location.reload();
+        } catch (error: any) {
+          console.error("Error deleting event:", error);
+          const errorMessage =
+            error?.info?.error || "Failed to delete event. Please try again.";
+
+          // Show error toast notification
+          toast.error("Error deleting event", {
+            description: errorMessage,
+            icon: <AlertCircle className="h-4 w-4 text-red-500" />,
+          });
+
+          setDeleteError(errorMessage);
+          setIsDeleting(false);
+        }
+      };
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontalIcon className="h-4 w-4" />
-              <span className="sr-only">Actions</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => {
-                // Get the organizerId from the URL
-                const pathParts = window.location.pathname.split("/");
-                const organizerId = pathParts[2]; // Assuming URL is /organizer/[id]/events
-                router.push(`/organizer/${organizerId}/events/${event.id}`);
-              }}
-            >
-              <EyeIcon className="mr-2 h-4 w-4" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                // Get the organizerId from the URL
-                const pathParts = window.location.pathname.split("/");
-                const organizerId = pathParts[2]; // Assuming URL is /organizer/[id]/events
-                router.push(
-                  `/organizer/${organizerId}/events/${event.id}/edit`,
-                );
-              }}
-            >
-              <PencilIcon className="mr-2 h-4 w-4" />
-              Edit Event
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => {
-                if (confirm("Are you sure you want to delete this event?")) {
-                  // Get the organizerId from the URL
-                  const pathParts = window.location.pathname.split("/");
-                  const organizerId = pathParts[2]; // Assuming URL is /organizer/[id]/events
-
-                  // Delete event logic will be implemented later
-                  console.log(
-                    "Delete event:",
-                    event.id,
-                    "for organizer:",
-                    organizerId,
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontalIcon className="h-4 w-4" />
+                <span className="sr-only">Actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => {
+                  const organizerId = getOrganizerId();
+                  router.push(`/organizer/${organizerId}/events/${event.id}`);
+                }}
+              >
+                <EyeIcon className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const organizerId = getOrganizerId();
+                  router.push(
+                    `/organizer/${organizerId}/events/${event.id}/edit`,
                   );
-                }
-              }}
-            >
-              <TrashIcon className="mr-2 h-4 w-4" />
-              Delete Event
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                }}
+              >
+                <PencilIcon className="mr-2 h-4 w-4" />
+                Edit Event
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+                onSelect={(e) => e.preventDefault()}
+              >
+                <TrashIcon className="mr-2 h-4 w-4" />
+                Delete Event
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Delete Event Alert Dialog */}
+          <AlertDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the
+                  event &quot;{event.title}&quot; and remove all associated data
+                  including tickets, sales records, and attendee information.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {deleteError && (
+                <div className="bg-destructive/15 text-destructive rounded-md p-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <p>{deleteError}</p>
+                  </div>
+                </div>
+              )}
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDeleteEvent();
+                  }}
+                  disabled={isDeleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Delete Event
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
       );
     },
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import {
@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import {
+  AlertCircle,
   ArrowLeft,
   CalendarDays,
   Clock,
@@ -32,8 +33,11 @@ import {
   BarChart,
   ImageIcon,
   Trash,
+  Images,
+  Loader2,
+  CheckCircle,
 } from "lucide-react";
-import { formatDate, formatCurrency } from "~/lib/utils";
+import { formatDate, formatPrice } from "~/lib/utils";
 import { EventStatus } from "@prisma/client";
 import {
   Table,
@@ -43,7 +47,20 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { ImageManagerDialog } from "~/components/event/image-manager-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
+import { deleteData } from "~/lib/api/client";
+import { toast } from "sonner";
 
 export default function EventDetailPage() {
   // Use the useParams hook to get route parameters
@@ -53,8 +70,14 @@ export default function EventDetailPage() {
 
   const router = useRouter();
 
+  // State for image manager dialog and delete dialog
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   // Fetch event details
-  const { data, isLoading, error } = useOrganizerEventDetail(
+  const { data, isLoading, error, mutate } = useOrganizerEventDetail(
     organizerId,
     eventId,
   );
@@ -89,14 +112,34 @@ export default function EventDetailPage() {
 
   // Handle delete event
   const handleDeleteEvent = async () => {
-    if (confirm("Are you sure you want to delete this event?")) {
-      try {
-        // Delete event logic will be implemented later
-        console.log("Delete event:", eventId);
-        router.push(`/organizer/${organizerId}/events`);
-      } catch (error) {
-        console.error("Error deleting event:", error);
-      }
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      // Call the delete API endpoint
+      await deleteData(ORGANIZER_ENDPOINTS.DELETE_EVENT(organizerId, eventId));
+
+      // Show success toast notification
+      toast.success("Event deleted successfully", {
+        description: "The event has been permanently deleted.",
+        icon: <CheckCircle className="h-4 w-4 text-green-500" />,
+      });
+
+      // Redirect to events list on success
+      router.push(`/organizer/${organizerId}/events`);
+    } catch (error: any) {
+      console.error("Error deleting event:", error);
+      const errorMessage =
+        error?.info?.error || "Failed to delete event. Please try again.";
+
+      // Show error toast notification
+      toast.error("Error deleting event", {
+        description: errorMessage,
+        icon: <AlertCircle className="h-4 w-4 text-red-500" />,
+      });
+
+      setDeleteError(errorMessage);
+      setIsDeleting(false);
     }
   };
 
@@ -150,6 +193,22 @@ export default function EventDetailPage() {
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+      {/* Image Manager Dialog */}
+      <ImageManagerDialog
+        open={imageDialogOpen}
+        onOpenChange={setImageDialogOpen}
+        posterImage={event?.posterUrl}
+        posterPublicId={(event as any)?.posterPublicId}
+        bannerImage={event?.bannerUrl}
+        bannerPublicId={(event as any)?.bannerPublicId}
+        additionalImages={event?.images || []}
+        additionalImagePublicIds={(event as any)?.imagePublicIds || []}
+        eventId={eventId}
+        organizerId={organizerId}
+        onSuccess={() => mutate()}
+        eventTitle={event?.title || "Event"}
+      />
+
       <div className="px-4 lg:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
@@ -168,10 +227,57 @@ export default function EventDetailPage() {
               <Pencil className="mr-2 h-4 w-4" />
               Edit Event
             </Button>
-            <Button variant="destructive" onClick={handleDeleteEvent}>
+            <Button
+              variant="destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
               <Trash className="mr-2 h-4 w-4" />
               Delete
             </Button>
+
+            {/* Delete Event Alert Dialog */}
+            <AlertDialog
+              open={deleteDialogOpen}
+              onOpenChange={setDeleteDialogOpen}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete
+                    the event &quot;{event?.title}&quot; and remove all
+                    associated data including tickets, sales records, and
+                    attendee information.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                {deleteError && (
+                  <div className="bg-destructive/15 text-destructive rounded-md p-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <p>{deleteError}</p>
+                    </div>
+                  </div>
+                )}
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleDeleteEvent();
+                    }}
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Delete Event
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>
@@ -193,67 +299,101 @@ export default function EventDetailPage() {
                 <CardContent className="space-y-4">
                   {/* Event Images */}
                   <div className="mb-6 space-y-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="flex items-center font-medium">
+                        <ImageIcon className="text-muted-foreground mr-2 h-4 w-4" />
+                        Event Images
+                      </h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setImageDialogOpen(true)}
+                      >
+                        <Images className="mr-2 h-4 w-4" />
+                        Manage Images
+                      </Button>
+                    </div>
+
+                    {/* Poster Image */}
                     {event.posterUrl && (
                       <div>
-                        <h3 className="flex items-center font-medium">
-                          <ImageIcon className="text-muted-foreground mr-2 h-4 w-4" />
+                        <h4 className="mb-2 text-sm font-medium">
                           Event Poster
-                        </h3>
-                        <div className="mt-2 overflow-hidden rounded-md">
+                        </h4>
+                        <div className="overflow-hidden rounded-md">
                           <div className="relative h-[200px] w-full">
                             <Image
                               src={event.posterUrl}
                               alt={event.title}
                               fill
-                              className="object-cover"
+                              className="bg-muted/20 object-contain"
+                              sizes="(max-width: 768px) 100vw, 600px"
                             />
                           </div>
                         </div>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          Recommended size: 1200×800px (3:2 ratio), max 2MB
+                        </p>
                       </div>
                     )}
 
+                    {/* Banner Image */}
                     {event.bannerUrl && (
-                      <div>
-                        <h3 className="flex items-center font-medium">
-                          <ImageIcon className="text-muted-foreground mr-2 h-4 w-4" />
+                      <div className="mt-4">
+                        <h4 className="mb-2 text-sm font-medium">
                           Event Banner
-                        </h3>
-                        <div className="mt-2 overflow-hidden rounded-md">
+                        </h4>
+                        <div className="overflow-hidden rounded-md">
                           <div className="relative h-[200px] w-full">
                             <Image
                               src={event.bannerUrl}
                               alt={event.title}
                               fill
-                              className="object-cover"
+                              className="bg-muted/20 object-contain"
+                              sizes="(max-width: 768px) 100vw, 800px"
                             />
                           </div>
                         </div>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          Recommended size: 1920×640px (3:1 ratio), max 2MB
+                        </p>
                       </div>
                     )}
 
-                    {event.images && event.images.length > 0 && (
-                      <div>
-                        <h3 className="flex items-center font-medium">
-                          <ImageIcon className="text-muted-foreground mr-2 h-4 w-4" />
-                          Additional Images
-                        </h3>
-                        <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
+                    {/* Additional Images */}
+                    <div className="mt-4">
+                      <h4 className="mb-2 text-sm font-medium">
+                        Additional Images
+                      </h4>
+                      <p className="text-muted-foreground mb-2 text-xs">
+                        Recommended size: 1200×800px (3:2 ratio) or square, max
+                        2MB each
+                      </p>
+                      {event.images && event.images.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                           {event.images.map((image, index) => (
                             <div
                               key={index}
-                              className="relative h-[120px] overflow-hidden rounded-md"
+                              className="bg-muted/20 relative h-[120px] overflow-hidden rounded-md"
                             >
                               <Image
                                 src={image}
                                 alt={`${event.title} - Image ${index + 1}`}
                                 fill
-                                className="object-cover"
+                                className="object-contain"
+                                sizes="(max-width: 768px) 50vw, 33vw"
                               />
                             </div>
                           ))}
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                          <p className="text-muted-foreground text-sm">
+                            No additional images yet.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -449,9 +589,7 @@ export default function EventDetailPage() {
                           Total Sales
                         </h3>
                         <p className="text-2xl font-bold">
-                          {formatCurrency(
-                            typedSalesData?.data.totalRevenue || 0,
-                          )}
+                          {formatPrice(typedSalesData?.data.totalRevenue || 0)}
                         </p>
                       </div>
                       <div className="rounded-lg border p-4">
@@ -495,7 +633,7 @@ export default function EventDetailPage() {
                                 <TableCell>{item.count}</TableCell>
                                 <TableCell>{item.ticketsSold}</TableCell>
                                 <TableCell className="text-right">
-                                  {formatCurrency(item.revenue)}
+                                  {formatPrice(item.revenue)}
                                 </TableCell>
                               </TableRow>
                             ))}

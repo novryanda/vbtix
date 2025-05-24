@@ -91,6 +91,34 @@ export const organizerService = {
     });
   },
 
+  // Mencari organizer berdasarkan ID user dengan auto-create jika tidak ada
+  async findOrCreateByUserId(userId: string) {
+    // Coba cari organizer yang sudah ada
+    let organizer = await this.findByUserId(userId);
+
+    if (!organizer) {
+      // Cek apakah user ada dan memiliki role ORGANIZER
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (user && user.role === "ORGANIZER") {
+        // Auto-create organizer record
+        try {
+          organizer = await this.createOrganizerForUser(
+            userId,
+            user.name || "Organizer",
+          );
+        } catch (error) {
+          console.error("Failed to auto-create organizer record:", error);
+          return null;
+        }
+      }
+    }
+
+    return organizer;
+  },
+
   // Membuat organizer baru
   async createOrganizer(data: Prisma.OrganizerCreateInput) {
     return await prisma.organizer.create({
@@ -104,6 +132,49 @@ export const organizerService = {
             image: true,
           },
         },
+      },
+    });
+  },
+
+  // Membuat organizer record untuk user yang sudah ada
+  async createOrganizerForUser(userId: string, orgName: string) {
+    // Cek apakah user ada dan memiliki role ORGANIZER
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.role !== "ORGANIZER") {
+      throw new Error("User is not an organizer");
+    }
+
+    // Cek apakah organizer record sudah ada
+    const existingOrganizer = await this.findByUserId(userId);
+    if (existingOrganizer) {
+      throw new Error("Organizer record already exists for this user");
+    }
+
+    // Buat organizer record baru dengan include yang sama seperti findByUserId
+    return await prisma.organizer.create({
+      data: {
+        user: { connect: { id: userId } },
+        orgName: orgName || user.name || "Organizer",
+        verified: false,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
+        verification: true,
+        bankAccount: true,
       },
     });
   },

@@ -6,17 +6,22 @@ import { prisma } from "~/server/db/client";
 /**
  * Mendapatkan rute dashboard berdasarkan peran pengguna
  */
-export const getDashboardRoute = (role?: UserRole | string | null) => {
-  if (!role) return "/";
+export const getDashboardRoute = (
+  role?: UserRole | string | null,
+  userId?: string,
+) => {
+  if (!role) return "/"; // Public buyer page
 
   switch (role) {
     case UserRole.ADMIN:
       return "/admin";
     case UserRole.ORGANIZER:
-      return "/organizer";
+      // If userId is available, redirect to the organizer's dashboard
+      return userId ? `/organizer/${userId}/dashboard` : "/organizer";
     case UserRole.BUYER:
+      return "/"; // Buyers go to public page
     default:
-      return "/buyer";
+      return "/";
   }
 };
 
@@ -26,7 +31,7 @@ export const getDashboardRoute = (role?: UserRole | string | null) => {
 export const registerUser = async (
   email: string,
   password: string,
-  name?: string
+  name?: string,
 ) => {
   // Cek apakah email sudah terdaftar
   const existingUser = await prisma.user.findUnique({
@@ -68,6 +73,87 @@ export const registerUser = async (
   // await sendVerificationEmail(email, verificationToken);
 
   return user;
+};
+
+/**
+ * Mendaftarkan organizer baru
+ */
+export const registerOrganizer = async (
+  email: string,
+  password: string,
+  name: string,
+  organizerData: {
+    orgName: string;
+    legalName?: string;
+    phone?: string;
+    npwp?: string;
+  },
+) => {
+  // Cek apakah email sudah terdaftar
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (existingUser) {
+    throw new Error("Email sudah terdaftar");
+  }
+
+  // Hash password
+  const hashedPassword = await hash(password, 12);
+
+  // Buat token verifikasi
+  const verificationToken = randomBytes(32).toString("hex");
+  const tokenExpiry = new Date();
+  tokenExpiry.setHours(tokenExpiry.getHours() + 24); // Token berlaku 24 jam
+
+  // Buat user dan organizer dalam satu transaksi
+  console.log("💾 Starting database transaction...");
+  const result = await prisma.$transaction(async (tx) => {
+    // Buat user baru dengan role ORGANIZER
+    console.log("👤 Creating user with ORGANIZER role...");
+    const user = await tx.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+        phone: organizerData.phone,
+        role: UserRole.ORGANIZER,
+      },
+    });
+    console.log("✅ User created:", user.id, user.role);
+
+    // Buat organizer record
+    console.log("🏢 Creating organizer record...");
+    const organizer = await tx.organizer.create({
+      data: {
+        userId: user.id,
+        orgName: organizerData.orgName,
+        legalName: organizerData.legalName,
+        npwp: organizerData.npwp,
+        verified: false, // Organizer perlu verifikasi admin
+      },
+    });
+    console.log("✅ Organizer created:", organizer.id, organizer.orgName);
+
+    // Simpan token verifikasi
+    console.log("🔐 Creating verification token...");
+    await tx.verificationToken.create({
+      data: {
+        identifier: email,
+        token: verificationToken,
+        expires: tokenExpiry,
+      },
+    });
+    console.log("✅ Verification token created");
+
+    return { user, organizer };
+  });
+  console.log("🎉 Transaction completed successfully!");
+
+  // Kirim email verifikasi (implementasi akan dibuat nanti)
+  // await sendVerificationEmail(email, verificationToken);
+
+  return result;
 };
 
 /**

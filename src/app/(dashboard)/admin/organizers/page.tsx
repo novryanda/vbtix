@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle,
@@ -67,6 +67,10 @@ export default function OrganizersPage() {
   const [search, setSearch] = useState("");
   const [verified, setVerified] = useState<boolean | undefined>(undefined);
   const [activeTab, setActiveTab] = useState("all");
+  const [userVerificationRequests, setUserVerificationRequests] = useState<
+    any[]
+  >([]);
+  const [isLoadingUserRequests, setIsLoadingUserRequests] = useState(false);
 
   // Fetch organizers data
   const { organizers, meta, error, isLoading, mutate } = useAdminOrganizers({
@@ -82,6 +86,32 @@ export default function OrganizersPage() {
       (organizer) =>
         organizer.verification && organizer.verification.status === "PENDING",
     ) || [];
+
+  // Fetch user verification requests
+  const fetchUserVerificationRequests = async () => {
+    try {
+      setIsLoadingUserRequests(true);
+      const response = await fetch("/api/admin/verifications?status=PENDING");
+      const data = await response.json();
+
+      if (data.success) {
+        setUserVerificationRequests(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching user verification requests:", error);
+    } finally {
+      setIsLoadingUserRequests(false);
+    }
+  };
+
+  // Fetch user verification requests on component mount
+  useEffect(() => {
+    fetchUserVerificationRequests();
+  }, []);
+
+  // Combined pending requests (organizers + users)
+  const totalPendingRequests =
+    pendingVerifications.length + userVerificationRequests.length;
 
   // Verify organizer hook
   const { verifyOrganizer } = useVerifyOrganizer();
@@ -154,12 +184,12 @@ export default function OrganizersPage() {
               <TabsTrigger value="all">All Organizers</TabsTrigger>
               <TabsTrigger value="pending" className="relative">
                 Pending Verification
-                {pendingVerifications.length > 0 && (
+                {totalPendingRequests > 0 && (
                   <Badge
                     variant="destructive"
                     className="ml-2 flex h-5 w-5 items-center justify-center rounded-full p-0 text-xs"
                   >
-                    {pendingVerifications.length}
+                    {totalPendingRequests}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -460,14 +490,14 @@ export default function OrganizersPage() {
                       Review and approve organizer verification documents
                     </CardDescription>
                   </div>
-                  {pendingVerifications.length > 0 && (
+                  {totalPendingRequests > 0 && (
                     <Badge
                       variant="outline"
                       className="border-amber-200 bg-amber-50 px-3 py-1 text-amber-700"
                     >
                       <Clock className="mr-2 h-4 w-4 text-amber-500" />
-                      {pendingVerifications.length} Pending Request
-                      {pendingVerifications.length > 1 ? "s" : ""}
+                      {totalPendingRequests} Pending Request
+                      {totalPendingRequests > 1 ? "s" : ""}
                     </Badge>
                   )}
                 </div>
@@ -479,7 +509,7 @@ export default function OrganizersPage() {
                       <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
                     </div>
                   </div>
-                ) : pendingVerifications.length === 0 ? (
+                ) : totalPendingRequests === 0 ? (
                   <div className="flex flex-col items-center justify-center p-8 text-center">
                     <div className="bg-primary/10 rounded-full p-3">
                       <Check className="text-primary h-6 w-6" />
@@ -503,9 +533,10 @@ export default function OrganizersPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
+                        {/* Existing organizer verification requests */}
                         {pendingVerifications.map((organizer) => (
                           <TableRow
-                            key={organizer.id}
+                            key={`organizer-${organizer.id}`}
                             className="bg-amber-50/30"
                           >
                             <TableCell>
@@ -516,6 +547,9 @@ export default function OrganizersPage() {
                                 <span className="text-muted-foreground text-xs">
                                   {organizer.user.email}
                                 </span>
+                                <Badge variant="outline" className="mt-1 w-fit">
+                                  Existing Organizer
+                                </Badge>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -602,6 +636,147 @@ export default function OrganizersPage() {
                                       router.push(
                                         `/admin/organizers/${organizer.id}?tab=verification&action=reject`,
                                       );
+                                    }}
+                                  >
+                                    <XCircle className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {/* New user verification requests */}
+                        {userVerificationRequests.map((request) => (
+                          <TableRow
+                            key={`user-${request.id}`}
+                            className="bg-blue-50/30"
+                          >
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {request.user?.name || "No name"}
+                                </span>
+                                <span className="text-muted-foreground text-xs">
+                                  {request.user?.email}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="mt-1 w-fit border-blue-500 text-blue-500"
+                                >
+                                  New Organizer Request
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {new Date(
+                                request.submittedAt,
+                              ).toLocaleDateString()}
+                              <div className="text-muted-foreground mt-1 text-xs">
+                                {new Date(
+                                  request.submittedAt,
+                                ).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col space-y-2">
+                                <Badge
+                                  variant="outline"
+                                  className="w-fit border-purple-500 text-purple-500"
+                                >
+                                  Verification Data
+                                </Badge>
+                                <div className="text-muted-foreground text-xs">
+                                  Initial verification request
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col space-y-2">
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => {
+                                    // Handle user verification review
+                                    router.push(
+                                      `/admin/organizers/${request.entityId}?tab=verification&type=user`,
+                                    );
+                                  }}
+                                >
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  Review
+                                </Button>
+                                <div className="flex space-x-1">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 border-green-500 text-green-500 hover:bg-green-50"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(
+                                          `/api/admin/organizers/${request.entityId}/verify`,
+                                          {
+                                            method: "PUT",
+                                            headers: {
+                                              "Content-Type":
+                                                "application/json",
+                                            },
+                                            body: JSON.stringify({
+                                              verified: true,
+                                              notes:
+                                                "Approved from admin panel",
+                                            }),
+                                          },
+                                        );
+                                        if (response.ok) {
+                                          fetchUserVerificationRequests();
+                                          mutate();
+                                        }
+                                      } catch (error) {
+                                        console.error(
+                                          "Error approving verification:",
+                                          error,
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <CheckCircle className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 border-red-500 text-red-500 hover:bg-red-50"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(
+                                          `/api/admin/organizers/${request.entityId}/verify`,
+                                          {
+                                            method: "PUT",
+                                            headers: {
+                                              "Content-Type":
+                                                "application/json",
+                                            },
+                                            body: JSON.stringify({
+                                              verified: false,
+                                              notes:
+                                                "Rejected from admin panel",
+                                            }),
+                                          },
+                                        );
+                                        if (response.ok) {
+                                          fetchUserVerificationRequests();
+                                          mutate();
+                                        }
+                                      } catch (error) {
+                                        console.error(
+                                          "Error rejecting verification:",
+                                          error,
+                                        );
+                                      }
                                     }}
                                   >
                                     <XCircle className="h-3 w-3" />

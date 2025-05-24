@@ -55,7 +55,6 @@ interface Event {
   tags: string[];
   images: string[];
   featured: boolean;
-  published: boolean;
   organizerId: string;
   organizer?: {
     id: string;

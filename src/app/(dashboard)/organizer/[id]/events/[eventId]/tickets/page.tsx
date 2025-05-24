@@ -45,7 +45,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
-import { formatCurrency } from "~/lib/utils";
+import { formatPrice } from "~/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -452,13 +452,23 @@ export default function EventTicketsPage({
                                 name="price"
                                 type="number"
                                 min="0"
-                                step="0.01"
+                                step="1"
                                 value={ticketFormData.price}
                                 onChange={handleTicketFormChange}
                                 required
+                                placeholder="0"
                               />
                               <p className="text-muted-foreground text-xs">
-                                The price per ticket in IDR
+                                Price in Indonesian Rupiah (IDR)
+                                {ticketFormData.price &&
+                                  !isNaN(Number(ticketFormData.price)) && (
+                                    <span className="block font-medium text-blue-600">
+                                      Preview:{" "}
+                                      {formatPrice(
+                                        Number(ticketFormData.price),
+                                      )}
+                                    </span>
+                                  )}
                               </p>
                             </div>
                             <div className="grid gap-2">
@@ -822,9 +832,7 @@ export default function EventTicketsPage({
                                   </p>
                                 )}
                               </TableCell>
-                              <TableCell>
-                                {formatCurrency(ticket.price)}
-                              </TableCell>
+                              <TableCell>{formatPrice(ticket.price)}</TableCell>
                               <TableCell>{ticket.quantity}</TableCell>
                               <TableCell>{ticket.sold || 0}</TableCell>
                               <TableCell>

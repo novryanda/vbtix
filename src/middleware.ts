@@ -13,16 +13,10 @@ const publicRoutes = [
   "/unauthorized",
 ];
 
-// Buyer routes are public but can have enhanced features when logged in
-const publicBuyerRoutes = ["/buyer", "/buyer/events", "/buyer/about"];
-
 // Memeriksa apakah rute adalah rute publik
 function isPublicRoute(path: string) {
   // Cek apakah path cocok dengan salah satu rute publik
   if (publicRoutes.includes(path)) return true;
-
-  // Cek apakah path cocok dengan salah satu rute buyer publik
-  if (publicBuyerRoutes.includes(path)) return true;
 
   // Cek apakah path dimulai dengan salah satu prefiks publik
   if (
@@ -31,7 +25,12 @@ function isPublicRoute(path: string) {
     path.startsWith("/api/revalidate/") ||
     path.startsWith("/reset-password/") ||
     path.startsWith("/verify/") ||
-    path.startsWith("/buyer/events/") // Allow access to individual event pages
+    path.startsWith("/events/") || // Allow access to public event pages
+    path.startsWith("/checkout") || // Allow access to checkout pages (with or without trailing slash)
+    path.startsWith("/orders/") || // Allow access to public order pages
+    path.startsWith("/tickets/") || // Allow access to public ticket pages
+    path.startsWith("/profile") || // Allow access to public profile page
+    path.startsWith("/api/public/") // Allow access to all public API endpoints
   ) {
     return true;
   }
@@ -51,7 +50,7 @@ function getDashboardRoute(role?: UserRole | string | null, userId?: string) {
       return userId ? `/organizer/${userId}/dashboard` : "/organizer";
     case UserRole.BUYER:
     default:
-      return "/buyer";
+      return "/";
   }
 }
 
@@ -82,9 +81,9 @@ export async function authMiddleware(req: NextRequest) {
 
     const isAuthenticated = !!token;
 
-    // Special handling for root path - always redirect to buyer page if not authenticated
-    if (path === "/" && !isAuthenticated) {
-      return NextResponse.redirect(new URL("/buyer", req.url));
+    // Special handling for root path - allow access to public page
+    if (path === "/") {
+      return NextResponse.next();
     }
 
     // Jika pengguna sudah login dan mencoba mengakses halaman publik, alihkan ke dashboard
@@ -113,8 +112,8 @@ export async function authMiddleware(req: NextRequest) {
         );
         return NextResponse.redirect(new URL(dashboardRoute, req.url));
       } else {
-        // Redirect to buyer page instead of login
-        return NextResponse.redirect(new URL("/buyer", req.url));
+        // Redirect to public home page instead of login
+        return NextResponse.redirect(new URL("/", req.url));
       }
     }
 
@@ -203,26 +202,22 @@ export async function organizerMiddleware(req: NextRequest) {
 }
 
 /**
- * Middleware untuk rute buyer
+ * Middleware untuk rute publik
  *
- * Buyer routes are special - they're public by default, but some features
- * may require authentication (like viewing tickets or orders)
+ * Public routes are accessible to everyone, but some features
+ * may require authentication (like viewing personal tickets or orders)
  */
-export async function buyerMiddleware(req: NextRequest) {
+export async function publicMiddleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
-  // Check if this is a public buyer route
+  // Check if this is a public route
   if (isPublicRoute(path)) {
     return NextResponse.next();
   }
 
-  // For protected buyer routes (like /buyer/tickets or /buyer/orders)
-  // we use the role middleware to ensure the user is authenticated
-  return roleMiddleware(req, [
-    UserRole.BUYER,
-    UserRole.ORGANIZER,
-    UserRole.ADMIN,
-  ]);
+  // For protected features within public routes (like /profile, /tickets, /orders)
+  // we use the auth middleware to ensure the user is authenticated
+  return authMiddleware(req);
 }
 
 export async function middleware(req: NextRequest) {
@@ -238,12 +233,12 @@ export async function middleware(req: NextRequest) {
 
     const path = req.nextUrl.pathname;
 
-    // Handle buyer routes specially
-    if (path.startsWith("/buyer")) {
-      return await buyerMiddleware(req);
+    // Handle public routes (including root path and public pages)
+    if (isPublicRoute(path)) {
+      return await publicMiddleware(req);
     }
 
-    // For all other routes, use the standard auth middleware
+    // For all other routes (admin, organizer), use the standard auth middleware
     return await authMiddleware(req);
   } catch (error) {
     console.error("Middleware error:", error);
@@ -264,8 +259,12 @@ export const config = {
     "/register",
     "/verify-email",
     "/reset-password",
+    "/events/:path*",
+    "/checkout/:path*",
+    "/orders/:path*",
+    "/tickets/:path*",
+    "/profile/:path*",
     "/admin/:path*",
     "/organizer/:path*",
-    "/buyer/:path*",
   ],
 };

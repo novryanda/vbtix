@@ -27,7 +27,6 @@ export const eventSchema = z.object({
   tags: z.array(z.string()),
   images: z.array(z.string()),
   featured: z.boolean(),
-  published: z.boolean(),
   seatingMap: z.string().optional().nullable(),
   maxAttendees: z.number().int().positive().optional().nullable(),
   website: z
@@ -75,7 +74,6 @@ export const createEventSchema = z.object({
   images: z.array(z.string()).optional().default([]),
   imagePublicIds: z.array(z.string()).optional().default([]),
   featured: z.boolean().optional().default(false),
-  published: z.boolean().optional().default(false),
   seatingMap: z.string().optional(),
   maxAttendees: z.number().int().positive().optional(),
   website: z
@@ -120,7 +118,6 @@ export const updateEventSchema = z.object({
   images: z.array(z.string()).optional(),
   imagePublicIds: z.array(z.string()).optional(),
   featured: z.boolean().optional(),
-  published: z.boolean().optional(),
   seatingMap: z.string().optional(),
   maxAttendees: z.number().int().positive().optional(),
   website: z

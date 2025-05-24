@@ -1,5 +1,5 @@
 import { ticketService } from "~/server/services/ticket.service";
-import { eventService } from "~/server/services/event.service";
+import { reservationService } from "~/server/services/reservation.service";
 import { prisma } from "~/server/db";
 import { TicketStatus } from "@prisma/client";
 import { formatDate } from "~/lib/utils";
@@ -128,20 +128,213 @@ export async function handleGetTicketById(params: {
 }
 
 /**
- * Purchase tickets
+ * Purchase tickets with buyer and ticket holder information (Single ticket type)
  */
 export async function handlePurchaseTickets(params: {
+  userId: string;
+  ticketPurchase: {
+    ticketTypeId: string;
+    quantity: number;
+  };
+  buyerInfo: {
+    fullName: string;
+    identityType: string;
+    identityNumber: string;
+    email: string;
+    whatsapp: string;
+  };
+  ticketHolders: Array<{
+    fullName: string;
+    identityType: string;
+    identityNumber: string;
+    email: string;
+    whatsapp: string;
+  }>;
+}) {
+  const { userId, ticketPurchase, buyerInfo, ticketHolders } = params;
+
+  // Validate ticket purchase
+  if (!ticketPurchase || !ticketPurchase.ticketTypeId) {
+    throw new Error("Ticket purchase information is required");
+  }
+
+  // Validate ticket holders count matches quantity
+  if (ticketHolders.length !== ticketPurchase.quantity) {
+    throw new Error(
+      `Number of ticket holders (${ticketHolders.length}) must match ticket quantity (${ticketPurchase.quantity})`,
+    );
+  }
+
+  // Get ticket type
+  const ticketType = await prisma.ticketType.findUnique({
+    where: {
+      id: ticketPurchase.ticketTypeId,
+      isVisible: true,
+    },
+    include: {
+      event: {
+        select: {
+          id: true,
+          title: true,
+          organizerId: true,
+        },
+      },
+    },
+  });
+
+  // Validate ticket type exists
+  if (!ticketType) {
+    throw new Error("Ticket type not found or not available");
+  }
+
+  // Check if tickets are available
+  const availableTickets =
+    ticketType.quantity - ticketType.sold - ticketType.reserved;
+  if (availableTickets < ticketPurchase.quantity) {
+    throw new Error(
+      `Not enough tickets available for ${ticketType.name}. Available: ${availableTickets}, Requested: ${ticketPurchase.quantity}`,
+    );
+  }
+
+  // Check max per purchase limit
+  if (ticketPurchase.quantity > ticketType.maxPerPurchase) {
+    throw new Error(
+      `Maximum ${ticketType.maxPerPurchase} tickets allowed per purchase for ${ticketType.name}`,
+    );
+  }
+
+  // Calculate total amount
+  const totalAmount = Number(ticketType.price) * ticketPurchase.quantity;
+
+  // Prepare single order item
+  const orderItem = {
+    ticketTypeId: ticketPurchase.ticketTypeId,
+    quantity: ticketPurchase.quantity,
+    price: ticketType.price,
+  };
+
+  // Get event ID
+  const eventId = ticketType.event.id;
+
+  // Create transaction in a transaction to ensure atomicity
+  const result = await prisma.$transaction(async (tx) => {
+    // Create transaction
+    const transaction = await tx.transaction.create({
+      data: {
+        userId,
+        eventId,
+        amount: totalAmount,
+        currency: "IDR", // Default currency
+        paymentMethod: "PENDING", // Will be updated after payment
+        invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        status: "PENDING",
+        orderItems: {
+          create: [orderItem],
+        },
+      },
+      include: {
+        orderItems: true,
+      },
+    });
+
+    // Create buyer info
+    await tx.buyerInfo.create({
+      data: {
+        transactionId: transaction.id,
+        fullName: buyerInfo.fullName,
+        identityType: buyerInfo.identityType,
+        identityNumber: buyerInfo.identityNumber,
+        email: buyerInfo.email,
+        whatsapp: buyerInfo.whatsapp,
+      },
+    });
+
+    // Create tickets with ticket holders
+    const createdTickets = [];
+
+    for (let i = 0; i < orderItem.quantity; i++) {
+      const ticket = await tx.ticket.create({
+        data: {
+          ticketTypeId: orderItem.ticketTypeId,
+          transactionId: transaction.id,
+          userId,
+          qrCode: generateUniqueCode(),
+          status: TicketStatus.ACTIVE,
+        },
+      });
+
+      // Create ticket holder for this ticket
+      const holder = ticketHolders[i];
+      if (holder) {
+        await tx.ticketHolder.create({
+          data: {
+            ticketId: ticket.id,
+            fullName: holder.fullName,
+            identityType: holder.identityType,
+            identityNumber: holder.identityNumber,
+            email: holder.email,
+            whatsapp: holder.whatsapp,
+          },
+        });
+      }
+
+      createdTickets.push(ticket);
+    }
+
+    // Update ticket type sold count
+    await tx.ticketType.update({
+      where: { id: orderItem.ticketTypeId },
+      data: {
+        sold: {
+          increment: orderItem.quantity,
+        },
+      },
+    });
+
+    return { transaction, tickets: createdTickets };
+  });
+
+  return result;
+}
+
+/**
+ * Purchase multiple ticket types (for organizer bulk purchases)
+ * Legacy function for backward compatibility
+ */
+export async function handleBulkPurchaseTickets(params: {
   userId: string;
   items: Array<{
     ticketTypeId: string;
     quantity: number;
   }>;
+  buyerInfo: {
+    fullName: string;
+    identityType: string;
+    identityNumber: string;
+    email: string;
+    whatsapp: string;
+  };
+  ticketHolders: Array<{
+    fullName: string;
+    identityType: string;
+    identityNumber: string;
+    email: string;
+    whatsapp: string;
+  }>;
 }) {
-  const { userId, items } = params;
+  const { userId, items, buyerInfo, ticketHolders } = params;
 
   // Validate items
   if (!items || items.length === 0) {
     throw new Error("No items provided");
+  }
+
+  // Calculate total tickets and validate ticket holders
+  const totalTickets = items.reduce((sum, item) => sum + item.quantity, 0);
+  if (ticketHolders.length !== totalTickets) {
+    throw new Error(
+      "Number of ticket holders must match total number of tickets",
+    );
   }
 
   // Get ticket types
@@ -170,14 +363,16 @@ export async function handlePurchaseTickets(params: {
   // Check if tickets are available
   for (const item of items) {
     const ticketType = ticketTypes.find((tt) => tt.id === item.ticketTypeId);
-    // Add null check for ticketType
     if (!ticketType) {
       throw new Error(`Ticket type not found: ${item.ticketTypeId}`);
     }
 
-    const available = ticketType.quantity - ticketType.sold;
-    if (item.quantity > available) {
-      throw new Error(`Not enough tickets available for ${ticketType.name}`);
+    const availableTickets =
+      ticketType.quantity - ticketType.sold - ticketType.reserved;
+    if (availableTickets < item.quantity) {
+      throw new Error(
+        `Not enough tickets available for ${ticketType.name}. Available: ${availableTickets}, Requested: ${item.quantity}`,
+      );
     }
 
     if (item.quantity > ticketType.maxPerPurchase) {
@@ -187,35 +382,30 @@ export async function handlePurchaseTickets(params: {
     }
   }
 
-  // Calculate total amount
-  let totalAmount = 0;
-  const orderItems: Array<{
-    ticketTypeId: string;
-    quantity: number;
-    price: any; // Using 'any' for Decimal type compatibility
-  }> = [];
-  for (const item of items) {
-    const ticketType = ticketTypes.find((tt) => tt.id === item.ticketTypeId);
-    if (!ticketType) continue;
-
-    const itemPrice = Number(ticketType.price) * item.quantity;
-    totalAmount += itemPrice;
-
-    orderItems.push({
-      ticketTypeId: ticketType.id,
-      quantity: item.quantity,
-      price: ticketType.price,
-    });
+  // Ensure all tickets belong to the same event
+  const eventIds = [...new Set(ticketTypes.map((tt) => tt.event.id))];
+  if (eventIds.length > 1) {
+    throw new Error("All tickets must belong to the same event");
   }
 
-  // Get event ID (assuming all tickets are for the same event)
-  // We've already validated that ticketTypes has at least one item
-  // by checking ticketTypes.length !== ticketTypeIds.length
-  const eventId = ticketTypes[0]?.event.id;
-
+  const eventId = eventIds[0];
   if (!eventId) {
     throw new Error("Could not determine event ID");
   }
+
+  // Calculate total amount and prepare order items
+  let totalAmount = 0;
+  const orderItems = items.map((item) => {
+    const ticketType = ticketTypes.find((tt) => tt.id === item.ticketTypeId)!;
+    const itemTotal = Number(ticketType.price) * item.quantity;
+    totalAmount += itemTotal;
+
+    return {
+      ticketTypeId: item.ticketTypeId,
+      quantity: item.quantity,
+      price: ticketType.price,
+    };
+  });
 
   // Create transaction in a transaction to ensure atomicity
   const result = await prisma.$transaction(async (tx) => {
@@ -225,8 +415,8 @@ export async function handlePurchaseTickets(params: {
         userId,
         eventId,
         amount: totalAmount,
-        currency: "IDR", // Default currency
-        paymentMethod: "PENDING", // Will be updated after payment
+        currency: "IDR",
+        paymentMethod: "PENDING",
         invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         status: "PENDING",
         orderItems: {
@@ -242,29 +432,55 @@ export async function handlePurchaseTickets(params: {
       },
     });
 
-    // Create tickets
-    const tickets: Array<{
-      ticketTypeId: string;
-      transactionId: string;
-      userId: string;
-      qrCode: string;
-      status: TicketStatus;
-    }> = [];
+    // Create buyer info
+    await tx.buyerInfo.create({
+      data: {
+        transactionId: transaction.id,
+        fullName: buyerInfo.fullName,
+        identityType: buyerInfo.identityType,
+        identityNumber: buyerInfo.identityNumber,
+        email: buyerInfo.email,
+        whatsapp: buyerInfo.whatsapp,
+      },
+    });
+
+    // Create tickets with ticket holders
+    const createdTickets = [];
+    let ticketHolderIndex = 0;
+
     for (const item of orderItems) {
       for (let i = 0; i < item.quantity; i++) {
-        tickets.push({
-          ticketTypeId: item.ticketTypeId,
-          transactionId: transaction.id,
-          userId,
-          qrCode: generateUniqueCode(),
-          status: TicketStatus.ACTIVE, // Using enum value instead of string
+        const ticket = await tx.ticket.create({
+          data: {
+            ticketTypeId: item.ticketTypeId,
+            transactionId: transaction.id,
+            userId,
+            qrCode: generateUniqueCode(),
+            status: TicketStatus.ACTIVE,
+          },
         });
+
+        // Create ticket holder for this ticket
+        if (ticketHolderIndex < ticketHolders.length) {
+          const holder = ticketHolders[ticketHolderIndex];
+          if (holder) {
+            await tx.ticketHolder.create({
+              data: {
+                ticketId: ticket.id,
+                fullName: holder.fullName,
+                identityType: holder.identityType,
+                identityNumber: holder.identityNumber,
+                email: holder.email,
+                whatsapp: holder.whatsapp,
+              },
+            });
+          }
+          ticketHolderIndex++;
+        }
+
+        createdTickets.push(ticket);
       }
     }
-
-    await tx.ticket.createMany({
-      data: tickets,
-    });
 
     // Update ticket type sold count
     for (const item of orderItems) {
@@ -278,7 +494,199 @@ export async function handlePurchaseTickets(params: {
       });
     }
 
-    return { transaction, tickets };
+    return { transaction, tickets: createdTickets };
+  });
+
+  return result;
+}
+
+/**
+ * Purchase tickets from existing reservations
+ */
+export async function handlePurchaseFromReservation(params: {
+  userId: string | null;
+  reservationId: string;
+  sessionId: string;
+  buyerInfo: {
+    fullName: string;
+    identityType: string;
+    identityNumber: string;
+    email: string;
+    whatsapp: string;
+  };
+  ticketHolders: Array<{
+    fullName: string;
+    identityType: string;
+    identityNumber: string;
+    email: string;
+    whatsapp: string;
+  }>;
+}) {
+  const { userId, reservationId, sessionId, buyerInfo, ticketHolders } = params;
+
+  // For guest purchases, create a temporary user or use existing guest user
+  let actualUserId: string;
+  if (!userId) {
+    // Create a temporary guest user for this purchase
+    const guestUser = await prisma.user.create({
+      data: {
+        email: `guest_${sessionId}@vbtix.temp`,
+        name: buyerInfo.fullName,
+        role: "BUYER",
+        // Mark as temporary guest user
+        phone: `guest_${sessionId}`,
+      },
+    });
+    actualUserId = guestUser.id;
+  } else {
+    actualUserId = userId;
+  }
+
+  // Get and validate reservation
+  console.log("Looking for reservation with ID:", reservationId);
+  console.log("Session ID:", sessionId);
+  const reservation =
+    await reservationService.getReservationById(reservationId);
+
+  console.log("Found reservation:", reservation);
+
+  if (!reservation) {
+    console.error("Reservation not found for ID:", reservationId);
+    throw new Error("Reservation not found");
+  }
+
+  // Check ownership
+  if (reservation.sessionId !== sessionId) {
+    throw new Error(
+      "You don't have permission to purchase from this reservation",
+    );
+  }
+
+  if (!["PENDING", "ACTIVE"].includes(reservation.status)) {
+    throw new Error("Reservation is not available for purchase");
+  }
+
+  if (reservation.expiresAt < new Date()) {
+    throw new Error("Reservation has expired");
+  }
+
+  // Activate reservation if it's still pending
+  if (reservation.status === "PENDING") {
+    await reservationService.activateReservation(reservationId, { sessionId });
+  }
+
+  // Validate ticket holders count matches reservation quantity
+  if (ticketHolders.length !== reservation.quantity) {
+    throw new Error(
+      `Expected ${reservation.quantity} ticket holders, got ${ticketHolders.length}`,
+    );
+  }
+
+  // Get ticket type and event info
+  const ticketType = reservation.ticketType;
+  const event = ticketType.event;
+
+  // Calculate total amount
+  const totalAmount = Number(ticketType.price) * reservation.quantity;
+
+  // Create transaction in a database transaction to ensure atomicity
+  const result = await prisma.$transaction(async (tx) => {
+    // Create transaction
+    const transaction = await tx.transaction.create({
+      data: {
+        userId: actualUserId,
+        eventId: event.id,
+        amount: totalAmount,
+        currency: "IDR",
+        paymentMethod: "PENDING",
+        invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        status: "PENDING",
+        orderItems: {
+          create: [
+            {
+              ticketTypeId: ticketType.id,
+              quantity: reservation.quantity,
+              price: ticketType.price,
+            },
+          ],
+        },
+      },
+      include: {
+        orderItems: true,
+      },
+    });
+
+    // Create buyer info
+    await tx.buyerInfo.create({
+      data: {
+        transactionId: transaction.id,
+        fullName: buyerInfo.fullName,
+        identityType: buyerInfo.identityType,
+        identityNumber: buyerInfo.identityNumber,
+        email: buyerInfo.email,
+        whatsapp: buyerInfo.whatsapp,
+      },
+    });
+
+    // Create tickets with ticket holders
+    const createdTickets = [];
+
+    for (let i = 0; i < reservation.quantity; i++) {
+      const ticket = await tx.ticket.create({
+        data: {
+          ticketTypeId: ticketType.id,
+          transactionId: transaction.id,
+          userId: actualUserId,
+          qrCode: generateUniqueCode(),
+          status: TicketStatus.ACTIVE,
+        },
+      });
+
+      // Create ticket holder for this ticket
+      const holder = ticketHolders[i];
+      if (holder) {
+        await tx.ticketHolder.create({
+          data: {
+            ticketId: ticket.id,
+            fullName: holder.fullName,
+            identityType: holder.identityType,
+            identityNumber: holder.identityNumber,
+            email: holder.email,
+            whatsapp: holder.whatsapp,
+          },
+        });
+      }
+
+      createdTickets.push(ticket);
+    }
+
+    // Update ticket type sold count and decrease reserved count
+    await tx.ticketType.update({
+      where: { id: ticketType.id },
+      data: {
+        sold: {
+          increment: reservation.quantity,
+        },
+        reserved: {
+          decrement: reservation.quantity,
+        },
+      },
+    });
+
+    // Convert reservation to purchased status
+    await tx.ticketReservation.update({
+      where: { id: reservationId },
+      data: {
+        status: "CONVERTED",
+        metadata: {
+          ...((reservation.metadata as any) || {}),
+          transactionId: transaction.id,
+          convertedAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    return { transaction, tickets: createdTickets, reservation };
   });
 
   return result;

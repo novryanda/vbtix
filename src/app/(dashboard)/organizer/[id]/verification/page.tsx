@@ -66,6 +66,10 @@ export default function OrganizerVerificationPage() {
   const organizerId = params.id as string;
   const { data: session, status } = useSession();
 
+  // Debug logging
+  console.log("Verification page params:", params);
+  console.log("Organizer ID:", organizerId);
+
   // State for organizer data
   const [organizer, setOrganizer] = useState<any>(null);
   const [verification, setVerification] =
@@ -103,19 +107,36 @@ export default function OrganizerVerificationPage() {
         return;
       }
 
+      // Validate organizerId
+      if (
+        !organizerId ||
+        organizerId === "events" ||
+        organizerId === "undefined"
+      ) {
+        console.error("Invalid organizer ID:", organizerId);
+        toast.error("Invalid organizer ID. Redirecting to dashboard...");
+        router.push("/organizer");
+        return;
+      }
+
       try {
         setIsLoading(true);
 
-        // Fetch organizer settings
-        const settingsResponse = await fetch(
-          `/api/organizer/${organizerId}/settings`,
-        );
-        const settingsData = await settingsResponse.json();
+        // Try to fetch organizer settings (may not exist for new organizers)
+        try {
+          const settingsResponse = await fetch(
+            `/api/organizer/${organizerId}/settings`,
+          );
+          const settingsData = await settingsResponse.json();
 
-        if (settingsData.success) {
-          setOrganizer(settingsData.data);
-        } else {
-          toast.error(settingsData.error || "Failed to load organizer data");
+          if (settingsData.success) {
+            setOrganizer(settingsData.data);
+          }
+        } catch (error) {
+          // Organizer settings may not exist yet, this is okay for new organizers
+          console.log(
+            "Organizer settings not found, user may not have organizer record yet",
+          );
         }
 
         // Fetch verification status
@@ -128,8 +149,9 @@ export default function OrganizerVerificationPage() {
         console.log("Verification data from API:", verificationData);
 
         if (verificationData.success && verificationData.data) {
-          // Check if there's a verification record
+          // Handle both organizer verification and user verification requests
           if (verificationData.data.verification) {
+            // Existing organizer with verification record
             setVerification(verificationData.data.verification);
 
             // Pre-fill form with existing data if available
@@ -164,6 +186,36 @@ export default function OrganizerVerificationPage() {
 
             if (verificationRecord.termsAccepted)
               setTermsAccepted(verificationRecord.termsAccepted);
+          } else if (verificationData.data.approval) {
+            // User without organizer record but with verification request
+            const approval = verificationData.data.approval;
+
+            // Try to parse verification data from approval notes
+            try {
+              const parsedNotes = JSON.parse(approval.notes);
+              if (parsedNotes.verificationData) {
+                const verificationData = parsedNotes.verificationData;
+
+                if (verificationData.ktpNumber)
+                  setKtpNumber(verificationData.ktpNumber);
+                if (verificationData.ktpName)
+                  setKtpName(verificationData.ktpName);
+                if (verificationData.ktpAddress)
+                  setKtpAddress(verificationData.ktpAddress);
+                if (verificationData.npwpNumber)
+                  setNpwpNumber(verificationData.npwpNumber);
+                if (verificationData.npwpName)
+                  setNpwpName(verificationData.npwpName);
+                if (verificationData.npwpAddress)
+                  setNpwpAddress(verificationData.npwpAddress);
+                if (verificationData.termsAccepted)
+                  setTermsAccepted(verificationData.termsAccepted);
+              }
+            } catch (error) {
+              console.log(
+                "Could not parse verification data from approval notes",
+              );
+            }
           }
 
           // Check if there's a pending request flag
@@ -390,6 +442,19 @@ export default function OrganizerVerificationPage() {
       console.log("Submitting verification data:", verificationData);
       console.log("Current verification status:", verification?.status);
       console.log("Has pending request:", hasPendingRequest);
+      console.log("Organizer ID for API call:", organizerId);
+
+      // Validate organizerId before making API call
+      if (
+        !organizerId ||
+        organizerId === "events" ||
+        organizerId === "undefined"
+      ) {
+        toast.error(
+          "Invalid organizer ID. Please refresh the page and try again.",
+        );
+        return;
+      }
 
       // Submit verification data
       const response = await fetch(

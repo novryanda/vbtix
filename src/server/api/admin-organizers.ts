@@ -78,6 +78,93 @@ export async function handleGetOrganizerById(id: string) {
 }
 
 /**
+ * Handle user organizer verification (create organizer record when approved)
+ */
+async function handleUserOrganizerVerification(
+  userId: string,
+  verified: boolean,
+  notes?: string,
+  adminId?: string,
+  userVerificationApproval?: any,
+) {
+  // Get user details
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) throw new Error("User not found");
+
+  if (verified) {
+    // Create organizer record when approved
+    let verificationData = {};
+
+    try {
+      // Parse verification data from approval notes
+      if (userVerificationApproval?.notes) {
+        const parsedNotes = JSON.parse(userVerificationApproval.notes);
+        verificationData = parsedNotes.verificationData || {};
+      }
+    } catch (error) {
+      console.error("Error parsing verification data:", error);
+    }
+
+    // Create organizer record
+    const organizer = await organizerService.createOrganizer({
+      user: { connect: { id: userId } },
+      orgName: user.name || "Organizer",
+      verified: true, // Set as verified since admin approved
+    });
+
+    // Create organizer verification record with the submitted data
+    await prisma.organizerVerification.create({
+      data: {
+        organizerId: organizer.id,
+        ...verificationData,
+        status: "APPROVED",
+        submittedAt: userVerificationApproval?.submittedAt || new Date(),
+        reviewedAt: new Date(),
+        reviewedBy: adminId,
+      },
+    });
+
+    // Update the approval record
+    await prisma.approval.update({
+      where: { id: userVerificationApproval.id },
+      data: {
+        status: "APPROVED",
+        notes:
+          notes ||
+          "Organizer verification approved and organizer record created",
+        reviewerId: adminId,
+        reviewedAt: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      message: "User verification approved and organizer record created",
+      organizer,
+    };
+  } else {
+    // Reject the verification request
+    await prisma.approval.update({
+      where: { id: userVerificationApproval.id },
+      data: {
+        status: "REJECTED",
+        notes: notes || "Organizer verification rejected",
+        reviewerId: adminId,
+        reviewedAt: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      message: "User verification rejected",
+    };
+  }
+}
+
+/**
  * Memverifikasi atau menolak verifikasi organizer
  */
 export async function handleVerifyOrganizer(
@@ -88,12 +175,43 @@ export async function handleVerifyOrganizer(
 ) {
   if (!id) throw new Error("Organizer ID is required");
 
-  // Verifikasi organizer ada
-  const existingOrganizer = await organizerService.findById(id);
-  if (!existingOrganizer) throw new Error("Organizer not found");
+  // Check if this is a user verification request (no organizer record yet)
+  const userVerificationApproval = await prisma.approval.findFirst({
+    where: {
+      entityType: "USER_ORGANIZER_VERIFICATION",
+      entityId: id,
+      status: "PENDING",
+    },
+    orderBy: {
+      submittedAt: "desc",
+    },
+  });
 
-  // Memperbarui status verifikasi pada organizer
-  await organizerService.verifyOrganizer(id, verified);
+  if (userVerificationApproval) {
+    // This is a user verification request
+    return await handleUserOrganizerVerification(
+      id,
+      verified,
+      notes,
+      adminId,
+      userVerificationApproval,
+    );
+  }
+
+  // This is a regular organizer verification
+  const existingOrganizer = await organizerService.findById(id);
+  if (!existingOrganizer) {
+    // Try to find by userId instead (for backward compatibility)
+    const organizerByUserId = await organizerService.findByUserId(id);
+    if (!organizerByUserId) {
+      throw new Error("Organizer not found");
+    }
+    // Use the organizer ID for verification
+    await organizerService.verifyOrganizer(organizerByUserId.id, verified);
+  } else {
+    // Memperbarui status verifikasi pada organizer
+    await organizerService.verifyOrganizer(id, verified);
+  }
 
   // Get all approvals for debugging
   const allApprovals = await prisma.approval.findMany({

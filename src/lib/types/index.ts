@@ -47,7 +47,6 @@ export interface Event {
   tags: string[];
   images: string[];
   featured: boolean;
-  published: boolean;
   seatingMap?: string;
   maxAttendees?: number;
   website?: string;
