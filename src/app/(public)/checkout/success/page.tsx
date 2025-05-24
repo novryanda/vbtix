@@ -157,7 +157,7 @@ export default function CheckoutSuccessPage() {
   }
 
   const isPaymentSuccessful =
-    orderData.status === "COMPLETED" || orderData.status === "PAID";
+    orderData.status === "SUCCESS" || orderData.status === "PAID";
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
