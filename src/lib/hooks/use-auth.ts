@@ -37,14 +37,18 @@ export const useAuth = () => {
       }
 
       // Force a session update before redirecting
-      await fetch("/api/auth/session");
+      const sessionResponse = await fetch("/api/auth/session");
+      const updatedSession = await sessionResponse.json();
 
       // Use router.replace instead of push for a cleaner navigation experience
       if (callbackUrl) {
         router.replace(callbackUrl);
       } else {
-        // Get the dashboard route based on user role
-        const dashboardRoute = getDashboardRoute(session?.user?.role);
+        // Get the dashboard route based on user role and user ID
+        const dashboardRoute = getDashboardRoute(
+          updatedSession?.user?.role || session?.user?.role,
+          updatedSession?.user?.id || session?.user?.id,
+        );
         router.replace(dashboardRoute);
       }
 
@@ -74,7 +78,7 @@ export const useAuth = () => {
   const redirectToDashboard = () => {
     if (!user?.role) return;
 
-    const dashboardRoute = getDashboardRoute(user.role);
+    const dashboardRoute = getDashboardRoute(user.role, user.id);
     router.push(dashboardRoute);
   };
 

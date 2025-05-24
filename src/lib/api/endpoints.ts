@@ -105,13 +105,16 @@ export const ORGANIZER_ENDPOINTS = {
     `${API_BASE}/organizer/${organizerId}/verification`,
 };
 
-// Buyer endpoints
-export const BUYER_ENDPOINTS = {
-  EVENTS: `${API_BASE}/buyer/events`,
-  EVENT_DETAIL: (eventId: string) => `${API_BASE}/buyer/events/${eventId}`,
-  PURCHASE_TICKET: `${API_BASE}/buyer/tickets/purchase`,
-  CANCEL_TICKET: (id: string) => `${API_BASE}/buyer/tickets/${id}/cancel`,
+// Public endpoints (formerly buyer endpoints)
+export const PUBLIC_ENDPOINTS = {
+  EVENTS: `${API_BASE}/public/events`,
+  EVENT_DETAIL: (eventId: string) => `${API_BASE}/public/events/${eventId}`,
+  PURCHASE_TICKET: `${API_BASE}/public/tickets/purchase`,
+  CANCEL_TICKET: (id: string) => `${API_BASE}/public/tickets/${id}/cancel`,
 };
+
+// Buyer endpoints (deprecated - use PUBLIC_ENDPOINTS instead)
+export const BUYER_ENDPOINTS = PUBLIC_ENDPOINTS;
 
 // Common endpoints
 export const COMMON_ENDPOINTS = {

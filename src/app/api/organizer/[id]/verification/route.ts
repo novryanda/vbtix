@@ -51,6 +51,23 @@ export async function PUT(
 
     const organizerId = (await params).id;
 
+    // Validate organizerId format
+    if (
+      !organizerId ||
+      organizerId === "events" ||
+      organizerId === "undefined"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Invalid organizer ID. Please access this page from your organizer dashboard.",
+          details: `Received organizerId: ${organizerId}`,
+        },
+        { status: 400 },
+      );
+    }
+
     // Check if user has ORGANIZER role
     const user = await prisma.user.findUnique({
       where: { id: organizerId },
@@ -58,7 +75,11 @@ export async function PUT(
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: "User not found" },
+        {
+          success: false,
+          error: "User not found",
+          details: `No user found with ID: ${organizerId}`,
+        },
         { status: 404 },
       );
     }
@@ -330,6 +351,23 @@ export async function GET(
 
     const organizerId = (await params).id;
 
+    // Validate organizerId format
+    if (
+      !organizerId ||
+      organizerId === "events" ||
+      organizerId === "undefined"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Invalid organizer ID. Please access this page from your organizer dashboard.",
+          details: `Received organizerId: ${organizerId}`,
+        },
+        { status: 400 },
+      );
+    }
+
     // Check if user has ORGANIZER role
     const user = await prisma.user.findUnique({
       where: { id: organizerId },
@@ -337,7 +375,11 @@ export async function GET(
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: "User not found" },
+        {
+          success: false,
+          error: "User not found",
+          details: `No user found with ID: ${organizerId}`,
+        },
         { status: 404 },
       );
     }

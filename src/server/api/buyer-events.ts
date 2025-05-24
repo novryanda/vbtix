@@ -2,6 +2,7 @@ import { eventService } from "~/server/services/event.service";
 import { ticketService } from "~/server/services/ticket.service";
 import { formatDate } from "~/lib/utils";
 import { EventStatus } from "@prisma/client";
+import { prisma } from "~/server/db";
 
 /**
  * Get all published events with pagination and filtering
@@ -85,8 +86,8 @@ export async function handleGetPublishedEvents(params: {
       formattedStartDate: formatDate(event.startDate),
       formattedEndDate: formatDate(event.endDate),
       organizer: event.organizer,
+      lowestPrice, // Move lowestPrice to top level for consistency with featured events
       ticketInfo: {
-        lowestPrice,
         totalTickets,
         soldTickets,
         availableTickets,
@@ -124,14 +125,30 @@ export async function handleGetEventById(params: {
   // Get event using the service
   let event;
   if (id) {
+    console.log(`Looking up event by ID: ${id}`);
     event = await eventService.findById(id);
   } else if (slug) {
-    // Find by slug using the findAll method with a filter
-    const { events } = await eventService.findAll({
-      status: EventStatus.PUBLISHED,
-      limit: 1,
+    console.log(`Looking up event by slug: ${slug}`);
+    // Find by slug using direct database query
+    event = await prisma.event.findFirst({
+      where: {
+        slug: slug,
+        status: EventStatus.PUBLISHED,
+      },
+      include: {
+        organizer: {
+          include: {
+            user: true,
+          },
+        },
+        ticketTypes: {
+          where: {
+            isVisible: true,
+          },
+        },
+      },
     });
-    event = events.find((e) => e.slug === slug);
+    console.log(`Found event by slug: ${event ? event.title : "not found"}`);
   }
 
   if (!event || event.status !== EventStatus.PUBLISHED) {

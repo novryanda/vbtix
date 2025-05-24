@@ -66,6 +66,10 @@ export default function OrganizerVerificationPage() {
   const organizerId = params.id as string;
   const { data: session, status } = useSession();
 
+  // Debug logging
+  console.log("Verification page params:", params);
+  console.log("Organizer ID:", organizerId);
+
   // State for organizer data
   const [organizer, setOrganizer] = useState<any>(null);
   const [verification, setVerification] =
@@ -100,6 +104,18 @@ export default function OrganizerVerificationPage() {
 
       if (!session) {
         router.push("/login");
+        return;
+      }
+
+      // Validate organizerId
+      if (
+        !organizerId ||
+        organizerId === "events" ||
+        organizerId === "undefined"
+      ) {
+        console.error("Invalid organizer ID:", organizerId);
+        toast.error("Invalid organizer ID. Redirecting to dashboard...");
+        router.push("/organizer");
         return;
       }
 
@@ -426,6 +442,19 @@ export default function OrganizerVerificationPage() {
       console.log("Submitting verification data:", verificationData);
       console.log("Current verification status:", verification?.status);
       console.log("Has pending request:", hasPendingRequest);
+      console.log("Organizer ID for API call:", organizerId);
+
+      // Validate organizerId before making API call
+      if (
+        !organizerId ||
+        organizerId === "events" ||
+        organizerId === "undefined"
+      ) {
+        toast.error(
+          "Invalid organizer ID. Please refresh the page and try again.",
+        );
+        return;
+      }
 
       // Submit verification data
       const response = await fetch(

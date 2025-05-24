@@ -12,17 +12,21 @@ export const auth = () => getServerSession(authOptions);
 /**
  * Mendapatkan rute dashboard berdasarkan peran pengguna
  */
-export const getDashboardRoute = (role?: UserRole | string | null) => {
+export const getDashboardRoute = (
+  role?: UserRole | string | null,
+  userId?: string,
+) => {
   if (!role) return "/";
 
   switch (role) {
     case UserRole.ADMIN:
       return "/admin";
     case UserRole.ORGANIZER:
-      return "/organizer";
+      // If userId is available, redirect to the organizer's dashboard
+      return userId ? `/organizer/${userId}/dashboard` : "/organizer";
     case UserRole.BUYER:
     default:
-      return "/buyer";
+      return "/";
   }
 };
 

@@ -38,7 +38,10 @@ export async function requireRole(allowedRoles: UserRole[]) {
   const session = await requireAuth();
 
   if (!session?.user?.role || !allowedRoles.includes(session.user.role)) {
-    const dashboardRoute = getDashboardRoute(session.user.role);
+    const dashboardRoute = getDashboardRoute(
+      session.user.role,
+      session.user.id,
+    );
     redirect(dashboardRoute);
   }
 
@@ -95,7 +98,10 @@ export async function getCurrentUserRole() {
  * @param allowAdmin - Apakah admin diizinkan mengakses (default: true)
  * @returns Boolean yang menunjukkan apakah pengguna memiliki akses
  */
-export async function hasResourceAccess(resourceOwnerId: string, allowAdmin = true) {
+export async function hasResourceAccess(
+  resourceOwnerId: string,
+  allowAdmin = true,
+) {
   const session = await getSession();
 
   if (!session?.user) return false;

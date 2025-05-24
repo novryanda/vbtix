@@ -114,14 +114,6 @@ export const eventService = {
 
       console.log("Query where condition:", JSON.stringify(where, null, 2));
 
-      // Create a debug query to log the SQL
-      const debugQuery = Prisma.sql`
-        SELECT COUNT(*) FROM "Event"
-        ${Object.keys(where).length > 0 ? Prisma.sql`WHERE ${Prisma.raw(JSON.stringify(where))}` : Prisma.empty}
-      `;
-
-      console.log("Debug SQL query:", debugQuery);
-
       const [events, total] = await Promise.all([
         db.event.findMany({
           where,

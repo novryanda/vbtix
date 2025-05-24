@@ -6,14 +6,18 @@ import { prisma } from "~/server/db/client";
 /**
  * Mendapatkan rute dashboard berdasarkan peran pengguna
  */
-export const getDashboardRoute = (role?: UserRole | string | null) => {
+export const getDashboardRoute = (
+  role?: UserRole | string | null,
+  userId?: string,
+) => {
   if (!role) return "/"; // Public buyer page
 
   switch (role) {
     case UserRole.ADMIN:
       return "/admin";
     case UserRole.ORGANIZER:
-      return "/organizer";
+      // If userId is available, redirect to the organizer's dashboard
+      return userId ? `/organizer/${userId}/dashboard` : "/organizer";
     case UserRole.BUYER:
       return "/"; // Buyers go to public page
     default:

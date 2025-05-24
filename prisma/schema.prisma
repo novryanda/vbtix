@@ -9,16 +9,16 @@ datasource db {
 }
 
 model User {
-  id            String        @id @default(cuid())
+  id            String              @id @default(cuid())
   name          String?
-  email         String        @unique
+  email         String              @unique
   emailVerified DateTime?
   image         String?
   password      String?
   phone         String?
-  role          UserRole      @default(BUYER)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  role          UserRole            @default(BUYER)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
   accounts      Account[]
   organizer     Organizer?
   sessions      Session[]
@@ -118,27 +118,29 @@ model Event {
 }
 
 model TicketType {
-  id                String      @id @default(cuid())
+  id                String             @id @default(cuid())
   eventId           String
   name              String
   description       String?
-  price             Decimal     @db.Decimal(10, 2)
-  currency          String      @default("IDR")
+  price             Decimal            @db.Decimal(10, 2)
+  currency          String             @default("IDR")
   quantity          Int
-  sold              Int         @default(0)
-  maxPerPurchase    Int         @default(10)
-  isVisible         Boolean     @default(true)
-  allowTransfer     Boolean     @default(false)
+  sold              Int                @default(0)
+  reserved          Int                @default(0)
+  maxPerPurchase    Int                @default(10)
+  isVisible         Boolean            @default(true)
+  allowTransfer     Boolean            @default(false)
   ticketFeatures    String?
   perks             String?
   earlyBirdDeadline DateTime?
   saleStartDate     DateTime?
   saleEndDate       DateTime?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   orderItems        OrderItem[]
   tickets           Ticket[]
-  event             Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  reservations      TicketReservation[]
+  event             Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model Transaction {
@@ -154,10 +156,10 @@ model Transaction {
   details          Json?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-  eTickets         ETicket[]
   orderItems       OrderItem[]
   payments         Payment[]
   tickets          Ticket[]
+  buyerInfo        BuyerInfo?
   event            Event         @relation(fields: [eventId], references: [id])
   user             User          @relation(fields: [userId], references: [id])
 }
@@ -187,18 +189,6 @@ model Payment {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   order           Transaction   @relation(fields: [orderId], references: [id])
-}
-
-model ETicket {
-  id          String      @id @default(cuid())
-  orderId     String
-  qrCodeData  String
-  fileUrl     String?
-  generatedAt DateTime    @default(now())
-  delivered   Boolean     @default(false)
-  deliveredAt DateTime?
-  scannedAt   DateTime?
-  order       Transaction @relation(fields: [orderId], references: [id])
 }
 
 model Approval {
@@ -297,21 +287,28 @@ model Voucher {
 }
 
 model Ticket {
-  id            String       @id @default(cuid())
-  ticketTypeId  String
-  transactionId String
-  userId        String
-  qrCode        String       @unique
-  status        TicketStatus @default(ACTIVE)
-  checkedIn     Boolean      @default(false)
-  checkInTime   DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  imagePublicId String?
-  imageUrl      String?
-  ticketType    TicketType   @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
-  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  ticketTypeId   String
+  transactionId  String
+  userId         String
+  qrCode         String        @unique
+  status         TicketStatus  @default(ACTIVE)
+  checkedIn      Boolean       @default(false)
+  checkInTime    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  imagePublicId  String?
+  imageUrl       String?
+  // Digital ticket fields (formerly ETicket)
+  fileUrl        String?
+  filePublicId   String?
+  delivered      Boolean       @default(false)
+  deliveredAt    DateTime?
+  scannedAt      DateTime?
+  ticketHolder   TicketHolder?
+  ticketType     TicketType    @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+  transaction    Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model OrganizerVerification {
@@ -337,6 +334,50 @@ model OrganizerVerification {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   organizer         Organizer          @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+}
+
+model BuyerInfo {
+  id             String      @id @default(cuid())
+  transactionId  String      @unique
+  fullName       String
+  identityType   String      // KTP, Passport, etc.
+  identityNumber String
+  email          String
+  whatsapp       String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+
+model TicketHolder {
+  id             String   @id @default(cuid())
+  ticketId       String   @unique
+  fullName       String
+  identityType   String   // KTP, Passport, etc.
+  identityNumber String
+  email          String
+  whatsapp       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ticket         Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model TicketReservation {
+  id           String            @id @default(cuid())
+  sessionId    String            // For guest tracking
+  ticketTypeId String
+  quantity     Int
+  reservedAt   DateTime          @default(now())
+  expiresAt    DateTime
+  status       ReservationStatus @default(PENDING)
+  metadata     Json?             // Additional reservation data
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  ticketType   TicketType        @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([sessionId])
+  @@index([status])
 }
 
 enum UserRole {
@@ -393,4 +434,12 @@ enum VerificationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum ReservationStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CONVERTED
+  CANCELLED
 }

@@ -21,6 +21,8 @@ export const env = createEnv({
     RESEND_API_KEY: z.string().optional(),
     MIDTRANS_SERVER_KEY: z.string().optional(),
     MIDTRANS_CLIENT_KEY: z.string().optional(),
+    XENDIT_SECRET_KEY: z.string().optional(),
+    XENDIT_WEBHOOK_TOKEN: z.string().optional(),
     CLOUDINARY_API_SECRET: z.string().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -36,6 +38,7 @@ export const env = createEnv({
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().optional(),
     NEXT_PUBLIC_CLOUDINARY_API_KEY: z.string().optional(),
     NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET: z.string().optional(),
+    NEXT_PUBLIC_XENDIT_ENABLED: z.string().optional(),
   },
 
   /**
@@ -57,6 +60,8 @@ export const env = createEnv({
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     MIDTRANS_SERVER_KEY: process.env.MIDTRANS_SERVER_KEY,
     MIDTRANS_CLIENT_KEY: process.env.MIDTRANS_CLIENT_KEY,
+    XENDIT_SECRET_KEY: process.env.XENDIT_SECRET_KEY,
+    XENDIT_WEBHOOK_TOKEN: process.env.XENDIT_WEBHOOK_TOKEN,
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME:
@@ -64,6 +69,7 @@ export const env = createEnv({
     NEXT_PUBLIC_CLOUDINARY_API_KEY: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
     NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET:
       process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
+    NEXT_PUBLIC_XENDIT_ENABLED: process.env.NEXT_PUBLIC_XENDIT_ENABLED,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
