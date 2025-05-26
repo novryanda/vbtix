@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { UserRole } from "@prisma/client";
 
-// Daftar rute publik yang tidak memerlukan autentikasi
-const publicRoutes = [
+// Routes that don't require authentication
+const PUBLIC_ROUTES = new Set([
   "/",
   "/login",
   "/register",
@@ -11,42 +11,45 @@ const publicRoutes = [
   "/reset-password",
   "/verify",
   "/unauthorized",
+  "/debug",
+  "/debug-session",
+]);
+
+// Route prefixes that don't require authentication
+const PUBLIC_PREFIXES = [
+  "/api/auth/",
+  "/api/webhooks/",
+  "/api/revalidate/",
+  "/api/public/",
+  "/reset-password/",
+  "/verify/",
+  "/events/",
+  "/checkout",
+  "/orders/",
+  "/tickets/",
+  "/profile",
+  "/_next/",
+  "/favicon.ico",
 ];
 
-// Memeriksa apakah rute adalah rute publik
-function isPublicRoute(path: string) {
-  // Cek apakah path cocok dengan salah satu rute publik
-  if (publicRoutes.includes(path)) return true;
+// Check if route is public (optimized for performance)
+function isPublicRoute(path: string): boolean {
+  // Fast lookup for exact matches
+  if (PUBLIC_ROUTES.has(path)) return true;
 
-  // Cek apakah path dimulai dengan salah satu prefiks publik
-  if (
-    path.startsWith("/api/auth/") ||
-    path.startsWith("/api/webhooks/") ||
-    path.startsWith("/api/revalidate/") ||
-    path.startsWith("/reset-password/") ||
-    path.startsWith("/verify/") ||
-    path.startsWith("/events/") || // Allow access to public event pages
-    path.startsWith("/checkout") || // Allow access to checkout pages (with or without trailing slash)
-    path.startsWith("/orders/") || // Allow access to public order pages
-    path.startsWith("/tickets/") || // Allow access to public ticket pages
-    path.startsWith("/profile") || // Allow access to public profile page
-    path.startsWith("/api/public/") // Allow access to all public API endpoints
-  ) {
-    return true;
-  }
-
-  return false;
+  // Check prefixes
+  return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
-// Mendapatkan rute dashboard berdasarkan peran pengguna
-function getDashboardRoute(role?: UserRole | string | null, userId?: string) {
-  if (!role) return "/";
-
+// Get dashboard route based on user role (optimized)
+function getDashboardRoute(
+  role?: UserRole | string | null,
+  userId?: string,
+): string {
   switch (role) {
     case UserRole.ADMIN:
-      return "/admin";
+      return "/admin/dashboard";
     case UserRole.ORGANIZER:
-      // If userId is available, redirect to the organizer's dashboard
       return userId ? `/organizer/${userId}/dashboard` : "/organizer";
     case UserRole.BUYER:
     default:
@@ -54,81 +57,127 @@ function getDashboardRoute(role?: UserRole | string | null, userId?: string) {
   }
 }
 
-// Removed authMiddleware - functionality moved to main middleware
+// Performance tracking for debugging
+const ENABLE_PERFORMANCE_LOGS = process.env.NODE_ENV === "development";
 
-// Removed unused middleware functions - functionality moved to main middleware
+function logPerformance(message: string, startTime: number) {
+  if (ENABLE_PERFORMANCE_LOGS) {
+    console.log(`[Middleware] ${message}: ${Date.now() - startTime}ms`);
+  }
+}
 
 export async function middleware(req: NextRequest) {
-  try {
-    const path = req.nextUrl.pathname;
+  const startTime = Date.now();
+  const path = req.nextUrl.pathname;
 
-    // Skip middleware for static files and API routes that don't need auth
-    if (
-      path.startsWith("/_next/") ||
-      path.startsWith("/api/auth/") ||
-      path.startsWith("/api/webhooks/") ||
-      path.startsWith("/api/public/") ||
-      path.includes(".")
-    ) {
+  try {
+    // Early return for static files and certain API routes
+    if (path.includes(".") || path.startsWith("/_next/")) {
       return NextResponse.next();
     }
 
-    // Get token once
+    // Check if route is public first (fastest check)
+    if (isPublicRoute(path)) {
+      logPerformance(`Public route ${path}`, startTime);
+      return NextResponse.next();
+    }
+
+    // Get authentication token
     let token;
+    const tokenStartTime = Date.now();
+
     try {
       token = await getToken({
         req,
         secret: process.env.NEXTAUTH_SECRET,
       });
+      logPerformance(`Token fetch for ${path}`, tokenStartTime);
     } catch (error) {
-      console.error("Error getting token:", error);
+      console.error(`[Middleware] Token error for ${path}:`, error);
       return NextResponse.next();
     }
 
     const isAuthenticated = !!token;
 
-    // Handle public routes
-    if (isPublicRoute(path)) {
-      // Don't redirect authenticated users from public routes to avoid loops
-      return NextResponse.next();
-    }
-
-    // Handle dashboard redirect
+    // Handle dashboard redirect (special case)
     if (path === "/dashboard") {
-      if (isAuthenticated && token?.role) {
+      if (isAuthenticated && token?.role && token?.id) {
         const dashboardRoute = getDashboardRoute(
           token.role as UserRole,
           token.id as string,
         );
+
+        if (ENABLE_PERFORMANCE_LOGS) {
+          console.log(
+            `[Middleware] Redirecting ${token.email} (${token.role}) to ${dashboardRoute}`,
+          );
+        }
+
+        logPerformance(`Dashboard redirect for ${path}`, startTime);
         return NextResponse.redirect(new URL(dashboardRoute, req.url));
+      } else if (isAuthenticated) {
+        // User authenticated but missing role/id - let dashboard page handle it
+        if (ENABLE_PERFORMANCE_LOGS) {
+          console.log(
+            `[Middleware] User authenticated but missing role/id, allowing dashboard access`,
+          );
+        }
+        return NextResponse.next();
       } else {
-        return NextResponse.redirect(new URL("/login", req.url));
+        // Not authenticated - redirect to login
+        const loginUrl = new URL("/login", req.url);
+        logPerformance(`Login redirect for ${path}`, startTime);
+        return NextResponse.redirect(loginUrl);
       }
     }
 
-    // Protect non-public routes
+    // Protect non-public routes - require authentication
     if (!isAuthenticated) {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", path);
+      logPerformance(`Auth required redirect for ${path}`, startTime);
       return NextResponse.redirect(loginUrl);
     }
 
-    // Check role-based access
-    if (path.startsWith("/admin") && token?.role !== UserRole.ADMIN) {
-      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    // Role-based access control
+    const userRole = token?.role as UserRole;
+
+    // Admin routes - only admins allowed
+    if (path.startsWith("/admin")) {
+      if (userRole !== UserRole.ADMIN) {
+        logPerformance(`Admin access denied for ${path}`, startTime);
+        return NextResponse.redirect(new URL("/unauthorized", req.url));
+      }
     }
 
-    if (
-      path.startsWith("/organizer") &&
-      token?.role !== UserRole.ORGANIZER &&
-      token?.role !== UserRole.ADMIN
-    ) {
-      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    // Organizer routes - organizers and admins allowed
+    if (path.startsWith("/organizer")) {
+      if (userRole !== UserRole.ORGANIZER && userRole !== UserRole.ADMIN) {
+        logPerformance(`Organizer access denied for ${path}`, startTime);
+        return NextResponse.redirect(new URL("/unauthorized", req.url));
+      }
+
+      // Additional check: ensure organizer can only access their own routes
+      if (userRole === UserRole.ORGANIZER) {
+        const pathParts = path.split("/");
+        const requestedUserId = pathParts[2]; // /organizer/[userId]/...
+        const tokenUserId = token?.id as string;
+
+        if (requestedUserId && requestedUserId !== tokenUserId) {
+          logPerformance(`Organizer ID mismatch for ${path}`, startTime);
+          return NextResponse.redirect(new URL("/unauthorized", req.url));
+        }
+      }
     }
 
+    logPerformance(`Middleware completed for ${path}`, startTime);
     return NextResponse.next();
   } catch (error) {
-    console.error("Middleware error:", error);
+    console.error(
+      `[Middleware] Error processing ${req.nextUrl.pathname}:`,
+      error,
+    );
+    // Fail open - allow request to continue
     return NextResponse.next();
   }
 }
@@ -136,17 +185,10 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api/auth (NextAuth routes)
-     * - api/webhooks (webhook routes)
-     * - api/public (public API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder files
+     * Optimized matcher for better performance:
+     * - Excludes static files, API routes, and assets
+     * - Only processes routes that need authentication/authorization
      */
-    "/((?!api/auth|api/webhooks|api/public|_next/static|_next/image|favicon.ico|.*\\..*).+)",
-    "/",
-    "/dashboard",
+    "/((?!api/auth|api/webhooks|api/public|_next|favicon.ico|.*\\..*).*)",
   ],
 };

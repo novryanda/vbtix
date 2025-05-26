@@ -36,13 +36,14 @@ export const useAuth = () => {
         return { success: false, error: result.error };
       }
 
-      // Redirect immediately - NextAuth will handle session update
-      if (callbackUrl) {
-        router.replace(callbackUrl);
-      } else {
-        // For now, redirect to a generic dashboard and let middleware handle the proper routing
-        router.replace("/dashboard");
-      }
+      // Wait a bit for the session to update, then redirect
+      setTimeout(() => {
+        if (callbackUrl) {
+          window.location.href = callbackUrl;
+        } else {
+          window.location.href = "/dashboard";
+        }
+      }, 500);
 
       return { success: true };
     } catch (error) {

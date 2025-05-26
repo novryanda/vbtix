@@ -92,6 +92,9 @@ export const authOptions: NextAuthOptions = {
           }
 
           console.log(`Total auth time: ${Date.now() - authStartTime}ms`);
+          console.log(
+            `User authenticated: ${user.email} with role: ${user.role}`,
+          );
           return user;
         } catch (error) {
           console.log(`Auth failed after: ${Date.now() - authStartTime}ms`);
