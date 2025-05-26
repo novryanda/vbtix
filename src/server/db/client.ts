@@ -1,16 +1,30 @@
 import { PrismaClient } from "@prisma/client";
-import { env } from "~/env";
 
 /**
  * Instantiasi PrismaClient dengan opsi logging berdasarkan environment
+ * Optimized for serverless environments like Vercel
  */
 const createPrismaClient = () => {
   const prisma = new PrismaClient({
     log:
-      env.NODE_ENV === "development"
+      process.env.NODE_ENV === "development"
         ? ["query", "error", "warn"]
         : ["error"],
+    // Optimize for serverless
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
   });
+
+  // Graceful shutdown for serverless
+  if (process.env.NODE_ENV === "production") {
+    process.on("beforeExit", async () => {
+      console.log("Disconnecting Prisma client...");
+      await prisma.$disconnect();
+    });
+  }
 
   return prisma;
 };
@@ -25,4 +39,6 @@ const globalForPrisma = globalThis as unknown as {
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}
