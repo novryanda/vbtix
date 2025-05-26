@@ -19,15 +19,18 @@ export async function POST(req: NextRequest) {
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     // Cek apakah user adalah buyer (belum menjadi organizer)
     if (session.user.role !== UserRole.BUYER) {
       return NextResponse.json(
-        { success: false, error: "User is not eligible for organizer registration" },
-        { status: 400 }
+        {
+          success: false,
+          error: "User is not eligible for organizer registration",
+        },
+        { status: 400 },
       );
     }
 
@@ -38,8 +41,11 @@ export async function POST(req: NextRequest) {
     const result = completeRegistrationSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
-        { success: false, error: result.error.errors[0].message },
-        { status: 400 }
+        {
+          success: false,
+          error: result.error.errors[0]?.message || "Validation error",
+        },
+        { status: 400 },
       );
     }
 
@@ -53,7 +59,7 @@ export async function POST(req: NextRequest) {
     if (existingOrganizer) {
       return NextResponse.json(
         { success: false, error: "User already has an organizer record" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -91,7 +97,7 @@ export async function POST(req: NextRequest) {
           organizerId: result_transaction.organizer.id,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error completing organizer registration:", error);
@@ -100,14 +106,17 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error) {
       return NextResponse.json(
         { success: false, error: error.message },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Handle error yang tidak diketahui
     return NextResponse.json(
-      { success: false, error: "Terjadi kesalahan saat melengkapi pendaftaran" },
-      { status: 500 }
+      {
+        success: false,
+        error: "Terjadi kesalahan saat melengkapi pendaftaran",
+      },
+      { status: 500 },
     );
   }
 }

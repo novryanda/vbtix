@@ -36,20 +36,12 @@ export const useAuth = () => {
         return { success: false, error: result.error };
       }
 
-      // Force a session update before redirecting
-      const sessionResponse = await fetch("/api/auth/session");
-      const updatedSession = await sessionResponse.json();
-
-      // Use router.replace instead of push for a cleaner navigation experience
+      // Redirect immediately - NextAuth will handle session update
       if (callbackUrl) {
         router.replace(callbackUrl);
       } else {
-        // Get the dashboard route based on user role and user ID
-        const dashboardRoute = getDashboardRoute(
-          updatedSession?.user?.role || session?.user?.role,
-          updatedSession?.user?.id || session?.user?.id,
-        );
-        router.replace(dashboardRoute);
+        // For now, redirect to a generic dashboard and let middleware handle the proper routing
+        router.replace("/dashboard");
       }
 
       return { success: true };

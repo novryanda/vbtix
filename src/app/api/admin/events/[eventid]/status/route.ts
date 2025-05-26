@@ -10,7 +10,7 @@ import { eventApprovalSchema } from "~/lib/validations/event.schema";
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -30,7 +30,7 @@ export async function PUT(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     try {
@@ -58,7 +58,8 @@ export async function PUT(
       );
     }
   } catch (error: any) {
-    console.error(`Error reviewing event ${params.id}:`, error);
+    const { id } = await params;
+    console.error(`Error reviewing event ${id}:`, error);
     return NextResponse.json(
       {
         success: false,

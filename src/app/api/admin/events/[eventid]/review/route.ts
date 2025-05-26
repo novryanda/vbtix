@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleReviewEvent } from "~/server/api/events";
 import { auth } from "~/server/auth";
-import { UserRole, ApprovalStatus } from "@prisma/client";
+import { UserRole, EventStatus } from "@prisma/client";
 import { z } from "zod";
 
 const reviewSchema = z.object({
-  status: z.enum([ApprovalStatus.APPROVED, ApprovalStatus.REJECTED]),
+  status: z.enum([EventStatus.PUBLISHED, EventStatus.REJECTED]),
   feedback: z.string().optional(),
 });
 
@@ -15,7 +15,7 @@ const reviewSchema = z.object({
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -35,7 +35,7 @@ export async function POST(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     try {
@@ -43,12 +43,7 @@ export async function POST(
       const { status, feedback } = reviewSchema.parse(body);
 
       // Review event
-      const result = await handleReviewEvent(
-        id,
-        status,
-        feedback,
-        session.user.id,
-      );
+      const result = await handleReviewEvent(id, status, feedback);
 
       return NextResponse.json({
         success: true,
@@ -61,7 +56,8 @@ export async function POST(
       );
     }
   } catch (error: any) {
-    console.error(`Error reviewing event ${params.id}:`, error);
+    const { id } = await params;
+    console.error(`Error reviewing event ${id}:`, error);
     return NextResponse.json(
       {
         success: false,

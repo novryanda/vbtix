@@ -12,7 +12,7 @@ import { UserRole } from "@prisma/client";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { organizerId: string } },
+  { params }: { params: Promise<{ organizerId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -32,7 +32,7 @@ export async function GET(
       );
     }
 
-    const { organizerId } = params;
+    const { organizerId } = await params;
     const organizer = await handleGetOrganizerById(organizerId);
 
     return NextResponse.json({
@@ -40,7 +40,8 @@ export async function GET(
       data: organizer,
     });
   } catch (error: any) {
-    console.error(`Error getting organizer ${params.organizerId}:`, error);
+    const { organizerId } = await params;
+    console.error(`Error getting organizer ${organizerId}:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -57,7 +58,7 @@ export async function GET(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { organizerId: string } },
+  { params }: { params: Promise<{ organizerId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -77,7 +78,7 @@ export async function DELETE(
       );
     }
 
-    const { organizerId } = params;
+    const { organizerId } = await params;
     await handleDeleteOrganizer(organizerId);
 
     return NextResponse.json({
@@ -85,7 +86,8 @@ export async function DELETE(
       message: "Organizer deleted successfully",
     });
   } catch (error: any) {
-    console.error(`Error deleting organizer ${params.organizerId}:`, error);
+    const { organizerId } = await params;
+    console.error(`Error deleting organizer ${organizerId}:`, error);
     return NextResponse.json(
       {
         success: false,

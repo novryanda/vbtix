@@ -16,8 +16,11 @@ export async function POST(req: NextRequest) {
     const result = verifySchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
-        { success: false, error: result.error.errors[0].message },
-        { status: 400 }
+        {
+          success: false,
+          error: result.error.errors[0]?.message || "Validation error",
+        },
+        { status: 400 },
       );
     }
 
@@ -29,9 +32,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: "Email berhasil diverifikasi. Silakan login."
+        message: "Email berhasil diverifikasi. Silakan login.",
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error verifying email:", error);
@@ -40,14 +43,14 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error) {
       return NextResponse.json(
         { success: false, error: error.message },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Handle error yang tidak diketahui
     return NextResponse.json(
       { success: false, error: "Terjadi kesalahan saat verifikasi email" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

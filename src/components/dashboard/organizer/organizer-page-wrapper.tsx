@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { VerificationWarning } from "./verification-warning";
 import { useOrganizerSettings } from "~/lib/api/hooks/organizer";
@@ -12,10 +12,10 @@ interface OrganizerPageWrapperProps {
 export function OrganizerPageWrapper({ children }: OrganizerPageWrapperProps) {
   const params = useParams();
   const organizerId = params?.id as string;
-  
+
   // Fetch organizer settings to check verification status
   const { settings, isLoading } = useOrganizerSettings(organizerId);
-  
+
   const showVerificationWarning = settings && !settings.verified;
   const verificationDocs = settings?.verificationDocs || null;
 
@@ -30,7 +30,7 @@ export function OrganizerPageWrapper({ children }: OrganizerPageWrapperProps) {
           />
         </div>
       )}
-      
+
       {/* Page Content */}
       {children}
     </div>

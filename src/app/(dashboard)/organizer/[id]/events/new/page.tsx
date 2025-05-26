@@ -188,9 +188,11 @@ export default function CreateEventPage() {
         setUploadProgress(70);
         additionalImagesResults = await uploadMultipleToCloudinary(
           eventImageFiles.map((item) => item.file),
-          (completed, total) => {
-            const progress = 70 + (completed / total) * 20;
-            setUploadProgress(progress);
+          {
+            onProgress: (completed, total) => {
+              const progress = 70 + (completed / total) * 20;
+              setUploadProgress(progress);
+            },
           },
         );
 

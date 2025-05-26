@@ -48,6 +48,9 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        const authStartTime = Date.now();
+        console.log("🔐 Credentials provider called");
+
         // Validasi input dengan Zod
         const credentialsSchema = z.object({
           email: z.string().email("Email tidak valid"),
@@ -60,16 +63,25 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Kredensial tidak diberikan");
           }
 
+          const validationStartTime = Date.now();
           const result = credentialsSchema.safeParse(credentials);
           if (!result.success) {
             // Use a simpler error message to avoid potential undefined errors
             throw new Error("Validasi gagal: Email atau password tidak valid");
           }
+          console.log(
+            `Schema validation took: ${Date.now() - validationStartTime}ms`,
+          );
 
           const { email, password } = result.data;
 
           // Validasi kredensial
+          const credentialsStartTime = Date.now();
           const user = await validateCredentials(email, password);
+          console.log(
+            `validateCredentials took: ${Date.now() - credentialsStartTime}ms`,
+          );
+
           if (!user) {
             throw new Error("Email atau password salah");
           }
@@ -79,8 +91,10 @@ export const authOptions: NextAuthOptions = {
             throw new Error("EmailNotVerified");
           }
 
+          console.log(`Total auth time: ${Date.now() - authStartTime}ms`);
           return user;
         } catch (error) {
+          console.log(`Auth failed after: ${Date.now() - authStartTime}ms`);
           if (error instanceof Error) {
             throw new Error(error.message);
           }
@@ -126,15 +140,21 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
       }
 
-      // Jika token sudah ada tapi tidak memiliki role, ambil dari database
-      if (!token.role) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: token.email as string },
-        });
+      // Only fetch from database if we absolutely need to and don't have the data
+      if (!token.role && !token.id && token.email) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email as string },
+            select: { id: true, role: true }, // Only select what we need
+          });
 
-        if (dbUser) {
-          token.id = dbUser.id;
-          token.role = dbUser.role;
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+          }
+        } catch (error) {
+          console.error("Error fetching user in JWT callback:", error);
+          // Don't throw, just continue without the data
         }
       }
 

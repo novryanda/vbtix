@@ -15,7 +15,7 @@ const verifySchema = z.object({
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { organizerId: string } },
+  { params }: { params: Promise<{ organizerId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -35,7 +35,7 @@ export async function PUT(
       );
     }
 
-    const { organizerId } = params;
+    const { organizerId } = await params;
     const body = await request.json();
 
     try {
@@ -61,7 +61,8 @@ export async function PUT(
       );
     }
   } catch (error: any) {
-    console.error(`Error verifying organizer ${params.organizerId}:`, error);
+    const { organizerId } = await params;
+    console.error(`Error verifying organizer ${organizerId}:`, error);
     return NextResponse.json(
       {
         success: false,

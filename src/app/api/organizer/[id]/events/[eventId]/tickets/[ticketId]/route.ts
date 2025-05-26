@@ -14,7 +14,9 @@ import { updateTicketTypeSchema } from "~/lib/validations/ticket.schema";
  */
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string; eventId: string; ticketId: string } },
+  {
+    params,
+  }: { params: Promise<{ id: string; eventId: string; ticketId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -37,7 +39,7 @@ export async function GET(
       );
     }
 
-    const { ticketId } = params;
+    const { ticketId } = await params;
 
     // Call business logic
     const ticketType = await handleGetTicketTypeById({
@@ -88,7 +90,9 @@ export async function GET(
  */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string; eventId: string; ticketId: string } },
+  {
+    params,
+  }: { params: Promise<{ id: string; eventId: string; ticketId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -111,7 +115,7 @@ export async function PUT(
       );
     }
 
-    const { ticketId } = params;
+    const { ticketId } = await params;
     const body = await req.json();
 
     try {
@@ -178,7 +182,9 @@ export async function PUT(
  */
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string; eventId: string; ticketId: string } },
+  {
+    params,
+  }: { params: Promise<{ id: string; eventId: string; ticketId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -201,7 +207,7 @@ export async function DELETE(
       );
     }
 
-    const { ticketId } = params;
+    const { ticketId } = await params;
 
     // Call business logic
     await handleDeleteTicketType({

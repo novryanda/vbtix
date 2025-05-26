@@ -13,7 +13,7 @@ import { createTicketTypeSchema } from "~/lib/validations/ticket.schema";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; eventId: string } },
+  { params }: { params: Promise<{ id: string; eventId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -37,7 +37,7 @@ export async function GET(
     }
 
     // Get params
-    const { eventId } = params;
+    const { eventId } = await params;
 
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -81,7 +81,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; eventId: string } },
+  { params }: { params: Promise<{ id: string; eventId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -104,7 +104,7 @@ export async function POST(
       );
     }
 
-    const { eventId } = params;
+    const { eventId } = await params;
     const body = await request.json();
 
     try {

@@ -9,7 +9,7 @@ import { auth } from "~/server/auth";
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Check authentication
@@ -25,7 +25,7 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Get ticket by ID
     const ticket = await handleGetTicketById({
@@ -39,7 +39,8 @@ export async function GET(
       data: ticket,
     });
   } catch (error: any) {
-    console.error(`Error getting ticket with ID ${params.id}:`, error);
+    const { id } = await params;
+    console.error(`Error getting ticket with ID ${id}:`, error);
     return NextResponse.json(
       {
         success: false,

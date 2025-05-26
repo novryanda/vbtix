@@ -305,6 +305,7 @@ export default function OrdersPage() {
                     <PaginationItem>
                       <PaginationPrevious
                         href="#"
+                        size="default"
                         onClick={(e) => {
                           e.preventDefault();
                           handlePageChange(Math.max(1, meta.currentPage - 1));
@@ -321,6 +322,7 @@ export default function OrdersPage() {
                       <PaginationItem key={index}>
                         <PaginationLink
                           href="#"
+                          size="default"
                           isActive={meta.currentPage === index + 1}
                           onClick={(e) => {
                             e.preventDefault();
@@ -335,6 +337,7 @@ export default function OrdersPage() {
                     <PaginationItem>
                       <PaginationNext
                         href="#"
+                        size="default"
                         onClick={(e) => {
                           e.preventDefault();
                           handlePageChange(

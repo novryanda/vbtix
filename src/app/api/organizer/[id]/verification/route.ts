@@ -37,7 +37,7 @@ const updateVerificationSchema = z.object({
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -49,7 +49,7 @@ export async function PUT(
       );
     }
 
-    const organizerId = (await params).id;
+    const { id: organizerId } = await params;
 
     // Validate organizerId format
     if (
@@ -337,7 +337,7 @@ export async function PUT(
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -349,7 +349,7 @@ export async function GET(
       );
     }
 
-    const organizerId = (await params).id;
+    const { id: organizerId } = await params;
 
     // Validate organizerId format
     if (

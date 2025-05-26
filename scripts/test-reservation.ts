@@ -28,7 +28,16 @@ async function testReservationFlow() {
     }
 
     const ticketType = event.ticketTypes[0];
-    console.log("Using ticket type:", ticketType.name, "Price:", ticketType.price);
+    if (!ticketType) {
+      console.error("No ticket type found");
+      return;
+    }
+    console.log(
+      "Using ticket type:",
+      ticketType.name,
+      "Price:",
+      ticketType.price,
+    );
 
     // Test reservation creation
     const sessionId = `test_session_${Date.now()}`;
