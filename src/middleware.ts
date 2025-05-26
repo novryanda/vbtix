@@ -54,20 +54,26 @@ function getDashboardRoute(role?: UserRole | string | null, userId?: string) {
   }
 }
 
-/**
- * Middleware untuk memeriksa autentikasi dan otorisasi
- */
-export async function authMiddleware(req: NextRequest) {
+// Removed authMiddleware - functionality moved to main middleware
+
+// Removed unused middleware functions - functionality moved to main middleware
+
+export async function middleware(req: NextRequest) {
   try {
     const path = req.nextUrl.pathname;
 
-    // Tambahkan pengecekan untuk NEXTAUTH_SECRET
-    if (!process.env.NEXTAUTH_SECRET) {
-      console.error("NEXTAUTH_SECRET is not defined");
+    // Skip middleware for static files and API routes that don't need auth
+    if (
+      path.startsWith("/_next/") ||
+      path.startsWith("/api/auth/") ||
+      path.startsWith("/api/webhooks/") ||
+      path.startsWith("/api/public/") ||
+      path.includes(".")
+    ) {
       return NextResponse.next();
     }
 
-    // Gunakan try/catch untuk getToken
+    // Get token once
     let token;
     try {
       token = await getToken({
@@ -81,190 +87,66 @@ export async function authMiddleware(req: NextRequest) {
 
     const isAuthenticated = !!token;
 
-    // Special handling for root path - allow access to public page
-    if (path === "/") {
+    // Handle public routes
+    if (isPublicRoute(path)) {
+      // Don't redirect authenticated users from public routes to avoid loops
       return NextResponse.next();
     }
 
-    // Jika pengguna sudah login dan mencoba mengakses halaman publik, alihkan ke dashboard
-    if (isPublicRoute(path) && isAuthenticated && token && token.role) {
-      const dashboardRoute = getDashboardRoute(
-        token.role as UserRole,
-        token.id as string,
-      );
-      return NextResponse.redirect(new URL(dashboardRoute, req.url));
-    }
-
-    // Jika pengguna belum login dan mencoba mengakses halaman yang memerlukan autentikasi, alihkan ke login
-    if (!isPublicRoute(path) && !isAuthenticated) {
-      const loginUrl = new URL("/login", req.url);
-      // Tambahkan callbackUrl sebagai query parameter untuk redirect kembali setelah login
-      loginUrl.searchParams.set("callbackUrl", path);
-      return NextResponse.redirect(loginUrl);
-    }
-
-    // Handle /dashboard path
+    // Handle dashboard redirect
     if (path === "/dashboard") {
-      if (isAuthenticated && token && token.role) {
+      if (isAuthenticated && token?.role) {
         const dashboardRoute = getDashboardRoute(
           token.role as UserRole,
           token.id as string,
         );
         return NextResponse.redirect(new URL(dashboardRoute, req.url));
       } else {
-        // Redirect to public home page instead of login
-        return NextResponse.redirect(new URL("/", req.url));
+        return NextResponse.redirect(new URL("/login", req.url));
       }
     }
 
-    return NextResponse.next();
-  } catch (error) {
-    console.error("Unexpected error in authMiddleware:", error);
-    return NextResponse.next();
-  }
-}
-
-/**
- * Middleware untuk memeriksa peran pengguna
- * @param req - NextRequest object
- * @param allowedRoles - Array of allowed roles
- * @returns NextResponse or null if authorized
- */
-export async function roleMiddleware(
-  req: NextRequest,
-  allowedRoles: UserRole[],
-) {
-  try {
-    const path = req.nextUrl.pathname;
-
-    // Tambahkan pengecekan untuk NEXTAUTH_SECRET
-    if (!process.env.NEXTAUTH_SECRET) {
-      console.error("NEXTAUTH_SECRET is not defined");
-      return NextResponse.next();
-    }
-
-    // Gunakan try/catch untuk getToken
-    let token;
-    try {
-      token = await getToken({
-        req,
-        secret: process.env.NEXTAUTH_SECRET,
-      });
-    } catch (error) {
-      console.error("Error getting token in roleMiddleware:", error);
+    // Protect non-public routes
+    if (!isAuthenticated) {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", path);
       return NextResponse.redirect(loginUrl);
     }
 
-    if (!token) {
-      const loginUrl = new URL("/login", req.url);
-      loginUrl.searchParams.set("callbackUrl", path);
-      return NextResponse.redirect(loginUrl);
+    // Check role-based access
+    if (path.startsWith("/admin") && token?.role !== UserRole.ADMIN) {
+      return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
 
-    // Pastikan token.role ada sebelum menggunakannya
-    if (!token.role) {
-      console.error("Token exists but role is undefined");
-      const loginUrl = new URL("/login", req.url);
-      loginUrl.searchParams.set("callbackUrl", path);
-      return NextResponse.redirect(loginUrl);
+    if (
+      path.startsWith("/organizer") &&
+      token?.role !== UserRole.ORGANIZER &&
+      token?.role !== UserRole.ADMIN
+    ) {
+      return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
 
-    const userRole = token.role as UserRole;
-
-    if (!allowedRoles.includes(userRole)) {
-      // Redirect to appropriate dashboard based on role
-      const dashboardRoute = getDashboardRoute(userRole, token.id as string);
-      return NextResponse.redirect(new URL(dashboardRoute, req.url));
-    }
-
-    // User is authorized, continue
-    return null;
-  } catch (error) {
-    console.error("Unexpected error in roleMiddleware:", error);
     return NextResponse.next();
-  }
-}
-
-/**
- * Middleware untuk rute admin
- */
-export async function adminMiddleware(req: NextRequest) {
-  return roleMiddleware(req, [UserRole.ADMIN]);
-}
-
-/**
- * Middleware untuk rute organizer
- */
-export async function organizerMiddleware(req: NextRequest) {
-  return roleMiddleware(req, [UserRole.ORGANIZER, UserRole.ADMIN]);
-}
-
-/**
- * Middleware untuk rute publik
- *
- * Public routes are accessible to everyone, but some features
- * may require authentication (like viewing personal tickets or orders)
- */
-export async function publicMiddleware(req: NextRequest) {
-  const path = req.nextUrl.pathname;
-
-  // Check if this is a public route
-  if (isPublicRoute(path)) {
-    return NextResponse.next();
-  }
-
-  // For protected features within public routes (like /profile, /tickets, /orders)
-  // we use the auth middleware to ensure the user is authenticated
-  return authMiddleware(req);
-}
-
-export async function middleware(req: NextRequest) {
-  try {
-    // Tambahkan logging untuk debugging
-    console.log(`Processing middleware for path: ${req.nextUrl.pathname}`);
-
-    // Periksa apakah req.url valid
-    if (!req.url) {
-      console.error("req.url is undefined or null");
-      return NextResponse.next();
-    }
-
-    const path = req.nextUrl.pathname;
-
-    // Handle public routes (including root path and public pages)
-    if (isPublicRoute(path)) {
-      return await publicMiddleware(req);
-    }
-
-    // For all other routes (admin, organizer), use the standard auth middleware
-    return await authMiddleware(req);
   } catch (error) {
     console.error("Middleware error:", error);
-    // Tambahkan detail error untuk debugging
-    if (error instanceof Error) {
-      console.error(`Error name: ${error.name}, message: ${error.message}`);
-      console.error(`Stack trace: ${error.stack}`);
-    }
     return NextResponse.next();
   }
 }
 
 export const config = {
   matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api/auth (NextAuth routes)
+     * - api/webhooks (webhook routes)
+     * - api/public (public API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder files
+     */
+    "/((?!api/auth|api/webhooks|api/public|_next/static|_next/image|favicon.ico|.*\\..*).+)",
     "/",
     "/dashboard",
-    "/login",
-    "/register",
-    "/verify-email",
-    "/reset-password",
-    "/events/:path*",
-    "/checkout/:path*",
-    "/orders/:path*",
-    "/tickets/:path*",
-    "/profile/:path*",
-    "/admin/:path*",
-    "/organizer/:path*",
   ],
 };
