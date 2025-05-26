@@ -36,30 +36,20 @@ export const useAuth = () => {
       const result = await signIn("credentials", {
         email,
         password,
-        redirect: false,
+        callbackUrl: callbackUrl || "/dashboard",
+        redirect: true, // Let NextAuth handle the redirect
       });
 
       console.log("[useAuth] SignIn result:", result);
 
+      // If we reach here, it means redirect: true didn't work
+      // This should not happen normally, but handle it as fallback
       if (result?.error) {
         console.log("[useAuth] SignIn error:", result.error);
         return { success: false, error: result.error };
       }
 
-      console.log("[useAuth] SignIn successful, setting up redirect...");
-
-      // Wait a bit for the session to update, then redirect using Next.js router
-      setTimeout(() => {
-        const redirectUrl = callbackUrl || "/dashboard";
-        console.log("[useAuth] Redirecting to:", redirectUrl);
-
-        if (callbackUrl) {
-          router.push(callbackUrl);
-        } else {
-          router.push("/dashboard");
-        }
-      }, 500);
-
+      console.log("[useAuth] SignIn successful");
       return { success: true };
     } catch (error) {
       console.error("[useAuth] Login error:", error);

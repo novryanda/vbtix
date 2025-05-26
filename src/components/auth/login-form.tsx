@@ -72,10 +72,12 @@ export function LoginForm({
         setErrorMessage(result.error || "Login gagal. Silakan coba lagi.");
         setIsLoading(false);
       } else {
-        console.log("[LoginForm] Login successful, waiting for redirect...");
+        console.log(
+          "[LoginForm] Login successful, NextAuth should handle redirect...",
+        );
+        // Keep loading state as NextAuth should redirect automatically
+        // If no redirect happens, the user will see the loading state
       }
-      // Don't set isLoading to false on success as we're redirecting
-      // This prevents the button from becoming clickable again during navigation
     } catch (err) {
       console.error("[LoginForm] Login error:", err);
       setErrorMessage("Terjadi kesalahan saat login. Silakan coba lagi.");

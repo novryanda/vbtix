@@ -121,7 +121,9 @@ export const authOptions: NextAuthOptions = {
         console.log("[NextAuth] Same origin redirect:", url);
         return url;
       }
-      // Default to dashboard for external URLs
+
+      // For external URLs or when no specific URL is provided, redirect to dashboard
+      // The dashboard page will handle role-based routing
       const defaultUrl = `${baseUrl}/dashboard`;
       console.log("[NextAuth] Default dashboard redirect:", defaultUrl);
       return defaultUrl;

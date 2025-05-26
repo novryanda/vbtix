@@ -78,15 +78,19 @@ export async function authMiddleware(req: NextRequest) {
       token = await getToken({
         req,
         secret: process.env.NEXTAUTH_SECRET,
+        secureCookie: process.env.NODE_ENV === "production",
       });
       console.log(`[AuthMiddleware] Token result:`, {
         hasToken: !!token,
         tokenEmail: token?.email,
         tokenRole: token?.role,
         tokenId: token?.id,
+        nodeEnv: process.env.NODE_ENV,
       });
     } catch (error) {
       console.error("[AuthMiddleware] Error getting token:", error);
+      // In production, if token retrieval fails, allow the request to continue
+      // The page-level auth checks will handle authentication
       return NextResponse.next();
     }
 
