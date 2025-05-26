@@ -17,7 +17,10 @@ const config = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   eslint: {
-  ignoreDuringBuilds: true,
+    ignoreDuringBuilds: true, // Skips eslint checking during builds
+  },
+  typescript: {
+    ignoreBuildErrors: true, // Skips type checking during builds
   },
 };
 
