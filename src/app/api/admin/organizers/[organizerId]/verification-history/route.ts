@@ -10,7 +10,7 @@ import { formatDate } from "~/lib/utils";
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { organizerId: string } }
+  { params }: { params: Promise<{ organizerId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -18,7 +18,7 @@ export async function GET(
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -26,11 +26,11 @@ export async function GET(
     if (session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
-    const { organizerId } = params;
+    const { organizerId } = await params;
 
     // Get all approvals for this organizer
     const approvals = await prisma.approval.findMany({
@@ -76,7 +76,7 @@ export async function GET(
         acc[user.id] = user;
         return acc;
       },
-      {} as Record<string, typeof users[number]>
+      {} as Record<string, (typeof users)[number]>,
     );
 
     // Format the approvals with user information
@@ -103,16 +103,17 @@ export async function GET(
       data: formattedApprovals,
     });
   } catch (error: any) {
+    const { organizerId } = await params;
     console.error(
-      `Error getting verification history for organizer ${params.organizerId}:`,
-      error
+      `Error getting verification history for organizer ${organizerId}:`,
+      error,
     );
     return NextResponse.json(
       {
         success: false,
         error: error.message || "Failed to get verification history",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

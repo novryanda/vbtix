@@ -14,7 +14,7 @@ const featuredSchema = z.object({
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -34,7 +34,7 @@ export async function POST(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     try {
@@ -55,10 +55,8 @@ export async function POST(
       );
     }
   } catch (error: any) {
-    console.error(
-      `Error setting featured status for event ${params.id}:`,
-      error,
-    );
+    const { id } = await params;
+    console.error(`Error setting featured status for event ${id}:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -75,7 +73,7 @@ export async function POST(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // Reuse the same implementation as POST
   return POST(request, { params });

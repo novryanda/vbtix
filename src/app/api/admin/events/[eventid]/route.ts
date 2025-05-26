@@ -14,7 +14,7 @@ import { updateEventSchema } from "~/lib/validations/event.schema";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { eventId: string } },
+  { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
     const session = await auth();
@@ -32,7 +32,7 @@ export async function GET(
       );
     }
 
-    const { eventId } = params;
+    const { eventId } = await params;
     const event = await handleGetEventById(eventId);
 
     return NextResponse.json({
@@ -40,7 +40,8 @@ export async function GET(
       data: event,
     });
   } catch (error: any) {
-    console.error(`Error getting event ${params?.eventId}:`, error);
+    const { eventId } = await params;
+    console.error(`Error getting event ${eventId}:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -57,7 +58,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { eventId: string } },
+  { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
     const session = await auth();
@@ -75,7 +76,7 @@ export async function PUT(
       );
     }
 
-    const { eventId } = params;
+    const { eventId } = await params;
     const body = await request.json();
 
     try {
@@ -97,7 +98,8 @@ export async function PUT(
       );
     }
   } catch (error: any) {
-    console.error(`Error updating event ${params?.eventId}:`, error);
+    const { eventId } = await params;
+    console.error(`Error updating event ${eventId}:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -114,7 +116,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { eventId: string } },
+  { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
     const session = await auth();
@@ -132,7 +134,7 @@ export async function DELETE(
       );
     }
 
-    const { eventId } = params;
+    const { eventId } = await params;
     await handleDeleteEvent(eventId, session.user.id);
 
     return NextResponse.json({
@@ -140,7 +142,8 @@ export async function DELETE(
       message: "Event deleted successfully",
     });
   } catch (error: any) {
-    console.error(`Error deleting event ${params?.eventId}:`, error);
+    const { eventId } = await params;
+    console.error(`Error deleting event ${eventId}:`, error);
     return NextResponse.json(
       {
         success: false,

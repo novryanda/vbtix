@@ -9,15 +9,23 @@ import { Button } from "~/components/ui/button";
 export default function VerifyTokenPage({
   params,
 }: {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }) {
-  const { token } = params;
+  const [token, setToken] = useState<string>("");
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
+    params.then((resolvedParams) => {
+      setToken(resolvedParams.token);
+    });
+  }, [params]);
+
+  useEffect(() => {
+    if (!token) return; // Wait for token to be resolved
+
     const verifyEmail = async () => {
       try {
         const response = await fetch("/api/auth/verify", {
@@ -33,7 +41,9 @@ export default function VerifyTokenPage({
         if (!response.ok) {
           setError(result.error || "Terjadi kesalahan saat verifikasi email");
         } else {
-          setSuccess(result.message || "Email berhasil diverifikasi. Silakan login.");
+          setSuccess(
+            result.message || "Email berhasil diverifikasi. Silakan login.",
+          );
           // Redirect ke halaman login setelah 3 detik
           setTimeout(() => {
             router.push("/login");
@@ -56,21 +66,23 @@ export default function VerifyTokenPage({
           <h1 className="text-2xl font-semibold tracking-tight">
             Verifikasi Email
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {isLoading ? "Memverifikasi email Anda..." : "Verifikasi email selesai"}
+          <p className="text-muted-foreground text-sm">
+            {isLoading
+              ? "Memverifikasi email Anda..."
+              : "Verifikasi email selesai"}
           </p>
         </div>
 
         <div className="grid gap-6">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">
+              <Loader2 className="text-primary h-8 w-8 animate-spin" />
+              <p className="text-muted-foreground text-sm">
                 Sedang memverifikasi email Anda...
               </p>
             </div>
           ) : error ? (
-            <div className="rounded-md bg-destructive/15 p-4 text-sm text-destructive">
+            <div className="bg-destructive/15 text-destructive rounded-md p-4 text-sm">
               <p>{error}</p>
               <p className="mt-2">
                 Silakan coba lagi atau hubungi dukungan pelanggan.

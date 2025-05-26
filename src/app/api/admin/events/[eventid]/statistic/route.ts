@@ -9,7 +9,7 @@ import { UserRole } from "@prisma/client";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -29,7 +29,7 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const statistics = await handleGetEventStatistics(id);
 
     return NextResponse.json({
@@ -37,7 +37,8 @@ export async function GET(
       data: statistics,
     });
   } catch (error: any) {
-    console.error(`Error getting statistics for event ${params.id}:`, error);
+    const { id } = await params;
+    console.error(`Error getting statistics for event ${id}:`, error);
     return NextResponse.json(
       {
         success: false,

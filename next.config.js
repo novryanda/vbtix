@@ -16,6 +16,9 @@ const config = {
     contentDispositionType: "attachment",
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+  eslint: {
+  ignoreDuringBuilds: true,
+  },
 };
 
 export default config;

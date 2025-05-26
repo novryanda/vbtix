@@ -15,7 +15,7 @@ import { updateUserSchema } from "~/lib/validations/user.schema";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { usersId: string } },
+  { params }: { params: Promise<{ usersId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -35,7 +35,7 @@ export async function GET(
       );
     }
 
-    const { usersId } = params;
+    const { usersId } = await params;
 
     // Call business logic
     const user = await handleGetUserById(usersId);
@@ -46,7 +46,8 @@ export async function GET(
       data: user,
     });
   } catch (error: any) {
-    console.error(`Error getting user with ID ${params.usersId}:`, error);
+    const { usersId } = await params;
+    console.error(`Error getting user with ID ${usersId}:`, error);
 
     if (error.message === "User not found") {
       return NextResponse.json(
@@ -68,7 +69,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { usersId: string } },
+  { params }: { params: Promise<{ usersId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -88,7 +89,7 @@ export async function PUT(
       );
     }
 
-    const { usersId } = params;
+    const { usersId } = await params;
 
     // Parse and validate request body
     const body = await request.json();
@@ -114,7 +115,8 @@ export async function PUT(
       data: updatedUser,
     });
   } catch (error: any) {
-    console.error(`Error updating user with ID ${params.usersId}:`, error);
+    const { usersId } = await params;
+    console.error(`Error updating user with ID ${usersId}:`, error);
 
     if (error.message === "User not found") {
       return NextResponse.json(
@@ -143,7 +145,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { usersId: string } },
+  { params }: { params: Promise<{ usersId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -163,7 +165,7 @@ export async function DELETE(
       );
     }
 
-    const { usersId } = params;
+    const { usersId } = await params;
 
     // Call business logic
     await handleDeleteUser(usersId);
@@ -174,7 +176,8 @@ export async function DELETE(
       message: "User deleted successfully",
     });
   } catch (error: any) {
-    console.error(`Error deleting user with ID ${params.usersId}:`, error);
+    const { usersId } = await params;
+    console.error(`Error deleting user with ID ${usersId}:`, error);
 
     if (error.message === "User not found") {
       return NextResponse.json(
