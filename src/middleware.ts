@@ -11,6 +11,9 @@ const publicRoutes = [
   "/reset-password",
   "/verify",
   "/unauthorized",
+  "/debug",
+  "/debug-session",
+  "/debug-auth",
 ];
 
 // Memeriksa apakah rute adalah rute publik
@@ -60,26 +63,35 @@ function getDashboardRoute(role?: UserRole | string | null, userId?: string) {
 export async function authMiddleware(req: NextRequest) {
   try {
     const path = req.nextUrl.pathname;
+    console.log(`[AuthMiddleware] Processing path: ${path}`);
 
     // Tambahkan pengecekan untuk NEXTAUTH_SECRET
     if (!process.env.NEXTAUTH_SECRET) {
-      console.error("NEXTAUTH_SECRET is not defined");
+      console.error("[AuthMiddleware] NEXTAUTH_SECRET is not defined");
       return NextResponse.next();
     }
 
     // Gunakan try/catch untuk getToken
     let token;
     try {
+      console.log(`[AuthMiddleware] Attempting to get token for path: ${path}`);
       token = await getToken({
         req,
         secret: process.env.NEXTAUTH_SECRET,
       });
+      console.log(`[AuthMiddleware] Token result:`, {
+        hasToken: !!token,
+        tokenEmail: token?.email,
+        tokenRole: token?.role,
+        tokenId: token?.id,
+      });
     } catch (error) {
-      console.error("Error getting token:", error);
+      console.error("[AuthMiddleware] Error getting token:", error);
       return NextResponse.next();
     }
 
     const isAuthenticated = !!token;
+    console.log(`[AuthMiddleware] Authentication status: ${isAuthenticated}`);
 
     // Special handling for root path - allow access to public page
     if (path === "/") {
@@ -222,30 +234,41 @@ export async function publicMiddleware(req: NextRequest) {
 
 export async function middleware(req: NextRequest) {
   try {
-    // Tambahkan logging untuk debugging
-    console.log(`Processing middleware for path: ${req.nextUrl.pathname}`);
+    const path = req.nextUrl.pathname;
+    const timestamp = new Date().toISOString();
+
+    // Enhanced logging for debugging
+    console.log(`[Middleware] ${timestamp} - Processing path: ${path}`);
+    console.log(
+      `[Middleware] User-Agent: ${req.headers.get("user-agent")?.substring(0, 100)}...`,
+    );
+    console.log(
+      `[Middleware] Referer: ${req.headers.get("referer") || "none"}`,
+    );
 
     // Periksa apakah req.url valid
     if (!req.url) {
-      console.error("req.url is undefined or null");
+      console.error("[Middleware] req.url is undefined or null");
       return NextResponse.next();
     }
 
-    const path = req.nextUrl.pathname;
-
     // Handle public routes (including root path and public pages)
     if (isPublicRoute(path)) {
+      console.log(`[Middleware] Public route detected: ${path}`);
       return await publicMiddleware(req);
     }
 
     // For all other routes (admin, organizer), use the standard auth middleware
+    console.log(`[Middleware] Protected route detected: ${path}`);
     return await authMiddleware(req);
   } catch (error) {
-    console.error("Middleware error:", error);
+    console.error("[Middleware] Unexpected error:", error);
     // Tambahkan detail error untuk debugging
     if (error instanceof Error) {
-      console.error(`Error name: ${error.name}, message: ${error.message}`);
-      console.error(`Stack trace: ${error.stack}`);
+      console.error(
+        `[Middleware] Error name: ${error.name}, message: ${error.message}`,
+      );
+      console.error(`[Middleware] Stack trace: ${error.stack}`);
     }
     return NextResponse.next();
   }
@@ -259,6 +282,9 @@ export const config = {
     "/register",
     "/verify-email",
     "/reset-password",
+    "/debug",
+    "/debug-session",
+    "/debug-auth",
     "/events/:path*",
     "/checkout/:path*",
     "/orders/:path*",

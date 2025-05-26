@@ -108,55 +108,95 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async redirect({ url, baseUrl }) {
+      console.log("[NextAuth] Redirect callback called:", { url, baseUrl });
+
       // Handle redirect after sign in
       if (url.startsWith("/")) {
         // Relative URL - make it absolute
-        return `${baseUrl}${url}`;
+        const finalUrl = `${baseUrl}${url}`;
+        console.log("[NextAuth] Relative URL redirect:", finalUrl);
+        return finalUrl;
       } else if (new URL(url).origin === baseUrl) {
         // Same origin - allow
+        console.log("[NextAuth] Same origin redirect:", url);
         return url;
       }
       // Default to dashboard for external URLs
-      return `${baseUrl}/dashboard`;
+      const defaultUrl = `${baseUrl}/dashboard`;
+      console.log("[NextAuth] Default dashboard redirect:", defaultUrl);
+      return defaultUrl;
     },
     async signIn({ user, account }) {
+      console.log("[NextAuth] SignIn callback called:", {
+        userEmail: user.email,
+        provider: account?.provider,
+        timestamp: new Date().toISOString(),
+      });
+
       // Hanya izinkan pengguna dengan email terverifikasi
       if (!user.email) {
+        console.log("[NextAuth] SignIn rejected: No email");
         return false;
       }
 
       // Jika login dengan OAuth, pastikan user ada di database
       if (account?.provider === "google") {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email },
-        });
+        console.log(
+          "[NextAuth] Google OAuth login, checking user in database...",
+        );
 
-        if (!existingUser) {
-          // Buat user baru jika belum ada dengan role BUYER sebagai default
-          // User bisa upgrade ke ORGANIZER melalui complete registration flow
-          await prisma.user.create({
-            data: {
-              email: user.email,
-              name: user.name,
-              image: user.image,
-              role: UserRole.BUYER,
-              emailVerified: new Date(), // OAuth email sudah terverifikasi
-            },
+        try {
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
           });
+
+          if (!existingUser) {
+            console.log("[NextAuth] Creating new user for Google OAuth...");
+            // Buat user baru jika belum ada dengan role BUYER sebagai default
+            // User bisa upgrade ke ORGANIZER melalui complete registration flow
+            await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name,
+                image: user.image,
+                role: UserRole.BUYER,
+                emailVerified: new Date(), // OAuth email sudah terverifikasi
+              },
+            });
+            console.log("[NextAuth] New user created successfully");
+          } else {
+            console.log("[NextAuth] Existing user found");
+          }
+        } catch (error) {
+          console.error("[NextAuth] Database error during signIn:", error);
+          return false;
         }
       }
 
+      console.log("[NextAuth] SignIn successful");
       return true;
     },
     async jwt({ token, user }) {
+      console.log("[NextAuth] JWT callback called:", {
+        hasUser: !!user,
+        tokenEmail: token.email,
+        tokenId: token.id,
+        tokenRole: token.role,
+      });
+
       // Tambahkan data user ke token saat login pertama kali
       if (user) {
+        console.log("[NextAuth] Adding user data to token:", {
+          userId: user.id,
+          userRole: user.role,
+        });
         token.id = user.id;
         token.role = user.role;
       }
 
       // Only fetch from database if we absolutely need to and don't have the data
       if (!token.role && !token.id && token.email) {
+        console.log("[NextAuth] Fetching user data from database...");
         try {
           const dbUser = await prisma.user.findUnique({
             where: { email: token.email as string },
@@ -164,24 +204,48 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (dbUser) {
+            console.log("[NextAuth] User found in database:", {
+              id: dbUser.id,
+              role: dbUser.role,
+            });
             token.id = dbUser.id;
             token.role = dbUser.role;
+          } else {
+            console.log("[NextAuth] User not found in database");
           }
         } catch (error) {
-          console.error("Error fetching user in JWT callback:", error);
+          console.error(
+            "[NextAuth] Error fetching user in JWT callback:",
+            error,
+          );
           // Don't throw, just continue without the data
         }
       }
 
+      console.log("[NextAuth] JWT callback complete:", {
+        tokenId: token.id,
+        tokenRole: token.role,
+      });
       return token;
     },
     async session({ session, token }) {
+      console.log("[NextAuth] Session callback called:", {
+        sessionUserEmail: session.user?.email,
+        tokenId: token.id,
+        tokenRole: token.role,
+      });
+
       // Tambahkan data dari token ke session
       if (token) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
+        console.log("[NextAuth] Session updated with token data:", {
+          userId: session.user.id,
+          userRole: session.user.role,
+        });
       }
 
+      console.log("[NextAuth] Session callback complete");
       return session;
     },
   },

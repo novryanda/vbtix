@@ -52,32 +52,53 @@ export function LoginForm({
   });
 
   const onSubmit = async (data: LoginFormValues) => {
+    console.log("[LoginForm] Starting login process...", {
+      email: data.email,
+      callbackUrl,
+      timestamp: new Date().toISOString(),
+    });
+
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
+      console.log("[LoginForm] Calling login function...");
       const result = await login(data.email, data.password, callbackUrl);
 
+      console.log("[LoginForm] Login result:", result);
+
       if (!result.success) {
+        console.log("[LoginForm] Login failed:", result.error);
         setErrorMessage(result.error || "Login gagal. Silakan coba lagi.");
         setIsLoading(false);
+      } else {
+        console.log("[LoginForm] Login successful, waiting for redirect...");
       }
       // Don't set isLoading to false on success as we're redirecting
       // This prevents the button from becoming clickable again during navigation
     } catch (err) {
+      console.error("[LoginForm] Login error:", err);
       setErrorMessage("Terjadi kesalahan saat login. Silakan coba lagi.");
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    console.log("[LoginForm] Starting Google login...", {
+      callbackUrl,
+      timestamp: new Date().toISOString(),
+    });
+
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
+      console.log("[LoginForm] Calling loginWithGoogle...");
       await loginWithGoogle(callbackUrl);
+      console.log("[LoginForm] Google login initiated, redirecting...");
       // We don't set isLoading to false here because we're redirecting to Google
     } catch (err) {
+      console.error("[LoginForm] Google login error:", err);
       setErrorMessage(
         "Terjadi kesalahan saat login dengan Google. Silakan coba lagi.",
       );

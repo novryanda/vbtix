@@ -25,19 +25,34 @@ export const useAuth = () => {
     password: string,
     callbackUrl?: string,
   ) => {
+    console.log("[useAuth] Starting credentials login...", {
+      email,
+      callbackUrl,
+      timestamp: new Date().toISOString(),
+    });
+
     try {
+      console.log("[useAuth] Calling signIn with credentials...");
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
       });
 
+      console.log("[useAuth] SignIn result:", result);
+
       if (result?.error) {
+        console.log("[useAuth] SignIn error:", result.error);
         return { success: false, error: result.error };
       }
 
+      console.log("[useAuth] SignIn successful, setting up redirect...");
+
       // Wait a bit for the session to update, then redirect using Next.js router
       setTimeout(() => {
+        const redirectUrl = callbackUrl || "/dashboard";
+        console.log("[useAuth] Redirecting to:", redirectUrl);
+
         if (callbackUrl) {
           router.push(callbackUrl);
         } else {
@@ -47,6 +62,7 @@ export const useAuth = () => {
 
       return { success: true };
     } catch (error) {
+      console.error("[useAuth] Login error:", error);
       return { success: false, error: "Terjadi kesalahan saat login" };
     }
   };
@@ -55,10 +71,23 @@ export const useAuth = () => {
    * Fungsi untuk login dengan Google
    */
   const loginWithGoogle = async (callbackUrl?: string) => {
-    await signIn("google", {
-      callbackUrl: callbackUrl || "/dashboard",
-      redirect: true,
+    const finalCallbackUrl = callbackUrl || "/dashboard";
+    console.log("[useAuth] Starting Google login...", {
+      callbackUrl: finalCallbackUrl,
+      timestamp: new Date().toISOString(),
     });
+
+    try {
+      console.log("[useAuth] Calling signIn with Google provider...");
+      await signIn("google", {
+        callbackUrl: finalCallbackUrl,
+        redirect: true,
+      });
+      console.log("[useAuth] Google signIn called successfully");
+    } catch (error) {
+      console.error("[useAuth] Google login error:", error);
+      throw error;
+    }
   };
 
   /**
