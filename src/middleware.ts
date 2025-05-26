@@ -21,6 +21,8 @@ const PUBLIC_PREFIXES = [
   "/api/webhooks/",
   "/api/revalidate/",
   "/api/public/",
+  "/api/test-db",
+  "/api/health",
   "/reset-password/",
   "/verify/",
   "/events/",
