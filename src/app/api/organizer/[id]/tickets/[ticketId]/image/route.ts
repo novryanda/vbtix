@@ -11,7 +11,7 @@ import { uploadImage } from "~/lib/cloudinary-utils";
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; ticketId: string } },
+  { params }: { params: Promise<{ id: string; ticketId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -34,7 +34,7 @@ export async function PUT(
       );
     }
 
-    const { id: organizerId, ticketId } = params;
+    const { id: organizerId, ticketId } = await params;
 
     // Verify organizer
     const organizer = await organizerService.findByUserId(session.user.id);
@@ -142,7 +142,7 @@ export async function PUT(
  */
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string; ticketId: string } },
+  { params }: { params: Promise<{ id: string; ticketId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -165,7 +165,7 @@ export async function DELETE(
       );
     }
 
-    const { id: organizerId, ticketId } = params;
+    const { id: organizerId, ticketId } = await params;
 
     // Verify organizer
     const organizer = await organizerService.findByUserId(session.user.id);

@@ -109,7 +109,16 @@ export async function DELETE(
       message: "Order cancelled successfully",
     });
   } catch (error: any) {
-    console.error(`Error cancelling order with ID ${params.id}:`, error);
+    // Get orderId from params if available
+    let orderId = "unknown";
+    try {
+      const resolvedParams = await params;
+      orderId = resolvedParams.orderId;
+    } catch {
+      // Ignore error getting orderId for logging
+    }
+
+    console.error(`Error cancelling order with ID ${orderId}:`, error);
     return NextResponse.json(
       {
         success: false,

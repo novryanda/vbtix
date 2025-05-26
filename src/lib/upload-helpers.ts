@@ -28,6 +28,15 @@ export interface UploadOptions {
 }
 
 /**
+ * Options for uploading multiple images
+ */
+export interface MultiUploadOptions {
+  endpoint?: UploadEndpoint;
+  folder?: string;
+  onProgress?: (completed: number, total: number) => void;
+}
+
+/**
  * Uploads a single file to Cloudinary using server-side API
  * @param file The file to upload
  * @param options Upload options including endpoint and callbacks
@@ -83,9 +92,7 @@ export async function uploadToCloudinary(
  */
 export async function uploadMultipleToCloudinary(
   files: File[],
-  options: UploadOptions & {
-    onProgress?: (completed: number, total: number) => void;
-  } = {},
+  options: MultiUploadOptions = {},
 ): Promise<CloudinaryUploadResult[]> {
   const total = files.length;
   let completed = 0;

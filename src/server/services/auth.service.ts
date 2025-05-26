@@ -260,23 +260,50 @@ export const resetPassword = async (token: string, newPassword: string) => {
  * Validasi kredensial pengguna
  */
 export const validateCredentials = async (email: string, password: string) => {
-  // Cari user berdasarkan email
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+  const startTime = Date.now();
 
-  if (!user || !user.password) {
+  try {
+    // Cari user berdasarkan email
+    const dbStartTime = Date.now();
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        role: true,
+        emailVerified: true,
+        name: true,
+      },
+    });
+    console.log(`DB query took: ${Date.now() - dbStartTime}ms`);
+
+    if (!user || !user.password) {
+      console.log(
+        `User validation failed - user not found or no password: ${Date.now() - startTime}ms`,
+      );
+      return null;
+    }
+
+    // Verifikasi password
+    const bcryptStartTime = Date.now();
+    const isValid = await compare(password, user.password);
+    console.log(`Password comparison took: ${Date.now() - bcryptStartTime}ms`);
+
+    if (!isValid) {
+      console.log(`Password validation failed: ${Date.now() - startTime}ms`);
+      return null;
+    }
+
+    console.log(`Total validation time: ${Date.now() - startTime}ms`);
+    return user;
+  } catch (error) {
+    console.error(
+      `Error in validateCredentials: ${Date.now() - startTime}ms`,
+      error,
+    );
     return null;
   }
-
-  // Verifikasi password
-  const isValid = await compare(password, user.password);
-
-  if (!isValid) {
-    return null;
-  }
-
-  return user;
 };
 
 /**

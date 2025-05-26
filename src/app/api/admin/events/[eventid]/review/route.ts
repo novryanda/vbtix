@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleReviewEvent } from "~/server/api/events";
 import { auth } from "~/server/auth";
-import { UserRole, ApprovalStatus } from "@prisma/client";
+import { UserRole, EventStatus } from "@prisma/client";
 import { z } from "zod";
 
 const reviewSchema = z.object({
-  status: z.enum([ApprovalStatus.APPROVED, ApprovalStatus.REJECTED]),
+  status: z.enum([EventStatus.PUBLISHED, EventStatus.REJECTED]),
   feedback: z.string().optional(),
 });
 
@@ -43,12 +43,7 @@ export async function POST(
       const { status, feedback } = reviewSchema.parse(body);
 
       // Review event
-      const result = await handleReviewEvent(
-        id,
-        status,
-        feedback,
-        session.user.id,
-      );
+      const result = await handleReviewEvent(id, status, feedback);
 
       return NextResponse.json({
         success: true,

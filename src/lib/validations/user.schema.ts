@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type {Enums} from "~/types/supabase";
+import type { Enums } from "~/types/supabase";
 
 // Menggunakan tipe UserRole dari Supabase
 type UserRole = Enums<"user_role">;
@@ -31,7 +31,7 @@ export const updateUserSchema = z.object({
     .min(10, "Phone number must be at least 10 digits")
     .max(20)
     .optional(),
-  image: z.string().url("Invalid image URL").optional().nullable(),
+  image: z.string().url("Invalid image URL").optional(),
 });
 
 // Schema untuk validasi perubahan role

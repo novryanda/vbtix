@@ -6,16 +6,16 @@ import { useTheme } from "next-themes";
 import { cn } from "~/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 
-interface ThemeToggleGroupProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ThemeToggleGroupProps {
   variant?: "default" | "outline";
   size?: "default" | "sm" | "lg";
+  className?: string;
 }
 
 export function ThemeToggleGroup({
   variant = "outline",
   size = "default",
   className,
-  ...props
 }: ThemeToggleGroupProps) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
@@ -35,7 +35,6 @@ export function ThemeToggleGroup({
         if (value) setTheme(value as "light" | "dark" | "system");
       }}
       className={cn("justify-center", className)}
-      {...props}
     >
       <ToggleGroupItem
         value="light"

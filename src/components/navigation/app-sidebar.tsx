@@ -200,8 +200,8 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navData.navMain} />
-        {role === "organizer" && navData.documents && (
-          <NavDocuments items={navData.documents} />
+        {role === "organizer" && (navData as any).documents && (
+          <NavDocuments items={(navData as any).documents} />
         )}
         <NavSecondary items={navData.navSecondary} className="mt-auto" />
       </SidebarContent>

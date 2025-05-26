@@ -22,7 +22,7 @@ async function createTestEvent() {
 
     if (!organizer) {
       console.log("No organizer found, creating test organizer...");
-      
+
       // Create a test user with organizer role
       const testUser = await prisma.user.create({
         data: {
@@ -37,16 +37,14 @@ async function createTestEvent() {
       organizer = await prisma.organizer.create({
         data: {
           userId: testUser.id,
-          businessName: "VBTix Test Events",
-          businessType: "Event Management",
-          businessAddress: "Jakarta, Indonesia",
-          businessPhone: "+6281234567890",
-          businessEmail: "test-organizer@vbtix.com",
-          verificationStatus: "APPROVED",
+          orgName: "VBTix Test Events",
+          legalName: "VBTix Test Events Ltd",
+          npwp: "123456789012345",
+          verified: true,
         },
       });
 
-      console.log("Test organizer created:", organizer.businessName);
+      console.log("Test organizer created:", organizer.orgName);
     }
 
     // Create test event
@@ -55,7 +53,8 @@ async function createTestEvent() {
         slug: "tech-conference-2024-test",
         organizerId: organizer.id,
         title: "Tech Conference 2024 - Test Event",
-        description: "A test event for demonstrating the mock payment system. This is a comprehensive technology conference featuring the latest trends in software development, AI, and digital transformation.",
+        description:
+          "A test event for demonstrating the mock payment system. This is a comprehensive technology conference featuring the latest trends in software development, AI, and digital transformation.",
         category: "Technology",
         venue: "Jakarta Convention Center",
         address: "Jl. Jendral Gatot Subroto, Jakarta Selatan",
@@ -124,8 +123,10 @@ async function createTestEvent() {
           maxPerPurchase: 3,
           isVisible: true,
           allowTransfer: false,
-          ticketFeatures: "Access to all sessions, premium welcome kit, VIP lunch, exclusive workshop",
-          perks: "VIP seating, exclusive networking session, meet & greet with speakers",
+          ticketFeatures:
+            "Access to all sessions, premium welcome kit, VIP lunch, exclusive workshop",
+          perks:
+            "VIP seating, exclusive networking session, meet & greet with speakers",
           saleStartDate: new Date("2024-11-01T00:00:00Z"),
           saleEndDate: new Date("2024-12-14T23:59:59Z"),
         },
@@ -142,18 +143,21 @@ async function createTestEvent() {
     console.log(`Event ID: ${testEvent.id}`);
     console.log(`Event Slug: ${testEvent.slug}`);
     console.log(`Event Title: ${testEvent.title}`);
-    console.log(`Organizer: ${organizer.businessName}`);
+    console.log(`Organizer: ${organizer.orgName}`);
     console.log(`URL: http://localhost:3001/events/${testEvent.slug}`);
 
     console.log("\n🎯 To test the mock payment system:");
     console.log("1. Go to the event page");
     console.log("2. Select tickets and click 'Beli Tiket'");
     console.log("3. Fill out the purchase form");
-    console.log("4. Use the 'Samakan dengan data pemesan' checkbox to copy buyer data");
+    console.log(
+      "4. Use the 'Samakan dengan data pemesan' checkbox to copy buyer data",
+    );
     console.log("5. Click 'Lanjut ke Pembayaran'");
-    console.log("6. Select a test payment method (you should see 'MODE TEST' indicators)");
+    console.log(
+      "6. Select a test payment method (you should see 'MODE TEST' indicators)",
+    );
     console.log("7. Complete the test payment simulation");
-
   } catch (error) {
     console.error("Error creating test event:", error);
   } finally {

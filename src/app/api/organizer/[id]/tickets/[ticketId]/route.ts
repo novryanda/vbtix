@@ -14,7 +14,7 @@ import { updateTicketTypeSchema } from "~/lib/validations/ticket.schema";
  */
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { organizerId: string; ticketsId: string } },
+  { params }: { params: Promise<{ organizerId: string; ticketsId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -37,7 +37,7 @@ export async function GET(
       );
     }
 
-    const { ticketsId } = params;
+    const { ticketsId } = await params;
 
     // Call business logic
     const ticketType = await handleGetTicketTypeById({
@@ -50,10 +50,8 @@ export async function GET(
       data: ticketType,
     });
   } catch (error: any) {
-    console.error(
-      `Error fetching ticket type with ID ${params.ticketsId}:`,
-      error,
-    );
+    const { ticketsId } = await params;
+    console.error(`Error fetching ticket type with ID ${ticketsId}:`, error);
 
     // Handle specific errors
     if (error.message === "Ticket type not found") {
@@ -91,7 +89,7 @@ export async function GET(
  */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { organizerId: string; ticketsId: string } },
+  { params }: { params: Promise<{ organizerId: string; ticketsId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -114,7 +112,7 @@ export async function PUT(
       );
     }
 
-    const { ticketsId } = params;
+    const { ticketsId } = await params;
     const body = await req.json();
 
     try {
@@ -143,10 +141,8 @@ export async function PUT(
       );
     }
   } catch (error: any) {
-    console.error(
-      `Error updating ticket type with ID ${params.ticketsId}:`,
-      error,
-    );
+    const { ticketsId } = await params;
+    console.error(`Error updating ticket type with ID ${ticketsId}:`, error);
 
     // Handle specific errors
     if (error.message === "Ticket type not found") {
@@ -184,7 +180,7 @@ export async function PUT(
  */
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { organizerId: string; ticketsId: string } },
+  { params }: { params: Promise<{ organizerId: string; ticketsId: string }> },
 ) {
   try {
     // Check authentication and authorization
@@ -207,7 +203,7 @@ export async function DELETE(
       );
     }
 
-    const { ticketsId } = params;
+    const { ticketsId } = await params;
 
     // Call business logic
     await handleDeleteTicketType({
@@ -220,10 +216,8 @@ export async function DELETE(
       message: "Ticket type deleted successfully",
     });
   } catch (error: any) {
-    console.error(
-      `Error deleting ticket type with ID ${params.ticketsId}:`,
-      error,
-    );
+    const { ticketsId } = await params;
+    console.error(`Error deleting ticket type with ID ${ticketsId}:`, error);
 
     // Handle specific errors
     if (error.message === "Ticket type not found") {

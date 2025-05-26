@@ -12,10 +12,10 @@ import { UserRole } from "@prisma/client";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { paymentsId: string } },
+  { params }: { params: Promise<{ paymentsId: string }> },
 ) {
   try {
-    const { paymentsId } = params;
+    const { paymentsId } = await params;
 
     // Check authentication
     const session = await auth();
@@ -45,7 +45,8 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: result.data });
   } catch (error) {
-    console.error(`Error in GET /api/payments/${params.paymentsId}:`, error);
+    const { paymentsId } = await params;
+    console.error(`Error in GET /api/payments/${paymentsId}:`, error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },
@@ -59,10 +60,10 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { paymentsId: string } },
+  { params }: { params: Promise<{ paymentsId: string }> },
 ) {
   try {
-    const { paymentsId } = params;
+    const { paymentsId } = await params;
 
     // Check authentication
     const session = await auth();
@@ -89,14 +90,15 @@ export async function PATCH(
 
     if (!result.success) {
       return NextResponse.json(
-        { success: false, error: result.error, errors: result.errors },
+        { success: false, error: result.error },
         { status: result.error === "Payment not found" ? 404 : 400 },
       );
     }
 
     return NextResponse.json({ success: true, data: result.data });
   } catch (error) {
-    console.error(`Error in PATCH /api/payments/${params.paymentsId}:`, error);
+    const { paymentsId } = await params;
+    console.error(`Error in PATCH /api/payments/${paymentsId}:`, error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

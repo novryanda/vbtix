@@ -24,6 +24,10 @@ export type ImageType = "poster" | "banner" | "additional";
 interface ImageEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  imageType: ImageType;
+  currentImage?: string;
+  currentImages?: string[];
+  currentImagePublicIds?: string[];
   posterImage?: string;
   bannerImage?: string;
   additionalImages?: string[];
