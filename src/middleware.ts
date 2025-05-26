@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { UserRole } from "@prisma/client";
 
-// Routes that don't require authentication
-const PUBLIC_ROUTES = new Set([
+// Daftar rute publik yang tidak memerlukan autentikasi
+const publicRoutes = [
   "/",
   "/login",
   "/register",
@@ -11,160 +11,260 @@ const PUBLIC_ROUTES = new Set([
   "/reset-password",
   "/verify",
   "/unauthorized",
-  "/debug",
-  "/debug-session",
-  "/debug-auth",
-]);
-
-// Route prefixes that don't require authentication
-const PUBLIC_PREFIXES = [
-  "/api/auth/",
-  "/api/webhooks/",
-  "/api/revalidate/",
-  "/api/public/",
-  "/api/test-db",
-  "/api/health",
-  "/reset-password/",
-  "/verify/",
-  "/events/",
-  "/checkout",
-  "/orders/",
-  "/tickets/",
-  "/profile",
-  "/_next/",
-  "/favicon.ico",
 ];
 
-// Check if route is public (optimized for performance)
-function isPublicRoute(path: string): boolean {
-  // Fast lookup for exact matches
-  if (PUBLIC_ROUTES.has(path)) return true;
+// Memeriksa apakah rute adalah rute publik
+function isPublicRoute(path: string) {
+  // Cek apakah path cocok dengan salah satu rute publik
+  if (publicRoutes.includes(path)) return true;
 
-  // Check prefixes
-  return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
+  // Cek apakah path dimulai dengan salah satu prefiks publik
+  if (
+    path.startsWith("/api/auth/") ||
+    path.startsWith("/api/webhooks/") ||
+    path.startsWith("/api/revalidate/") ||
+    path.startsWith("/reset-password/") ||
+    path.startsWith("/verify/") ||
+    path.startsWith("/events/") || // Allow access to public event pages
+    path.startsWith("/checkout") || // Allow access to checkout pages (with or without trailing slash)
+    path.startsWith("/orders/") || // Allow access to public order pages
+    path.startsWith("/tickets/") || // Allow access to public ticket pages
+    path.startsWith("/profile") || // Allow access to public profile page
+    path.startsWith("/api/public/") // Allow access to all public API endpoints
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
-// Performance tracking for debugging
-const ENABLE_PERFORMANCE_LOGS = process.env.NODE_ENV === "development";
+// Mendapatkan rute dashboard berdasarkan peran pengguna
+function getDashboardRoute(role?: UserRole | string | null, userId?: string) {
+  if (!role) return "/";
 
-function logPerformance(message: string, startTime: number) {
-  if (ENABLE_PERFORMANCE_LOGS) {
-    console.log(`[Middleware] ${message}: ${Date.now() - startTime}ms`);
+  switch (role) {
+    case UserRole.ADMIN:
+      return "/admin";
+    case UserRole.ORGANIZER:
+      // If userId is available, redirect to the organizer's dashboard
+      return userId ? `/organizer/${userId}/dashboard` : "/organizer";
+    case UserRole.BUYER:
+    default:
+      return "/";
   }
 }
 
-export async function middleware(req: NextRequest) {
-  const startTime = Date.now();
-  const path = req.nextUrl.pathname;
-
+/**
+ * Middleware untuk memeriksa autentikasi dan otorisasi
+ */
+export async function authMiddleware(req: NextRequest) {
   try {
-    // Early return for static files and certain API routes
-    if (path.includes(".") || path.startsWith("/_next/")) {
+    const path = req.nextUrl.pathname;
+
+    // Tambahkan pengecekan untuk NEXTAUTH_SECRET
+    if (!process.env.NEXTAUTH_SECRET) {
+      console.error("NEXTAUTH_SECRET is not defined");
       return NextResponse.next();
     }
 
-    // Check if route is public first (fastest check)
-    if (isPublicRoute(path)) {
-      logPerformance(`Public route ${path}`, startTime);
-      return NextResponse.next();
-    }
-
-    // Get authentication token
+    // Gunakan try/catch untuk getToken
     let token;
-    const tokenStartTime = Date.now();
-
     try {
       token = await getToken({
         req,
         secret: process.env.NEXTAUTH_SECRET,
       });
-      logPerformance(`Token fetch for ${path}`, tokenStartTime);
     } catch (error) {
-      console.error(`[Middleware] Token error for ${path}:`, error);
+      console.error("Error getting token:", error);
       return NextResponse.next();
     }
 
     const isAuthenticated = !!token;
 
-    // Handle dashboard redirect (special case)
-    if (path === "/dashboard") {
-      if (!isAuthenticated) {
-        // Not authenticated - redirect to login
-        const loginUrl = new URL("/login", req.url);
-        loginUrl.searchParams.set("callbackUrl", path);
-        logPerformance(`Login redirect for ${path}`, startTime);
-        return NextResponse.redirect(loginUrl);
-      }
-
-      // Let the dashboard page component handle the role-based redirect
-      // This prevents middleware from causing 307 redirects
-      if (ENABLE_PERFORMANCE_LOGS) {
-        console.log(
-          `[Middleware] Allowing dashboard page to handle redirect for ${token?.email} (${token?.role})`,
-        );
-      }
-      logPerformance(`Dashboard access allowed for ${path}`, startTime);
+    // Special handling for root path - allow access to public page
+    if (path === "/") {
       return NextResponse.next();
     }
 
-    // Protect non-public routes - require authentication
-    if (!isAuthenticated) {
+    // Jika pengguna sudah login dan mencoba mengakses halaman publik, alihkan ke dashboard
+    if (isPublicRoute(path) && isAuthenticated && token && token.role) {
+      const dashboardRoute = getDashboardRoute(
+        token.role as UserRole,
+        token.id as string,
+      );
+      return NextResponse.redirect(new URL(dashboardRoute, req.url));
+    }
+
+    // Jika pengguna belum login dan mencoba mengakses halaman yang memerlukan autentikasi, alihkan ke login
+    if (!isPublicRoute(path) && !isAuthenticated) {
       const loginUrl = new URL("/login", req.url);
+      // Tambahkan callbackUrl sebagai query parameter untuk redirect kembali setelah login
       loginUrl.searchParams.set("callbackUrl", path);
-      logPerformance(`Auth required redirect for ${path}`, startTime);
       return NextResponse.redirect(loginUrl);
     }
 
-    // Role-based access control
-    const userRole = token?.role as UserRole;
-
-    // Admin routes - only admins allowed
-    if (path.startsWith("/admin")) {
-      if (userRole !== UserRole.ADMIN) {
-        logPerformance(`Admin access denied for ${path}`, startTime);
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
+    // Handle /dashboard path
+    if (path === "/dashboard") {
+      if (isAuthenticated && token && token.role) {
+        const dashboardRoute = getDashboardRoute(
+          token.role as UserRole,
+          token.id as string,
+        );
+        return NextResponse.redirect(new URL(dashboardRoute, req.url));
+      } else {
+        // Redirect to public home page instead of login
+        return NextResponse.redirect(new URL("/", req.url));
       }
     }
 
-    // Organizer routes - organizers and admins allowed
-    if (path.startsWith("/organizer")) {
-      if (userRole !== UserRole.ORGANIZER && userRole !== UserRole.ADMIN) {
-        logPerformance(`Organizer access denied for ${path}`, startTime);
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-
-      // Additional check: ensure organizer can only access their own routes
-      if (userRole === UserRole.ORGANIZER) {
-        const pathParts = path.split("/");
-        const requestedUserId = pathParts[2]; // /organizer/[userId]/...
-        const tokenUserId = token?.id as string;
-
-        if (requestedUserId && requestedUserId !== tokenUserId) {
-          logPerformance(`Organizer ID mismatch for ${path}`, startTime);
-          return NextResponse.redirect(new URL("/unauthorized", req.url));
-        }
-      }
-    }
-
-    logPerformance(`Middleware completed for ${path}`, startTime);
     return NextResponse.next();
   } catch (error) {
-    console.error(
-      `[Middleware] Error processing ${req.nextUrl.pathname}:`,
-      error,
-    );
-    // Fail open - allow request to continue
+    console.error("Unexpected error in authMiddleware:", error);
+    return NextResponse.next();
+  }
+}
+
+/**
+ * Middleware untuk memeriksa peran pengguna
+ * @param req - NextRequest object
+ * @param allowedRoles - Array of allowed roles
+ * @returns NextResponse or null if authorized
+ */
+export async function roleMiddleware(
+  req: NextRequest,
+  allowedRoles: UserRole[],
+) {
+  try {
+    const path = req.nextUrl.pathname;
+
+    // Tambahkan pengecekan untuk NEXTAUTH_SECRET
+    if (!process.env.NEXTAUTH_SECRET) {
+      console.error("NEXTAUTH_SECRET is not defined");
+      return NextResponse.next();
+    }
+
+    // Gunakan try/catch untuk getToken
+    let token;
+    try {
+      token = await getToken({
+        req,
+        secret: process.env.NEXTAUTH_SECRET,
+      });
+    } catch (error) {
+      console.error("Error getting token in roleMiddleware:", error);
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", path);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (!token) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", path);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Pastikan token.role ada sebelum menggunakannya
+    if (!token.role) {
+      console.error("Token exists but role is undefined");
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", path);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const userRole = token.role as UserRole;
+
+    if (!allowedRoles.includes(userRole)) {
+      // Redirect to appropriate dashboard based on role
+      const dashboardRoute = getDashboardRoute(userRole, token.id as string);
+      return NextResponse.redirect(new URL(dashboardRoute, req.url));
+    }
+
+    // User is authorized, continue
+    return null;
+  } catch (error) {
+    console.error("Unexpected error in roleMiddleware:", error);
+    return NextResponse.next();
+  }
+}
+
+/**
+ * Middleware untuk rute admin
+ */
+export async function adminMiddleware(req: NextRequest) {
+  return roleMiddleware(req, [UserRole.ADMIN]);
+}
+
+/**
+ * Middleware untuk rute organizer
+ */
+export async function organizerMiddleware(req: NextRequest) {
+  return roleMiddleware(req, [UserRole.ORGANIZER, UserRole.ADMIN]);
+}
+
+/**
+ * Middleware untuk rute publik
+ *
+ * Public routes are accessible to everyone, but some features
+ * may require authentication (like viewing personal tickets or orders)
+ */
+export async function publicMiddleware(req: NextRequest) {
+  const path = req.nextUrl.pathname;
+
+  // Check if this is a public route
+  if (isPublicRoute(path)) {
+    return NextResponse.next();
+  }
+
+  // For protected features within public routes (like /profile, /tickets, /orders)
+  // we use the auth middleware to ensure the user is authenticated
+  return authMiddleware(req);
+}
+
+export async function middleware(req: NextRequest) {
+  try {
+    // Tambahkan logging untuk debugging
+    console.log(`Processing middleware for path: ${req.nextUrl.pathname}`);
+
+    // Periksa apakah req.url valid
+    if (!req.url) {
+      console.error("req.url is undefined or null");
+      return NextResponse.next();
+    }
+
+    const path = req.nextUrl.pathname;
+
+    // Handle public routes (including root path and public pages)
+    if (isPublicRoute(path)) {
+      return await publicMiddleware(req);
+    }
+
+    // For all other routes (admin, organizer), use the standard auth middleware
+    return await authMiddleware(req);
+  } catch (error) {
+    console.error("Middleware error:", error);
+    // Tambahkan detail error untuk debugging
+    if (error instanceof Error) {
+      console.error(`Error name: ${error.name}, message: ${error.message}`);
+      console.error(`Stack trace: ${error.stack}`);
+    }
     return NextResponse.next();
   }
 }
 
 export const config = {
   matcher: [
-    /*
-     * Optimized matcher for better performance:
-     * - Excludes static files, API routes, and assets
-     * - Only processes routes that need authentication/authorization
-     */
-    "/((?!api/auth|api/webhooks|api/public|_next|favicon.ico|.*\\..*).*)",
+    "/",
+    "/dashboard",
+    "/login",
+    "/register",
+    "/verify-email",
+    "/reset-password",
+    "/events/:path*",
+    "/checkout/:path*",
+    "/orders/:path*",
+    "/tickets/:path*",
+    "/profile/:path*",
+    "/admin/:path*",
+    "/organizer/:path*",
   ],
 };
