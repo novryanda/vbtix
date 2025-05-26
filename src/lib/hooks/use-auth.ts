@@ -36,12 +36,12 @@ export const useAuth = () => {
         return { success: false, error: result.error };
       }
 
-      // Wait a bit for the session to update, then redirect
+      // Wait a bit for the session to update, then redirect using Next.js router
       setTimeout(() => {
         if (callbackUrl) {
-          window.location.href = callbackUrl;
+          router.push(callbackUrl);
         } else {
-          window.location.href = "/dashboard";
+          router.push("/dashboard");
         }
       }, 500);
 
@@ -55,7 +55,10 @@ export const useAuth = () => {
    * Fungsi untuk login dengan Google
    */
   const loginWithGoogle = async (callbackUrl?: string) => {
-    await signIn("google", { callbackUrl });
+    await signIn("google", {
+      callbackUrl: callbackUrl || "/dashboard",
+      redirect: true,
+    });
   };
 
   /**

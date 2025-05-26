@@ -107,6 +107,18 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Handle redirect after sign in
+      if (url.startsWith("/")) {
+        // Relative URL - make it absolute
+        return `${baseUrl}${url}`;
+      } else if (new URL(url).origin === baseUrl) {
+        // Same origin - allow
+        return url;
+      }
+      // Default to dashboard for external URLs
+      return `${baseUrl}/dashboard`;
+    },
     async signIn({ user, account }) {
       // Hanya izinkan pengguna dengan email terverifikasi
       if (!user.email) {

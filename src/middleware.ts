@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = new Set([
   "/unauthorized",
   "/debug",
   "/debug-session",
+  "/debug-auth",
 ]);
 
 // Route prefixes that don't require authentication
@@ -41,22 +42,6 @@ function isPublicRoute(path: string): boolean {
 
   // Check prefixes
   return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
-}
-
-// Get dashboard route based on user role (optimized)
-function getDashboardRoute(
-  role?: UserRole | string | null,
-  userId?: string,
-): string {
-  switch (role) {
-    case UserRole.ADMIN:
-      return "/admin/dashboard";
-    case UserRole.ORGANIZER:
-      return userId ? `/organizer/${userId}/dashboard` : "/organizer";
-    case UserRole.BUYER:
-    default:
-      return "/";
-  }
 }
 
 // Performance tracking for debugging
@@ -103,34 +88,23 @@ export async function middleware(req: NextRequest) {
 
     // Handle dashboard redirect (special case)
     if (path === "/dashboard") {
-      if (isAuthenticated && token?.role && token?.id) {
-        const dashboardRoute = getDashboardRoute(
-          token.role as UserRole,
-          token.id as string,
-        );
-
-        if (ENABLE_PERFORMANCE_LOGS) {
-          console.log(
-            `[Middleware] Redirecting ${token.email} (${token.role}) to ${dashboardRoute}`,
-          );
-        }
-
-        logPerformance(`Dashboard redirect for ${path}`, startTime);
-        return NextResponse.redirect(new URL(dashboardRoute, req.url));
-      } else if (isAuthenticated) {
-        // User authenticated but missing role/id - let dashboard page handle it
-        if (ENABLE_PERFORMANCE_LOGS) {
-          console.log(
-            `[Middleware] User authenticated but missing role/id, allowing dashboard access`,
-          );
-        }
-        return NextResponse.next();
-      } else {
+      if (!isAuthenticated) {
         // Not authenticated - redirect to login
         const loginUrl = new URL("/login", req.url);
+        loginUrl.searchParams.set("callbackUrl", path);
         logPerformance(`Login redirect for ${path}`, startTime);
         return NextResponse.redirect(loginUrl);
       }
+
+      // Let the dashboard page component handle the role-based redirect
+      // This prevents middleware from causing 307 redirects
+      if (ENABLE_PERFORMANCE_LOGS) {
+        console.log(
+          `[Middleware] Allowing dashboard page to handle redirect for ${token?.email} (${token?.role})`,
+        );
+      }
+      logPerformance(`Dashboard access allowed for ${path}`, startTime);
+      return NextResponse.next();
     }
 
     // Protect non-public routes - require authentication
