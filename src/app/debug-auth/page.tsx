@@ -2,12 +2,21 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 
 export default function DebugAuthPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [currentUrl, setCurrentUrl] = useState("");
+
+  useEffect(() => {
+    // Only access window on client side
+    if (typeof window !== "undefined") {
+      setCurrentUrl(window.location.href);
+    }
+  }, []);
 
   return (
     <div className="container mx-auto p-6">
@@ -24,28 +33,26 @@ export default function DebugAuthPage() {
           {session && (
             <div>
               <h3 className="font-semibold">Session Data:</h3>
-              <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto">
+              <pre className="overflow-auto rounded bg-gray-100 p-2 text-xs">
                 {JSON.stringify(session, null, 2)}
               </pre>
             </div>
           )}
 
           <div className="space-x-2">
-            <Button onClick={() => router.push("/login")}>
-              Go to Login
-            </Button>
+            <Button onClick={() => router.push("/login")}>Go to Login</Button>
             <Button onClick={() => router.push("/dashboard")}>
               Go to Dashboard
             </Button>
-            <Button onClick={() => router.push("/")}>
-              Go to Home
-            </Button>
+            <Button onClick={() => router.push("/")}>Go to Home</Button>
           </div>
 
-          <div>
-            <h3 className="font-semibold">Current URL:</h3>
-            <p className="text-sm text-gray-600">{window.location.href}</p>
-          </div>
+          {currentUrl && (
+            <div>
+              <h3 className="font-semibold">Current URL:</h3>
+              <p className="text-sm text-gray-600">{currentUrl}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
