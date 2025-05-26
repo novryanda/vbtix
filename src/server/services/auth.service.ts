@@ -14,7 +14,7 @@ export const getDashboardRoute = (
 
   switch (role) {
     case UserRole.ADMIN:
-      return "/admin";
+      return "/admin/dashboard";
     case UserRole.ORGANIZER:
       // If userId is available, redirect to the organizer's dashboard
       return userId ? `/organizer/${userId}/dashboard` : "/organizer";

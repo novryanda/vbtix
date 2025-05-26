@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth } from "~/server/auth";
-import { getDashboardRoute } from "~/lib/auth";
+import { auth, getDashboardRoute } from "~/server/auth";
 
 export default async function DashboardPage() {
   const session = await auth();
