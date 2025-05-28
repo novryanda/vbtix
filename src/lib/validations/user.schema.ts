@@ -1,8 +1,5 @@
 import { z } from "zod";
-import type { Enums } from "~/types/supabase";
-
-// Menggunakan tipe UserRole dari Supabase
-type UserRole = Enums<"user_role">;
+import { UserRole } from "@prisma/client"
 
 // Schema untuk validasi pembuatan user
 export const createUserSchema = z.object({

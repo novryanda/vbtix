@@ -30,11 +30,11 @@ export function SectionCards() {
     console.error("Error loading dashboard data:", error);
   }
 
-  // Default values if data is loading or there's an error
-  const totalEvents = data?.data?.stats?.totalEvents || 0;
-  const totalTicketsSold = data?.data?.stats?.totalTicketsSold || 0;
-  const totalRevenue = data?.data?.stats?.totalRevenue || 0;
-  const upcomingEventsCount = data?.data?.stats?.upcomingEventsCount || 0;
+  // Default values if data is loading or there's an error - using nullish coalescing
+  const totalEvents = data?.data?.stats?.totalEvents ?? 0;
+  const totalTicketsSold = data?.data?.stats?.totalTicketsSold ?? 0;
+  const totalRevenue = data?.data?.stats?.totalRevenue ?? 0;
+  const upcomingEventsCount = data?.data?.stats?.upcomingEventsCount ?? 0;
 
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">

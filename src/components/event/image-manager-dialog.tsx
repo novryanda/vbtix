@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "~/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "~/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Button } from "~/components/ui/button";
 import { ImageUpload } from "~/components/ui/image-upload";
@@ -16,9 +23,9 @@ interface ImageManagerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   posterImage?: string;
-  posterPublicId?: string;
+  _posterPublicId?: string; // Prefixed with underscore to indicate intentionally unused
   bannerImage?: string;
-  bannerPublicId?: string;
+  _bannerPublicId?: string; // Prefixed with underscore to indicate intentionally unused
   additionalImages?: string[];
   additionalImagePublicIds?: string[];
   eventId: string;
@@ -27,13 +34,31 @@ interface ImageManagerDialogProps {
   eventTitle: string;
 }
 
+interface ImageData {
+  url: string;
+  publicId: string;
+}
+
+interface UpdateEventData {
+  posterUrl?: string;
+  posterPublicId?: string;
+  bannerUrl?: string;
+  bannerPublicId?: string;
+  images?: string[];
+  imagePublicIds?: string[];
+}
+
+interface ApiErrorResponse {
+  error?: string;
+}
+
 export function ImageManagerDialog({
   open,
   onOpenChange,
   posterImage,
-  posterPublicId,
+  _posterPublicId,
   bannerImage,
-  bannerPublicId,
+  _bannerPublicId,
   additionalImages = [],
   additionalImagePublicIds = [],
   eventId,
@@ -44,25 +69,27 @@ export function ImageManagerDialog({
   const [activeTab, setActiveTab] = useState<string>("poster");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  
+
   // State for new images
-  const [newPosterImage, setNewPosterImage] = useState<{ url: string; publicId: string } | null>(null);
-  const [newBannerImage, setNewBannerImage] = useState<{ url: string; publicId: string } | null>(null);
-  const [additionalImagesData, setAdditionalImagesData] = useState<{ url: string; publicId: string }[]>([]);
+  const [newPosterImage, setNewPosterImage] = useState<ImageData | null>(null);
+  const [newBannerImage, setNewBannerImage] = useState<ImageData | null>(null);
+  const [additionalImagesData, setAdditionalImagesData] = useState<ImageData[]>(
+    [],
+  );
 
   // Initialize additional images from props
   useEffect(() => {
     if (additionalImages.length > 0 && additionalImagePublicIds.length > 0) {
       const initialImages = additionalImages.map((url, index) => ({
         url,
-        publicId: additionalImagePublicIds[index] || "",
+        publicId: additionalImagePublicIds[index] ?? "",
       }));
       setAdditionalImagesData(initialImages);
     }
   }, [additionalImages, additionalImagePublicIds]);
 
   // Handle image change for poster
-  const handlePosterImageChange = (imageData: { url: string; publicId: string }) => {
+  const handlePosterImageChange = (imageData: ImageData) => {
     setNewPosterImage(imageData);
   };
 
@@ -72,7 +99,7 @@ export function ImageManagerDialog({
   };
 
   // Handle image change for banner
-  const handleBannerImageChange = (imageData: { url: string; publicId: string }) => {
+  const handleBannerImageChange = (imageData: ImageData) => {
     setNewBannerImage(imageData);
   };
 
@@ -82,7 +109,7 @@ export function ImageManagerDialog({
   };
 
   // Handle image change for additional images
-  const handleAdditionalImagesChange = (imagesData: { url: string; publicId: string }[]) => {
+  const handleAdditionalImagesChange = (imagesData: ImageData[]) => {
     setAdditionalImagesData(imagesData);
   };
 
@@ -97,7 +124,7 @@ export function ImageManagerDialog({
     setError("");
 
     try {
-      let data: Record<string, any> = {};
+      const data: UpdateEventData = {};
 
       // Add poster image data if changed
       if (newPosterImage) {
@@ -134,20 +161,24 @@ export function ImageManagerDialog({
         },
       );
 
-      const result = await response.json();
+      const result = (await response.json()) as ApiErrorResponse;
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to update images");
+        throw new Error(result.error ?? "Failed to update images");
       }
 
       // Call success callback
       onSuccess();
-      
+
       // Close dialog
       onOpenChange(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating images:", err);
-      setError(err.message || "Failed to update images. Please try again.");
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to update images. Please try again.";
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -169,13 +200,17 @@ export function ImageManagerDialog({
           </Alert>
         )}
 
-        <Tabs defaultValue="poster" value={activeTab} onValueChange={setActiveTab}>
+        <Tabs
+          defaultValue="poster"
+          value={activeTab}
+          onValueChange={setActiveTab}
+        >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="poster">Poster</TabsTrigger>
             <TabsTrigger value="banner">Banner</TabsTrigger>
             <TabsTrigger value="additional">Additional Images</TabsTrigger>
           </TabsList>
-          
+
           {/* Poster Tab */}
           <TabsContent value="poster" className="space-y-4 py-4">
             {/* Current Poster Image */}
@@ -207,7 +242,7 @@ export function ImageManagerDialog({
               endpoint={UploadEndpoint.EVENT}
             />
           </TabsContent>
-          
+
           {/* Banner Tab */}
           <TabsContent value="banner" className="space-y-4 py-4">
             {/* Current Banner Image */}
@@ -239,7 +274,7 @@ export function ImageManagerDialog({
               endpoint={UploadEndpoint.EVENT}
             />
           </TabsContent>
-          
+
           {/* Additional Images Tab */}
           <TabsContent value="additional" className="space-y-4 py-4">
             {/* Additional Images Upload Component */}
@@ -262,10 +297,7 @@ export function ImageManagerDialog({
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isSubmitting}
-          >
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

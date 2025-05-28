@@ -14,10 +14,10 @@ export function OrganizerPageWrapper({ children }: OrganizerPageWrapperProps) {
   const organizerId = params?.id as string;
 
   // Fetch organizer settings to check verification status
-  const { settings, isLoading } = useOrganizerSettings(organizerId);
+  const { settings } = useOrganizerSettings(organizerId);
 
   const showVerificationWarning = settings && !settings.verified;
-  const verificationDocs = settings?.verificationDocs || null;
+  const verificationDocs = settings?.verificationDocs ?? null;
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

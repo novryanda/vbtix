@@ -39,7 +39,6 @@ const purchaseFromReservationSchema = z.object({
     )
     .min(1, { message: "At least one ticket holder is required" }),
 });
-
 /**
  * POST /api/public/reservations/[reservationId]/purchase
  * Purchase tickets from an existing reservation
@@ -57,41 +56,14 @@ export async function POST(
 
     const body = await request.json();
 
+    // Log the request body for debugging
+    console.log("Purchase API received body:", JSON.stringify(body, null, 2));
+
+    let validatedData;
     try {
-      // Log the request body for debugging
-      console.log("Purchase API received body:", JSON.stringify(body, null, 2));
-
       // Validate request data
-      const validatedData = purchaseFromReservationSchema.parse(body);
+      validatedData = purchaseFromReservationSchema.parse(body);
       console.log("Purchase API validation successful:", validatedData);
-
-      // Purchase tickets from reservation (userId is optional for guest purchases)
-      const result = await handlePurchaseFromReservation({
-        userId: session?.user?.id || null,
-        reservationId,
-        sessionId: validatedData.sessionId,
-        buyerInfo: validatedData.buyerInfo,
-        ticketHolders: validatedData.ticketHolders,
-      });
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          transaction: {
-            id: result.transaction.id,
-            invoiceNumber: result.transaction.invoiceNumber,
-            amount: Number(result.transaction.amount),
-            status: result.transaction.status,
-          },
-          ticketCount: result.tickets.length,
-          reservation: {
-            id: result.reservation.id,
-            status: result.reservation.status,
-          },
-        },
-        message:
-          "Tickets purchased successfully from reservation. Proceed to checkout to complete payment.",
-      });
     } catch (validationError: any) {
       console.error("Purchase API validation error:", validationError);
       console.error(
@@ -117,13 +89,67 @@ export async function POST(
         { status: 400 },
       );
     }
+
+    // Purchase tickets from reservation (userId is optional for guest purchases)
+    const result = await handlePurchaseFromReservation({
+      userId: session?.user?.id || null,
+      reservationId,
+      sessionId: validatedData.sessionId,
+      buyerInfo: validatedData.buyerInfo,
+      ticketHolders: validatedData.ticketHolders,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        transaction: {
+          id: result.transaction.id,
+          invoiceNumber: result.transaction.invoiceNumber,
+          amount: Number(result.transaction.amount),
+          status: result.transaction.status,
+        },
+        ticketCount: result.tickets.length,
+        reservation: {
+          id: result.reservation.id,
+          status: result.reservation.status,
+        },
+      },
+      message:
+        "Tickets purchased successfully from reservation. Proceed to checkout to complete payment.",
+    });
+
   } catch (error: any) {
     console.error(
       `Error purchasing from reservation ${(await params).reservationId}:`,
       error,
     );
 
-    // Handle specific errors
+    // Handle Prisma-specific errors
+    if (error.code === 'P2028') {
+      console.error("Prisma transaction error - connection or timeout issue");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Database transaction failed. Please try again.",
+          code: "TRANSACTION_FAILED"
+        },
+        { status: 500 },
+      );
+    }
+
+    if (error.code === 'P2034') {
+      console.error("Prisma write conflict error");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Transaction conflict. Please try again.",
+          code: "CONFLICT"
+        },
+        { status: 409 },
+      );
+    }
+
+    // Handle business logic errors
     if (error.message === "Reservation not found") {
       return NextResponse.json(
         { success: false, error: "Reservation not found" },
@@ -148,9 +174,9 @@ export async function POST(
       );
     }
 
-    if (error.message.includes("not active")) {
+    if (error.message.includes("not available") || error.message.includes("not active")) {
       return NextResponse.json(
-        { success: false, error: "Reservation is not active" },
+        { success: false, error: "Reservation is not available for purchase" },
         { status: 409 },
       );
     }
@@ -162,10 +188,24 @@ export async function POST(
       );
     }
 
+    // Handle database connection errors
+    if (error.message.includes("connection") || error.message.includes("timeout")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Database connection issue. Please try again.",
+          code: "CONNECTION_ERROR"
+        },
+        { status: 503 },
+      );
+    }
+
+    // Generic error fallback
     return NextResponse.json(
       {
         success: false,
         error: error.message || "Failed to purchase tickets from reservation",
+        code: "INTERNAL_ERROR"
       },
       { status: 500 },
     );

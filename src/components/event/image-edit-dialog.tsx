@@ -9,7 +9,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "~/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Button } from "~/components/ui/button";
 import { ImageUpload } from "~/components/ui/image-upload";
 import { MultiImageUpload } from "~/components/ui/multi-image-upload";
@@ -40,6 +39,15 @@ interface ImageEditDialogProps {
   organizerId: string;
   onSuccess: () => void;
   eventTitle: string;
+}
+
+interface ApiResponse {
+  error?: string;
+  message?: string;
+}
+
+interface ApiError {
+  message?: string;
 }
 
 export function ImageEditDialog({
@@ -152,10 +160,10 @@ export function ImageEditDialog({
         },
       );
 
-      const result = await response.json();
+      const result = (await response.json()) as ApiResponse;
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to update image");
+        throw new Error(result.error ?? "Failed to update image");
       }
 
       // Call success callback
@@ -163,9 +171,10 @@ export function ImageEditDialog({
 
       // Close dialog
       onOpenChange(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error updating image:", err);
-      setError(err.message || "Failed to update image. Please try again.");
+      const apiError = err as ApiError;
+      setError(apiError.message ?? "Failed to update image. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -180,7 +189,7 @@ export function ImageEditDialog({
     ) {
       const initialImages = currentImages.map((url, index) => ({
         url,
-        publicId: currentImagePublicIds[index] || "",
+        publicId: currentImagePublicIds[index] ?? "",
       }));
       setNewImages(initialImages);
     }

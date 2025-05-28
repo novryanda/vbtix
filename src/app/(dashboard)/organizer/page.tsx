@@ -1,27 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useOrganizerRedirectWithSession } from "~/lib/hooks/use-dashboard-redirect";
+import { RedirectLoading } from "~/components/ui/redirect-loading";
 
 export default function Page() {
-  const router = useRouter();
-  const { data: session } = useSession();
+  // Use the shared redirect hook with session-based logic
+  const { isLoading } = useOrganizerRedirectWithSession();
 
-  useEffect(() => {
-    // If user is logged in and has an organizerId, redirect to their dashboard
-    if (session?.user?.id) {
-      router.replace(`/organizer/${session.user.id}/dashboard`);
-    } else {
-      // If not logged in, redirect to login
-      router.replace("/login");
-    }
-  }, [session, router]);
-
-  // Show a loading state while redirecting
+  // Show loading state while redirecting
   return (
-    <div className="flex h-screen w-full items-center justify-center">
-      <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
-    </div>
+    <RedirectLoading
+      message={
+        isLoading ? "Loading..." : "Redirecting to organizer dashboard..."
+      }
+    />
   );
 }

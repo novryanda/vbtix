@@ -18,6 +18,7 @@ import {
   SettingsIcon,
   TicketIcon,
   UsersIcon,
+  type LucideIcon,
 } from "lucide-react";
 
 import { NavMain } from "./nav-main";
@@ -34,8 +35,32 @@ import {
   SidebarMenuItem,
 } from "~/components/ui/sidebar";
 
+// Define types for navigation data
+interface NavItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+}
+
+interface DocumentItem {
+  name: string;
+  url: string;
+  icon: LucideIcon;
+}
+
+interface AdminNavigationData {
+  navMain: NavItem[];
+  navSecondary: NavItem[];
+}
+
+interface OrganizerNavigationData {
+  navMain: NavItem[];
+  navSecondary: NavItem[];
+  documents: DocumentItem[];
+}
+
 // Function to generate admin navigation data
-const getAdminNavigationData = () => ({
+const getAdminNavigationData = (): AdminNavigationData => ({
   navMain: [
     {
       title: "Dashboard",
@@ -63,7 +88,9 @@ const getAdminNavigationData = () => ({
 });
 
 // Function to generate organizer navigation data with organizerId
-const getOrganizerNavigationData = (organizerId: string) => ({
+const getOrganizerNavigationData = (
+  organizerId: string,
+): OrganizerNavigationData => ({
   navMain: [
     {
       title: "Dashboard",
@@ -141,9 +168,9 @@ export function AppSidebar({
 
   // Use user data from session if available
   const userData = {
-    name: session?.user?.name || "User",
-    email: session?.user?.email || "user@example.com",
-    avatar: session?.user?.image || "/avatars/default.jpg",
+    name: session?.user?.name ?? "User",
+    email: session?.user?.email ?? "user@example.com",
+    avatar: session?.user?.image ?? "/avatars/default.jpg",
   };
 
   // Generate navigation data based on role
@@ -151,6 +178,13 @@ export function AppSidebar({
     role === "admin"
       ? getAdminNavigationData()
       : getOrganizerNavigationData(organizerId);
+
+  // Type guard to check if navData has documents property
+  const hasDocuments = (
+    data: AdminNavigationData | OrganizerNavigationData,
+  ): data is OrganizerNavigationData => {
+    return "documents" in data;
+  };
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -200,8 +234,8 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navData.navMain} />
-        {role === "organizer" && (navData as any).documents && (
-          <NavDocuments items={(navData as any).documents} />
+        {role === "organizer" && hasDocuments(navData) && (
+          <NavDocuments items={navData.documents} />
         )}
         <NavSecondary items={navData.navSecondary} className="mt-auto" />
       </SidebarContent>

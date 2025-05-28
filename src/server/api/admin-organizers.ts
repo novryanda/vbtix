@@ -199,7 +199,9 @@ export async function handleVerifyOrganizer(
   }
 
   // This is a regular organizer verification
-  const existingOrganizer = await organizerService.findById(id);
+  let existingOrganizer = await organizerService.findById(id);
+  let actualOrganizerId = id;
+
   if (!existingOrganizer) {
     // Try to find by userId instead (for backward compatibility)
     const organizerByUserId = await organizerService.findByUserId(id);
@@ -207,6 +209,8 @@ export async function handleVerifyOrganizer(
       throw new Error("Organizer not found");
     }
     // Use the organizer ID for verification
+    existingOrganizer = organizerByUserId;
+    actualOrganizerId = organizerByUserId.id;
     await organizerService.verifyOrganizer(organizerByUserId.id, verified);
   } else {
     // Memperbarui status verifikasi pada organizer
@@ -217,7 +221,7 @@ export async function handleVerifyOrganizer(
   const allApprovals = await prisma.approval.findMany({
     where: {
       entityType: "ORGANIZER",
-      entityId: id,
+      entityId: actualOrganizerId,
     },
     orderBy: {
       submittedAt: "desc",
@@ -238,7 +242,7 @@ export async function handleVerifyOrganizer(
   const pendingApproval = await prisma.approval.findFirst({
     where: {
       entityType: "ORGANIZER",
-      entityId: id,
+      entityId: actualOrganizerId,
       status: "PENDING",
     },
     orderBy: {
@@ -262,11 +266,11 @@ export async function handleVerifyOrganizer(
     });
   } else {
     // Create a new approval record
-    console.log(`Creating new approval for organizer ${id}`);
+    console.log(`Creating new approval for organizer ${actualOrganizerId}`);
     await prisma.approval.create({
       data: {
         entityType: "ORGANIZER",
-        entityId: id,
+        entityId: actualOrganizerId,
         status: verified ? ApprovalStatus.APPROVED : ApprovalStatus.REJECTED,
         notes,
         reviewerId: adminId,
@@ -279,7 +283,7 @@ export async function handleVerifyOrganizer(
   const updatedApprovals = await prisma.approval.findMany({
     where: {
       entityType: "ORGANIZER",
-      entityId: id,
+      entityId: actualOrganizerId,
     },
     orderBy: {
       submittedAt: "desc",
@@ -297,9 +301,9 @@ export async function handleVerifyOrganizer(
   );
 
   // Update verification status in OrganizerVerification if it exists
-  if (existingOrganizer.verification) {
+  if (existingOrganizer?.verification) {
     await prisma.organizerVerification.update({
-      where: { organizerId: id },
+      where: { organizerId: actualOrganizerId },
       data: {
         status: verified
           ? VerificationStatus.APPROVED

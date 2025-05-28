@@ -2,15 +2,29 @@
 
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
+
+interface EnvironmentVariables {
+  [key: string]: string | number | boolean | null | undefined;
+}
 
 interface DatabaseStatus {
   success: boolean;
   userCount?: number;
-  environment?: Record<string, any>;
+  environment?: EnvironmentVariables;
   error?: string;
   timestamp?: string;
+}
+
+interface DatabaseResponse extends DatabaseStatus {
+  // This ensures the response structure matches what we expect
 }
 
 export function DatabaseStatus() {
@@ -21,12 +35,13 @@ export function DatabaseStatus() {
     setLoading(true);
     try {
       const response = await fetch("/api/test-db");
-      const data = await response.json();
+      const data = (await response.json()) as DatabaseResponse;
       setStatus(data);
     } catch (error) {
       setStatus({
         success: false,
-        error: error instanceof Error ? error.message : "Failed to test connection"
+        error:
+          error instanceof Error ? error.message : "Failed to test connection",
       });
     } finally {
       setLoading(false);
@@ -53,7 +68,7 @@ export function DatabaseStatus() {
                 {status.success ? "✅ Connected" : "❌ Failed"}
               </Badge>
               {status.timestamp && (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   {new Date(status.timestamp).toLocaleString()}
                 </span>
               )}
@@ -66,8 +81,8 @@ export function DatabaseStatus() {
             )}
 
             {status.error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-800 font-medium">Error:</p>
+              <div className="rounded-md border border-red-200 bg-red-50 p-3">
+                <p className="text-sm font-medium text-red-800">Error:</p>
                 <p className="text-sm text-red-700">{status.error}</p>
               </div>
             )}
@@ -79,7 +94,10 @@ export function DatabaseStatus() {
                   {Object.entries(status.environment).map(([key, value]) => (
                     <div key={key} className="flex justify-between">
                       <span>{key}:</span>
-                      <Badge variant={value ? "default" : "destructive"} className="text-xs">
+                      <Badge
+                        variant={value ? "default" : "destructive"}
+                        className="text-xs"
+                      >
                         {value ? "✓" : "✗"}
                       </Badge>
                     </div>

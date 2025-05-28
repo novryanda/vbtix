@@ -20,7 +20,6 @@ import { AlertCircle, User, Users } from "lucide-react";
 import {
   bulkTicketPurchaseSchema,
   type BulkTicketPurchaseSchema,
-  type TicketPurchaseItemSchema,
   formatWhatsAppNumber,
 } from "~/lib/validations/ticket-purchase.schema";
 
@@ -39,6 +38,8 @@ interface TicketPurchaseFormProps {
   onSubmit: (data: BulkTicketPurchaseSchema) => Promise<void>;
   isLoading?: boolean;
 }
+
+type IdentityType = "KTP" | "SIM" | "PASSPORT" | "KITAS" | "KITAP";
 
 export function TicketPurchaseForm({
   ticketTypes,
@@ -78,12 +79,7 @@ export function TicketPurchaseForm({
     name: "items",
   });
 
-  const {
-    fields: holderFields,
-    append: appendHolder,
-    remove: removeHolder,
-    replace: replaceHolders,
-  } = useFieldArray({
+  const { fields: holderFields, replace: replaceHolders } = useFieldArray({
     control,
     name: "ticketHolders",
   });
@@ -99,7 +95,7 @@ export function TicketPurchaseForm({
     // Update ticket holders array to match total tickets
     const currentHolders = holderFields.length;
     if (total !== currentHolders) {
-      const newHolders = Array.from({ length: total }, (_, index) => ({
+      const newHolders = Array.from({ length: total }, () => ({
         fullName: "",
         identityType: "KTP" as const,
         identityNumber: "",
@@ -165,7 +161,7 @@ export function TicketPurchaseForm({
               <Select
                 value={watch("buyerInfo.identityType")}
                 onValueChange={(value) =>
-                  setValue("buyerInfo.identityType", value as any)
+                  setValue("buyerInfo.identityType", value as IdentityType)
                 }
               >
                 <SelectTrigger>
@@ -338,7 +334,7 @@ export function TicketPurchaseForm({
                       onValueChange={(value) =>
                         setValue(
                           `ticketHolders.${index}.identityType`,
-                          value as any,
+                          value as IdentityType,
                         )
                       }
                     >

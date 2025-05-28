@@ -114,7 +114,7 @@ export function SiteHeader() {
                     <span className="font-medium">Event reminder</span>
                   </div>
                   <span className="text-muted-foreground text-xs">
-                    Your event "Summer Concert" starts tomorrow
+                    Your event &quot;Summer Concert&quot; starts tomorrow
                   </span>
                 </div>
               </DropdownMenuItem>
@@ -130,14 +130,14 @@ export function SiteHeader() {
             <Button variant="outline" size="icon" className="rounded-full">
               <Avatar className="h-6 w-6">
                 <AvatarImage
-                  src={session?.user?.image || ""}
-                  alt={session?.user?.name || "User"}
+                  src={session?.user?.image ?? ""}
+                  alt={session?.user?.name ?? "User"}
                 />
                 <AvatarFallback>
                   {session?.user?.name
                     ?.split(" ")
                     .map((n) => n[0])
-                    .join("") || "U"}
+                    .join("") ?? "U"}
                 </AvatarFallback>
               </Avatar>
               <span className="sr-only">User menu</span>

@@ -15,7 +15,8 @@ export function PaymentModeDebug() {
       <CardContent>
         <div className="space-y-2 text-sm">
           <div>
-            <strong>NEXT_PUBLIC_XENDIT_ENABLED:</strong> "{xenditEnabled || 'undefined'}"
+            <strong>NEXT_PUBLIC_XENDIT_ENABLED:</strong> &quot;
+            {xenditEnabled ?? "undefined"}&quot;
           </div>
           <div>
             <strong>Is Test Mode:</strong> {isTestMode ? "Yes" : "No"}
@@ -24,7 +25,7 @@ export function PaymentModeDebug() {
             <strong>Current Mode:</strong> {isTestMode ? "TEST" : "PRODUCTION"}
           </div>
         </div>
-        
+
         {isTestMode && (
           <Alert className="mt-3">
             <AlertDescription>

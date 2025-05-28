@@ -51,7 +51,7 @@ export function SiteHeader({ className }: SiteHeaderProps) {
     const href = `/${segments.slice(0, index + 1).join("/")}`;
 
     // Get a display name for this segment
-    let name = pathMap[segment] || segment;
+    let name = pathMap[segment] ?? segment;
 
     // If it's a UUID or ID, try to get a better name
     if (
@@ -126,14 +126,14 @@ export function SiteHeader({ className }: SiteHeaderProps) {
                 <Button variant="ghost" size="sm" className="h-8 gap-2 px-2">
                   <Avatar className="h-6 w-6">
                     <AvatarImage
-                      src={session.user.image || ""}
-                      alt={session.user.name || "User"}
+                      src={session.user.image ?? ""}
+                      alt={session.user.name ?? "User"}
                     />
                     <AvatarFallback>
                       {session.user.name
                         ?.split(" ")
                         .map((n) => n[0])
-                        .join("") || "U"}
+                        .join("") ?? "U"}
                     </AvatarFallback>
                   </Avatar>
                   <span className="hidden md:inline-block">

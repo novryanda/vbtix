@@ -1,6 +1,6 @@
 import { prisma as db } from "~/server/db";
 import { EventStatus, Prisma } from "@prisma/client";
-import {
+import type {
   CreateEventSchema,
   UpdateEventSchema,
 } from "~/lib/validations/event.schema";
@@ -159,7 +159,7 @@ export const eventService = {
       console.log(`Found ${events.length} events out of ${total} total`);
 
       // Log the first few events for debugging
-      if (events.length > 0) {
+      if (events.length > 0 && events[0]) {
         console.log("First event:", {
           id: events[0].id,
           title: events[0].title,
@@ -187,18 +187,18 @@ export const eventService = {
         where: { slug },
       });
 
+      let finalSlug = slug;
       if (existingEvent) {
         // If slug exists, append a random string
         const randomString = Math.random().toString(36).substring(2, 7);
-        data.slug = `${slug}-${randomString}`;
-      } else {
-        data.slug = slug;
+        finalSlug = `${slug}-${randomString}`;
       }
 
       // Create event
       return await db.event.create({
         data: {
           ...data,
+          slug: finalSlug,
           organizerId,
           startDate: new Date(data.startDate),
           endDate: new Date(data.endDate),
@@ -314,17 +314,21 @@ export const eventService = {
   async getStatistics(id: string) {
     try {
       const totalTickets = await db.ticket.count({
-        where: { eventId: id },
+        where: {
+          ticketType: {
+            eventId: id,
+          },
+        },
       });
 
-      const totalSales = await db.order.aggregate({
-        _sum: { totalAmount: true },
+      const totalSales = await db.transaction.aggregate({
+        _sum: { amount: true },
         where: { eventId: id },
       });
 
       return {
         totalTickets,
-        totalSales: totalSales._sum.totalAmount || 0,
+        totalSales: Number(totalSales._sum.amount) || 0,
       };
     } catch (error) {
       console.error("Database error:", error);

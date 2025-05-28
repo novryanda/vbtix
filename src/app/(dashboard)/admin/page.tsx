@@ -1,20 +1,17 @@
 "use client";
 
 import { AdminRoute } from "~/components/auth/admin-route";
+import { useAdminDashboardRedirect } from "~/lib/hooks/use-dashboard-redirect";
+import { RedirectLoading } from "~/components/ui/redirect-loading";
 
 export default function Page() {
-  // Redirect to the dashboard page
+  // Use the shared redirect hook for consistent behavior
+  useAdminDashboardRedirect();
+
+  // Show loading state while redirecting
   return (
     <AdminRoute>
-      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-        {/* Redirect to dashboard page */}
-        {typeof window !== "undefined" &&
-          (window.location.href = "/admin/dashboard")}
-        <div className="flex items-center justify-center p-8">
-          <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
-          <span className="ml-2">Redirecting to dashboard...</span>
-        </div>
-      </div>
+      <RedirectLoading message="Redirecting to admin dashboard..." />
     </AdminRoute>
   );
 }

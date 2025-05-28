@@ -1,23 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
+import { useOrganizerDashboardRedirect } from "~/lib/hooks/use-dashboard-redirect";
+import { RedirectLoading } from "~/components/ui/redirect-loading";
 
 export default function Page() {
-  const router = useRouter();
   const params = useParams();
   const organizerId = params.id as string;
 
-  useEffect(() => {
-    // Redirect to the dashboard page
-    router.replace(`/organizer/${organizerId}/dashboard`);
-  }, [organizerId, router]);
+  // Use the shared redirect hook for consistent behavior
+  useOrganizerDashboardRedirect(organizerId);
 
-  // Show a loading state while redirecting
-  return (
-    <div className="flex h-screen w-full items-center justify-center">
-      <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
-    </div>
-  );
+  // Show loading state while redirecting
+  return <RedirectLoading message="Redirecting to organizer dashboard..." />;
 }

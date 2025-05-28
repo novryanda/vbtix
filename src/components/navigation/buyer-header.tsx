@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
-import { Separator } from "~/components/ui/separator";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { ThemeSelector } from "~/components/ui/theme-selector";
 import {
@@ -55,7 +54,7 @@ export function BuyerHeader({ className }: BuyerHeaderProps) {
     const href = `/${segments.slice(0, index + 1).join("/")}`;
 
     // Get a display name for this segment
-    let name = pathMap[segment] || segment;
+    let name = pathMap[segment] ?? segment;
 
     // If it's a UUID or ID, try to get a better name
     if (
@@ -71,6 +70,10 @@ export function BuyerHeader({ className }: BuyerHeaderProps) {
 
     return { name, href };
   });
+
+  // Note: allSegments is prepared for breadcrumb functionality
+  // Remove this comment and use allSegments when implementing breadcrumbs
+  console.log("Breadcrumb segments:", allSegments);
 
   return (
     <header
@@ -118,14 +121,14 @@ export function BuyerHeader({ className }: BuyerHeaderProps) {
                 <Button variant="ghost" size="sm" className="h-8 gap-2 px-2">
                   <Avatar className="h-6 w-6">
                     <AvatarImage
-                      src={session.user.image || ""}
-                      alt={session.user.name || "User"}
+                      src={session.user.image ?? ""}
+                      alt={session.user.name ?? "User"}
                     />
                     <AvatarFallback>
                       {session.user.name
                         ?.split(" ")
                         .map((n) => n[0])
-                        .join("") || "U"}
+                        .join("") ?? "U"}
                     </AvatarFallback>
                   </Avatar>
                   <span className="hidden md:inline-block">
