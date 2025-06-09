@@ -140,11 +140,46 @@ export default function OrdersPage() {
     });
   };
 
+  // Get expiration info for pending orders
+  const getExpirationInfo = (createdAt: string, status: PaymentStatus) => {
+    if (!["PENDING", "PENDING_PAYMENT"].includes(status)) {
+      return null;
+    }
+
+    const now = new Date();
+    const orderDate = new Date(createdAt);
+    const expiresAt = new Date(orderDate.getTime() + 24 * 60 * 60 * 1000); // 24 hours after creation
+    const timeLeft = expiresAt.getTime() - now.getTime();
+
+    if (timeLeft <= 0) {
+      return { expired: true, message: "Expired" };
+    }
+
+    const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+    const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hoursLeft > 0) {
+      return {
+        expired: false,
+        message: `${hoursLeft}h ${minutesLeft}m remaining`,
+        urgent: hoursLeft < 2, // Mark as urgent if less than 2 hours left
+      };
+    } else {
+      return {
+        expired: false,
+        message: `${minutesLeft}m remaining`,
+        urgent: true,
+      };
+    }
+  };
+
   // Get status badge color
   const getStatusBadge = (status: PaymentStatus) => {
     switch (status) {
       case PaymentStatus.PENDING:
         return <Badge className="bg-yellow-500">Menunggu Pembayaran</Badge>;
+      case "PENDING_PAYMENT" as PaymentStatus:
+        return <Badge className="bg-orange-500">Menunggu Konfirmasi</Badge>;
       case PaymentStatus.SUCCESS:
         return <Badge className="bg-green-500">Lunas</Badge>;
       case PaymentStatus.FAILED:
@@ -159,92 +194,110 @@ export default function OrdersPage() {
   };
 
   // Order card component
-  const OrderCard = ({ order }: { order: Order }) => (
-    <Card className="overflow-hidden transition-all hover:shadow-md">
-      <div className="relative h-32 w-full overflow-hidden bg-blue-600">
-        <img
-          src={
-            order.event.image || "https://placehold.co/400x200?text=No+Image"
-          }
-          alt={order.event.title}
-          className="h-full w-full object-cover opacity-30"
-        />
-        <div className="absolute inset-0 flex flex-col justify-center p-4 text-white">
-          <h3 className="mb-1 line-clamp-1 text-lg font-semibold">
-            {order.event.title}
-          </h3>
-          <div className="flex items-center text-sm">
-            <Calendar size={14} className="mr-1.5" />
-            <span>{order.event.date}</span>
-          </div>
-          <div className="flex items-center text-sm">
-            <MapPin size={14} className="mr-1.5" />
-            <span className="line-clamp-1">{order.event.location}</span>
-          </div>
-        </div>
-        <div className="absolute top-2 right-2">
-          {getStatusBadge(order.status)}
-        </div>
-      </div>
-      <CardContent className="p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <div className="text-sm text-gray-500">Nomor Pesanan</div>
-            <div className="font-mono font-medium">{order.orderNumber}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500">Tanggal Pemesanan</div>
-            <div className="text-sm">{formatDate(order.createdAt)}</div>
-          </div>
-        </div>
-        <div className="mb-3">
-          <div className="mb-1 text-sm text-gray-500">Tiket</div>
-          {order.items.map((item) => (
-            <div key={item.id} className="flex justify-between text-sm">
-              <span>
-                {item.ticketType.name} x {item.quantity}
-              </span>
-              <span>{formatPrice(item.subtotal)}</span>
+  const OrderCard = ({ order }: { order: Order }) => {
+    const expirationInfo = getExpirationInfo(order.createdAt, order.status);
+
+    return (
+      <Card className="overflow-hidden transition-all hover:shadow-md">
+        <div className="relative h-32 w-full overflow-hidden bg-blue-600">
+          <img
+            src={
+              order.event.image || "https://placehold.co/400x200?text=No+Image"
+            }
+            alt={order.event.title}
+            className="h-full w-full object-cover opacity-30"
+          />
+          <div className="absolute inset-0 flex flex-col justify-center p-4 text-white">
+            <h3 className="mb-1 line-clamp-1 text-lg font-semibold">
+              {order.event.title}
+            </h3>
+            <div className="flex items-center text-sm">
+              <Calendar size={14} className="mr-1.5" />
+              <span>{order.event.date}</span>
             </div>
-          ))}
+            <div className="flex items-center text-sm">
+              <MapPin size={14} className="mr-1.5" />
+              <span className="line-clamp-1">{order.event.location}</span>
+            </div>
+          </div>
+          <div className="absolute top-2 right-2 flex flex-col gap-1">
+            {getStatusBadge(order.status)}
+            {expirationInfo && (
+              <Badge
+                variant="secondary"
+                className={`text-xs ${
+                  expirationInfo.expired
+                    ? "bg-red-100 text-red-800"
+                    : expirationInfo.urgent
+                      ? "bg-orange-100 text-orange-800"
+                      : "bg-blue-100 text-blue-800"
+                }`}
+              >
+                {expirationInfo.message}
+              </Badge>
+            )}
+          </div>
         </div>
-        <div className="flex justify-between font-medium">
-          <span>Total</span>
-          <span className="text-blue-600">
-            {formatPrice(order.totalAmount)}
-          </span>
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between gap-2 border-t p-4">
-        <Button variant="outline" size="sm" className="flex-1" asChild>
-          <Link href={`/buyer/orders/${order.id}`}>
-            <Receipt size={16} className="mr-2" />
-            Detail
-          </Link>
-        </Button>
-        {order.status === PaymentStatus.PENDING && order.paymentUrl && (
-          <Button size="sm" className="flex-1" asChild>
-            <a
-              href={order.paymentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <CreditCard size={16} className="mr-2" />
-              Bayar
-            </a>
-          </Button>
-        )}
-        {order.status === PaymentStatus.SUCCESS && (
-          <Button size="sm" className="flex-1" asChild>
-            <Link href={`/buyer/tickets?orderId=${order.id}`}>
-              <ExternalLink size={16} className="mr-2" />
-              Lihat Tiket
+        <CardContent className="p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-500">Nomor Pesanan</div>
+              <div className="font-mono font-medium">{order.orderNumber}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Tanggal Pemesanan</div>
+              <div className="text-sm">{formatDate(order.createdAt)}</div>
+            </div>
+          </div>
+          <div className="mb-3">
+            <div className="mb-1 text-sm text-gray-500">Tiket</div>
+            {order.items.map((item) => (
+              <div key={item.id} className="flex justify-between text-sm">
+                <span>
+                  {item.ticketType.name} x {item.quantity}
+                </span>
+                <span>{formatPrice(item.subtotal)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between font-medium">
+            <span>Total</span>
+            <span className="text-blue-600">
+              {formatPrice(order.totalAmount)}
+            </span>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between gap-2 border-t p-4">
+          <Button variant="outline" size="sm" className="flex-1" asChild>
+            <Link href={`/buyer/orders/${order.id}`}>
+              <Receipt size={16} className="mr-2" />
+              Detail
             </Link>
           </Button>
-        )}
-      </CardFooter>
-    </Card>
-  );
+          {order.status === PaymentStatus.PENDING && order.paymentUrl && (
+            <Button size="sm" className="flex-1" asChild>
+              <a
+                href={order.paymentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <CreditCard size={16} className="mr-2" />
+                Bayar
+              </a>
+            </Button>
+          )}
+          {order.status === PaymentStatus.SUCCESS && (
+            <Button size="sm" className="flex-1" asChild>
+              <Link href={`/buyer/tickets?orderId=${order.id}`}>
+                <ExternalLink size={16} className="mr-2" />
+                Lihat Tiket
+              </Link>
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
+    );
+  };
 
   // Loading skeleton
   const OrderCardSkeleton = () => (
@@ -275,6 +328,9 @@ export default function OrdersPage() {
         <TabsList className="mb-6">
           <TabsTrigger value={PaymentStatus.PENDING}>
             Menunggu Pembayaran
+          </TabsTrigger>
+          <TabsTrigger value={"PENDING_PAYMENT" as PaymentStatus}>
+            Menunggu Konfirmasi
           </TabsTrigger>
           <TabsTrigger value={PaymentStatus.SUCCESS}>Lunas</TabsTrigger>
           <TabsTrigger value={PaymentStatus.EXPIRED}>Kadaluarsa</TabsTrigger>

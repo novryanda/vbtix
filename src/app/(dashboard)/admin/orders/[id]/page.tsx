@@ -245,35 +245,11 @@ export default function AdminOrderDetailPage({
               <CardTitle>Aksi</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {order.status === "pending" && (
-                <>
-                  <Button
-                    onClick={() => handleUpdateStatus("confirmed")}
-                    disabled={isProcessing}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                    )}
-                    Konfirmasi Pesanan
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleUpdateStatus("cancelled")}
-                    disabled={isProcessing}
-                    className="w-full"
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <XCircle className="mr-2 h-4 w-4" />
-                    )}
-                    Batalkan Pesanan
-                  </Button>
-                </>
-              )}
+              <p className="text-muted-foreground text-sm">
+                Manual payment confirmation is now handled by the event
+                organizer. Please contact the organizer directly for payment
+                status updates.
+              </p>
             </CardContent>
           </Card>
 

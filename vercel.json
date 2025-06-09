@@ -13,5 +13,11 @@
     "env": {
       "SKIP_ENV_VALIDATION": "true"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/expire-orders",
+      "schedule": "0 * * * *"
+    }
+  ]
 }

@@ -70,6 +70,48 @@ export async function handleInitiateCheckout(params: {
     throw new Error("Only pending orders can be checked out");
   }
 
+  // Handle manual payment
+  if (paymentMethod === "MANUAL_PAYMENT") {
+    // Update order status to PENDING_PAYMENT for manual approval
+    const updatedOrder = await prisma.transaction.update({
+      where: { id: orderId },
+      data: {
+        paymentMethod: "MANUAL_PAYMENT",
+        status: "PENDING_PAYMENT",
+      },
+    });
+
+    // Create payment record for manual payment
+    const payment = await prisma.payment.create({
+      data: {
+        orderId,
+        gateway: "MANUAL",
+        amount: order.amount,
+        status: "PENDING",
+        paymentId: `MANUAL_${orderId}_${Date.now()}`,
+        callbackPayload: {
+          type: "manual_payment",
+          orderId: orderId,
+          createdAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    return {
+      order: updatedOrder,
+      payment,
+      checkoutUrl: undefined,
+      paymentToken: payment.paymentId,
+      paymentInstructions: {
+        type: "manual_payment",
+        message:
+          "Pesanan Anda sedang menunggu konfirmasi pembayaran dari admin. Anda akan menerima email konfirmasi setelah pembayaran disetujui.",
+      },
+      isTestMode: false,
+      gateway: "MANUAL",
+    };
+  }
+
   // Check if Xendit is enabled (has secret key)
   const isXenditEnabled = !!env.XENDIT_SECRET_KEY;
 

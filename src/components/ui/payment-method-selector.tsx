@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { CreditCard, Smartphone, QrCode, Store } from "lucide-react";
+import { CreditCard, Smartphone, QrCode, Store, HandCoins } from "lucide-react";
 
 export interface PaymentMethodDetails {
   bankCode?: string;
@@ -33,6 +33,12 @@ const isTestMode = process.env.NEXT_PUBLIC_XENDIT_ENABLED !== "true";
 
 const paymentMethods = isTestMode
   ? [
+      {
+        id: "MANUAL_PAYMENT",
+        name: "Pembayaran Manual",
+        description: "Pembayaran akan dikonfirmasi manual oleh admin",
+        icon: HandCoins,
+      },
       {
         id: "TEST_BANK_TRANSFER",
         name: "Test Bank Transfer",
@@ -65,6 +71,12 @@ const paymentMethods = isTestMode
       },
     ]
   : [
+      {
+        id: "MANUAL_PAYMENT",
+        name: "Pembayaran Manual",
+        description: "Pembayaran akan dikonfirmasi manual oleh admin",
+        icon: HandCoins,
+      },
       {
         id: "VIRTUAL_ACCOUNT",
         name: "Virtual Account",
@@ -161,6 +173,9 @@ export function PaymentMethodSelector({
       case "TEST_CASH":
         // No additional details needed for test cash
         break;
+      case "MANUAL_PAYMENT":
+        // No additional details needed for manual payment
+        break;
     }
 
     onPaymentMethodSelect(selectedMethod, details);
@@ -184,6 +199,8 @@ export function PaymentMethodSelector({
       case "TEST_EWALLET":
         return !!selectedType;
       case "TEST_CASH":
+        return true;
+      case "MANUAL_PAYMENT":
         return true;
       default:
         return false;

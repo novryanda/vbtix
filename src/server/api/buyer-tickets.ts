@@ -217,84 +217,123 @@ export async function handlePurchaseTickets(params: {
   const eventId = ticketType.event.id;
 
   // Create transaction in a transaction to ensure atomicity
-  const result = await prisma.$transaction(async (tx) => {
-    // Create transaction
-    const transaction = await tx.transaction.create({
-      data: {
-        userId,
-        eventId,
-        amount: totalAmount,
-        currency: "IDR", // Default currency
-        paymentMethod: "PENDING", // Will be updated after payment
-        invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        status: "PENDING",
-        orderItems: {
-          create: [orderItem],
-        },
-      },
-      include: {
-        orderItems: true,
-      },
-    });
-
-    // Create buyer info
-    await tx.buyerInfo.create({
-      data: {
-        transactionId: transaction.id,
-        fullName: buyerInfo.fullName,
-        identityType: buyerInfo.identityType,
-        identityNumber: buyerInfo.identityNumber,
-        email: buyerInfo.email,
-        whatsapp: buyerInfo.whatsapp,
-      },
-    });
-
-    // Create tickets with ticket holders
-    const createdTickets = [];
-
-    for (let i = 0; i < orderItem.quantity; i++) {
-      const ticket = await tx.ticket.create({
-        data: {
-          ticketTypeId: orderItem.ticketTypeId,
-          transactionId: transaction.id,
-          userId,
-          qrCode: generateUniqueCode(),
-          status: TicketStatus.ACTIVE,
-        },
-      });
-
-      // Create ticket holder for this ticket
-      const holder = ticketHolders[i];
-      if (holder) {
-        await tx.ticketHolder.create({
+  try {
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // Create transaction
+        const transaction = await tx.transaction.create({
           data: {
-            ticketId: ticket.id,
-            fullName: holder.fullName,
-            identityType: holder.identityType,
-            identityNumber: holder.identityNumber,
-            email: holder.email,
-            whatsapp: holder.whatsapp,
+            userId,
+            eventId,
+            amount: totalAmount,
+            currency: "IDR", // Default currency
+            paymentMethod: "PENDING", // Will be updated after payment
+            invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            status: "PENDING",
+            orderItems: {
+              create: [orderItem],
+            },
+          },
+          include: {
+            orderItems: true,
           },
         });
-      }
 
-      createdTickets.push(ticket);
+        // Create buyer info
+        await tx.buyerInfo.create({
+          data: {
+            transactionId: transaction.id,
+            fullName: buyerInfo.fullName,
+            identityType: buyerInfo.identityType,
+            identityNumber: buyerInfo.identityNumber,
+            email: buyerInfo.email,
+            whatsapp: buyerInfo.whatsapp,
+          },
+        });
+
+        // Prepare ticket data for batch creation
+        const ticketData = [];
+        const ticketHolderData = [];
+
+        for (let i = 0; i < orderItem.quantity; i++) {
+          const qrCode = generateUniqueCode();
+          const ticketId = `ticket_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 11)}`;
+
+          ticketData.push({
+            id: ticketId,
+            ticketTypeId: orderItem.ticketTypeId,
+            transactionId: transaction.id,
+            userId,
+            qrCode,
+            status: TicketStatus.ACTIVE,
+          });
+
+          // Prepare ticket holder data if exists
+          const holder = ticketHolders[i];
+          if (holder) {
+            ticketHolderData.push({
+              ticketId,
+              fullName: holder.fullName,
+              identityType: holder.identityType,
+              identityNumber: holder.identityNumber,
+              email: holder.email,
+              whatsapp: holder.whatsapp,
+            });
+          }
+        }
+
+        // Batch create tickets
+        const createdTickets = await tx.ticket.createManyAndReturn({
+          data: ticketData,
+        });
+
+        // Batch create ticket holders if any
+        if (ticketHolderData.length > 0) {
+          await tx.ticketHolder.createMany({
+            data: ticketHolderData,
+          });
+        }
+
+        // Update ticket type sold count
+        await tx.ticketType.update({
+          where: { id: orderItem.ticketTypeId },
+          data: {
+            sold: {
+              increment: orderItem.quantity,
+            },
+          },
+        });
+
+        return { transaction, tickets: createdTickets };
+      },
+      {
+        maxWait: 10000, // 10 seconds
+        timeout: 15000, // 15 seconds
+      },
+    );
+
+    return result;
+  } catch (error: any) {
+    console.error("Error purchasing tickets:", error);
+
+    // Handle specific Prisma errors
+    if (error.code === "P2028") {
+      throw new Error(
+        "Transaction timeout - please try again. If the problem persists, the order may have been created successfully.",
+      );
     }
 
-    // Update ticket type sold count
-    await tx.ticketType.update({
-      where: { id: orderItem.ticketTypeId },
-      data: {
-        sold: {
-          increment: orderItem.quantity,
-        },
-      },
-    });
+    if (error.code === "P2002") {
+      throw new Error("A duplicate entry was detected. Please try again.");
+    }
 
-    return { transaction, tickets: createdTickets };
-  });
+    if (error.code === "P2025") {
+      throw new Error("The ticket type or related data was not found.");
+    }
 
-  return result;
+    // Re-throw the original error if it's not a Prisma error
+    throw error;
+  }
 }
 
 /**
@@ -408,96 +447,136 @@ export async function handleBulkPurchaseTickets(params: {
   });
 
   // Create transaction in a transaction to ensure atomicity
-  const result = await prisma.$transaction(async (tx) => {
-    // Create transaction
-    const transaction = await tx.transaction.create({
-      data: {
-        userId,
-        eventId,
-        amount: totalAmount,
-        currency: "IDR",
-        paymentMethod: "PENDING",
-        invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        status: "PENDING",
-        orderItems: {
-          create: orderItems.map((item) => ({
-            ticketTypeId: item.ticketTypeId,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-        },
-      },
-      include: {
-        orderItems: true,
-      },
-    });
-
-    // Create buyer info
-    await tx.buyerInfo.create({
-      data: {
-        transactionId: transaction.id,
-        fullName: buyerInfo.fullName,
-        identityType: buyerInfo.identityType,
-        identityNumber: buyerInfo.identityNumber,
-        email: buyerInfo.email,
-        whatsapp: buyerInfo.whatsapp,
-      },
-    });
-
-    // Create tickets with ticket holders
-    const createdTickets = [];
-    let ticketHolderIndex = 0;
-
-    for (const item of orderItems) {
-      for (let i = 0; i < item.quantity; i++) {
-        const ticket = await tx.ticket.create({
+  try {
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // Create transaction
+        const transaction = await tx.transaction.create({
           data: {
-            ticketTypeId: item.ticketTypeId,
-            transactionId: transaction.id,
             userId,
-            qrCode: generateUniqueCode(),
-            status: TicketStatus.ACTIVE,
+            eventId,
+            amount: totalAmount,
+            currency: "IDR",
+            paymentMethod: "PENDING",
+            invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            status: "PENDING",
+            orderItems: {
+              create: orderItems.map((item) => ({
+                ticketTypeId: item.ticketTypeId,
+                quantity: item.quantity,
+                price: item.price,
+              })),
+            },
+          },
+          include: {
+            orderItems: true,
           },
         });
 
-        // Create ticket holder for this ticket
-        if (ticketHolderIndex < ticketHolders.length) {
-          const holder = ticketHolders[ticketHolderIndex];
-          if (holder) {
-            await tx.ticketHolder.create({
-              data: {
-                ticketId: ticket.id,
-                fullName: holder.fullName,
-                identityType: holder.identityType,
-                identityNumber: holder.identityNumber,
-                email: holder.email,
-                whatsapp: holder.whatsapp,
-              },
+        // Create buyer info
+        await tx.buyerInfo.create({
+          data: {
+            transactionId: transaction.id,
+            fullName: buyerInfo.fullName,
+            identityType: buyerInfo.identityType,
+            identityNumber: buyerInfo.identityNumber,
+            email: buyerInfo.email,
+            whatsapp: buyerInfo.whatsapp,
+          },
+        });
+
+        // Prepare ticket data for batch creation
+        const ticketData = [];
+        const ticketHolderData = [];
+        let ticketHolderIndex = 0;
+
+        for (const item of orderItems) {
+          for (let i = 0; i < item.quantity; i++) {
+            const qrCode = generateUniqueCode();
+            const ticketId = `ticket_${Date.now()}_${ticketHolderIndex}_${Math.random().toString(36).substring(2, 11)}`;
+
+            ticketData.push({
+              id: ticketId,
+              ticketTypeId: item.ticketTypeId,
+              transactionId: transaction.id,
+              userId,
+              qrCode,
+              status: TicketStatus.ACTIVE,
             });
+
+            // Prepare ticket holder data if exists
+            if (ticketHolderIndex < ticketHolders.length) {
+              const holder = ticketHolders[ticketHolderIndex];
+              if (holder) {
+                ticketHolderData.push({
+                  ticketId,
+                  fullName: holder.fullName,
+                  identityType: holder.identityType,
+                  identityNumber: holder.identityNumber,
+                  email: holder.email,
+                  whatsapp: holder.whatsapp,
+                });
+              }
+            }
+            ticketHolderIndex++;
           }
-          ticketHolderIndex++;
         }
 
-        createdTickets.push(ticket);
-      }
+        // Batch create tickets
+        const createdTickets = await tx.ticket.createManyAndReturn({
+          data: ticketData,
+        });
+
+        // Batch create ticket holders if any
+        if (ticketHolderData.length > 0) {
+          await tx.ticketHolder.createMany({
+            data: ticketHolderData,
+          });
+        }
+
+        // Update ticket type sold counts in parallel
+        const updatePromises = orderItems.map((item) =>
+          tx.ticketType.update({
+            where: { id: item.ticketTypeId },
+            data: {
+              sold: {
+                increment: item.quantity,
+              },
+            },
+          }),
+        );
+        await Promise.all(updatePromises);
+
+        return { transaction, tickets: createdTickets };
+      },
+      {
+        maxWait: 10000, // 10 seconds
+        timeout: 15000, // 15 seconds
+      },
+    );
+
+    return result;
+  } catch (error: any) {
+    console.error("Error bulk purchasing tickets:", error);
+
+    // Handle specific Prisma errors
+    if (error.code === "P2028") {
+      throw new Error(
+        "Transaction timeout - please try again. If the problem persists, the order may have been created successfully.",
+      );
     }
 
-    // Update ticket type sold count
-    for (const item of orderItems) {
-      await tx.ticketType.update({
-        where: { id: item.ticketTypeId },
-        data: {
-          sold: {
-            increment: item.quantity,
-          },
-        },
-      });
+    if (error.code === "P2002") {
+      throw new Error("A duplicate entry was detected. Please try again.");
     }
 
-    return { transaction, tickets: createdTickets };
-  });
+    if (error.code === "P2025") {
+      throw new Error("One or more ticket types were not found.");
+    }
 
-  return result;
+    // Re-throw the original error if it's not a Prisma error
+    throw error;
+  }
 }
 
 /**
@@ -590,104 +669,147 @@ export async function handlePurchaseFromReservation(params: {
   const totalAmount = Number(ticketType.price) * reservation.quantity;
 
   // Create transaction in a database transaction to ensure atomicity
-  const result = await prisma.$transaction(async (tx) => {
-    // Create transaction
-    const transaction = await tx.transaction.create({
-      data: {
-        userId: actualUserId,
-        eventId: event.id,
-        amount: totalAmount,
-        currency: "IDR",
-        paymentMethod: "PENDING",
-        invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        status: "PENDING",
-        orderItems: {
-          create: [
-            {
-              ticketTypeId: ticketType.id,
-              quantity: reservation.quantity,
-              price: ticketType.price,
-            },
-          ],
-        },
-      },
-      include: {
-        orderItems: true,
-      },
-    });
-
-    // Create buyer info
-    await tx.buyerInfo.create({
-      data: {
-        transactionId: transaction.id,
-        fullName: buyerInfo.fullName,
-        identityType: buyerInfo.identityType,
-        identityNumber: buyerInfo.identityNumber,
-        email: buyerInfo.email,
-        whatsapp: buyerInfo.whatsapp,
-      },
-    });
-
-    // Create tickets with ticket holders
-    const createdTickets = [];
-
-    for (let i = 0; i < reservation.quantity; i++) {
-      const ticket = await tx.ticket.create({
-        data: {
-          ticketTypeId: ticketType.id,
-          transactionId: transaction.id,
-          userId: actualUserId,
-          qrCode: generateUniqueCode(),
-          status: TicketStatus.ACTIVE,
-        },
-      });
-
-      // Create ticket holder for this ticket
-      const holder = ticketHolders[i];
-      if (holder) {
-        await tx.ticketHolder.create({
+  try {
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // Create transaction
+        const transaction = await tx.transaction.create({
           data: {
-            ticketId: ticket.id,
-            fullName: holder.fullName,
-            identityType: holder.identityType,
-            identityNumber: holder.identityNumber,
-            email: holder.email,
-            whatsapp: holder.whatsapp,
+            userId: actualUserId,
+            eventId: event.id,
+            amount: totalAmount,
+            currency: "IDR",
+            paymentMethod: "PENDING",
+            invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            status: "PENDING",
+            orderItems: {
+              create: [
+                {
+                  ticketTypeId: ticketType.id,
+                  quantity: reservation.quantity,
+                  price: ticketType.price,
+                },
+              ],
+            },
+          },
+          include: {
+            orderItems: true,
           },
         });
-      }
 
-      createdTickets.push(ticket);
+        // Create buyer info
+        await tx.buyerInfo.create({
+          data: {
+            transactionId: transaction.id,
+            fullName: buyerInfo.fullName,
+            identityType: buyerInfo.identityType,
+            identityNumber: buyerInfo.identityNumber,
+            email: buyerInfo.email,
+            whatsapp: buyerInfo.whatsapp,
+          },
+        });
+
+        // Prepare ticket data for batch creation
+        const ticketData = [];
+        const ticketHolderData = [];
+
+        for (let i = 0; i < reservation.quantity; i++) {
+          const qrCode = generateUniqueCode();
+          const ticketId = `ticket_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 11)}`;
+
+          ticketData.push({
+            id: ticketId,
+            ticketTypeId: ticketType.id,
+            transactionId: transaction.id,
+            userId: actualUserId,
+            qrCode,
+            status: TicketStatus.ACTIVE,
+          });
+
+          // Prepare ticket holder data if exists
+          const holder = ticketHolders[i];
+          if (holder) {
+            ticketHolderData.push({
+              ticketId,
+              fullName: holder.fullName,
+              identityType: holder.identityType,
+              identityNumber: holder.identityNumber,
+              email: holder.email,
+              whatsapp: holder.whatsapp,
+            });
+          }
+        }
+
+        // Batch create tickets
+        const createdTickets = await tx.ticket.createManyAndReturn({
+          data: ticketData,
+        });
+
+        // Batch create ticket holders if any
+        if (ticketHolderData.length > 0) {
+          await tx.ticketHolder.createMany({
+            data: ticketHolderData,
+          });
+        }
+
+        // Update ticket type counts and reservation status in parallel
+        await Promise.all([
+          // Update ticket type sold count and decrease reserved count
+          tx.ticketType.update({
+            where: { id: ticketType.id },
+            data: {
+              sold: {
+                increment: reservation.quantity,
+              },
+              reserved: {
+                decrement: reservation.quantity,
+              },
+            },
+          }),
+          // Convert reservation to purchased status
+          tx.ticketReservation.update({
+            where: { id: reservationId },
+            data: {
+              status: "CONVERTED",
+              metadata: {
+                ...((reservation.metadata as any) || {}),
+                transactionId: transaction.id,
+                convertedAt: new Date().toISOString(),
+              },
+            },
+          }),
+        ]);
+
+        return { transaction, tickets: createdTickets, reservation };
+      },
+      {
+        maxWait: 10000, // 10 seconds
+        timeout: 15000, // 15 seconds
+      },
+    );
+
+    return result;
+  } catch (error: any) {
+    console.error("Error purchasing from reservation:", error);
+
+    // Handle specific Prisma errors
+    if (error.code === "P2028") {
+      throw new Error(
+        "Transaction timeout - please try again. If the problem persists, the order may have been created successfully.",
+      );
     }
 
-    // Update ticket type sold count and decrease reserved count
-    await tx.ticketType.update({
-      where: { id: ticketType.id },
-      data: {
-        sold: {
-          increment: reservation.quantity,
-        },
-        reserved: {
-          decrement: reservation.quantity,
-        },
-      },
-    });
+    if (error.code === "P2002") {
+      throw new Error("A duplicate entry was detected. Please try again.");
+    }
 
-    // Convert reservation to purchased status
-    await tx.ticketReservation.update({
-      where: { id: reservationId },
-      data: {
-        status: "CONVERTED",
-        metadata: {
-          ...((reservation.metadata as any) || {}),
-          transactionId: transaction.id,
-          convertedAt: new Date().toISOString(),
-        },
-      },
-    });
+    if (error.code === "P2025") {
+      throw new Error(
+        "The reservation or related data was not found. It may have been processed by another request.",
+      );
+    }
 
-    return { transaction, tickets: createdTickets, reservation };
-  });
-
-  return result;
+    // Re-throw the original error if it's not a Prisma error
+    throw error;
+  }
 }

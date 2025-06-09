@@ -1,6 +1,7 @@
 import { prisma } from "~/server/db";
 import { organizerService } from "~/server/services/organizer.service";
 import { PaymentStatus } from "@prisma/client";
+import { emailService } from "~/lib/email-service";
 
 /**
  * Get orders for an organizer's events
@@ -260,6 +261,220 @@ export async function handleGetOrganizerOrderStats(params: {
     failedOrders,
     totalRevenue: revenue._sum.amount || 0,
   };
+}
+
+/**
+ * Update order status (for manual payment approval by organizer)
+ */
+export async function handleUpdateOrganizerOrderStatus(params: {
+  userId: string;
+  orderId: string;
+  status: PaymentStatus;
+  notes?: string;
+}) {
+  const { userId, orderId, status, notes } = params;
+  // Check if user is an organizer
+  const organizer = await organizerService.findByUserId(userId);
+  if (!organizer) {
+    throw new Error("User is not an organizer");
+  }
+
+  // Get order with all related data and verify it belongs to this organizer
+  const order = await prisma.transaction.findFirst({
+    where: {
+      id: orderId,
+      event: {
+        organizerId: organizer.id,
+      },
+    },
+    include: {
+      user: true,
+      event: {
+        include: {
+          organizer: true,
+        },
+      },
+      orderItems: {
+        include: {
+          ticketType: true,
+        },
+      },
+      tickets: {
+        include: {
+          ticketHolder: true,
+          ticketType: {
+            include: {
+              event: true,
+            },
+          },
+        },
+      },
+      buyerInfo: true,
+      payments: true,
+    },
+  });
+
+  if (!order) {
+    throw new Error(
+      "Order not found or you don't have permission to update it",
+    );
+  }
+
+  // Update order status in a transaction
+  const result = await prisma.$transaction(
+    async (tx) => {
+      // Update order status
+      const updatedOrder = await tx.transaction.update({
+        where: { id: orderId },
+        data: {
+          status,
+          updatedAt: new Date(),
+        },
+      });
+
+      // If status is SUCCESS (approved), update tickets and send email
+      if (status === "SUCCESS") {
+        // Update ticket statuses to ACTIVE
+        await tx.ticket.updateMany({
+          where: { transactionId: orderId },
+          data: {
+            status: "ACTIVE",
+            updatedAt: new Date(),
+          },
+        });
+
+        // Update payment status if exists
+        if (order.payments.length > 0) {
+          await tx.payment.updateMany({
+            where: { orderId },
+            data: {
+              status: "SUCCESS",
+              receivedAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+        }
+
+        // Mark tickets as delivered (since we're sending via email)
+        await tx.ticket.updateMany({
+          where: { transactionId: orderId },
+          data: {
+            delivered: true,
+            deliveredAt: new Date(),
+          },
+        });
+      }
+
+      // If status is FAILED (rejected), update tickets to CANCELLED
+      if (status === "FAILED") {
+        await tx.ticket.updateMany({
+          where: { transactionId: orderId },
+          data: {
+            status: "CANCELLED",
+            updatedAt: new Date(),
+          },
+        });
+
+        // Restore ticket type quantities
+        for (const item of order.orderItems) {
+          await tx.ticketType.update({
+            where: { id: item.ticketTypeId },
+            data: {
+              sold: {
+                decrement: item.quantity,
+              },
+            },
+          });
+        }
+
+        // Update payment status if exists
+        if (order.payments.length > 0) {
+          await tx.payment.updateMany({
+            where: { orderId },
+            data: {
+              status: "FAILED",
+              updatedAt: new Date(),
+            },
+          });
+        }
+      }
+
+      return updatedOrder;
+    },
+    {
+      maxWait: 10000, // 10 seconds
+      timeout: 15000, // 15 seconds
+    },
+  );
+
+  // Send email notification if order is approved
+  if (status === "SUCCESS") {
+    try {
+      // Get the email to send to (buyer info email or user email)
+      const emailTo = order.buyerInfo?.email || order.user.email;
+
+      if (emailTo) {
+        // Format event date and time
+        const eventDate = new Date(order.event.startDate).toLocaleDateString(
+          "id-ID",
+          {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          },
+        );
+
+        const eventTime = order.event.startTime || "Waktu akan diumumkan";
+        const customerName =
+          order.buyerInfo?.fullName || order.user.name || "Customer";
+
+        // Format payment date
+        const paymentDate =
+          new Date().toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }) + " WIB";
+
+        await emailService.sendTicketDelivery({
+          to: emailTo,
+          customerName,
+          event: {
+            title: order.event.title,
+            date: eventDate,
+            time: eventTime,
+            location: order.event.venue,
+            address: `${order.event.address}, ${order.event.city}, ${order.event.province}`,
+            image: order.event.image || undefined,
+          },
+          order: {
+            invoiceNumber: order.invoiceNumber,
+            totalAmount: Number(order.amount),
+            paymentDate,
+          },
+          tickets: order.tickets.map((ticket) => ({
+            id: ticket.id,
+            ticketNumber: ticket.ticketNumber,
+            ticketType: ticket.ticketType.name,
+            holderName: ticket.ticketHolder?.fullName || customerName,
+            qrCode: ticket.qrCode || undefined,
+          })),
+        });
+
+        console.log(
+          `✅ Ticket delivery email sent to ${emailTo} for order ${order.invoiceNumber}`,
+        );
+      }
+    } catch (emailError) {
+      console.error("Failed to send ticket email:", emailError);
+      // Don't throw error here, order update should still succeed
+    }
+  }
+
+  return result;
 }
 
 /**

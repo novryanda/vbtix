@@ -181,7 +181,14 @@ export default function OrderDetailPage({
       }
 
       // Handle different payment responses
-      if (result.data.checkoutUrl) {
+      if (result.data.gateway === "MANUAL") {
+        // For manual payment, show success message and redirect to pending page
+        toast.success("Pesanan berhasil dibuat!", {
+          description:
+            "Pesanan Anda sedang menunggu konfirmasi pembayaran dari admin.",
+        });
+        router.push(`/orders/${orderId}/pending-payment`);
+      } else if (result.data.checkoutUrl) {
         // Redirect to external payment gateway (Xendit)
         toast.info("Redirecting to payment gateway...", {
           description: "You will be redirected to complete your payment.",
@@ -280,7 +287,9 @@ export default function OrderDetailPage({
                 <div className="rounded-full bg-yellow-100 px-3 py-1 text-sm text-yellow-800">
                   {orderData.status === "PENDING"
                     ? "Menunggu Pembayaran"
-                    : orderData.status}
+                    : orderData.status === "PENDING_PAYMENT"
+                      ? "Menunggu Konfirmasi"
+                      : orderData.status}
                 </div>
               </div>
             </CardHeader>
