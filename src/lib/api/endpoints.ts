@@ -17,7 +17,6 @@ export const ADMIN_ENDPOINTS = {
   DASHBOARD: `${API_BASE}/admin/dashboard`,
   DASHBOARD_ORGANIZERS: `${API_BASE}/admin/dashboard/organizers`,
   DASHBOARD_EVENTS: `${API_BASE}/admin/dashboard/events`,
-
   // Events
   EVENTS: `${API_BASE}/admin/events`,
   EVENT_DETAIL: (id: string) => `${API_BASE}/admin/events/${id}`,
@@ -54,6 +53,8 @@ export const ORGANIZER_ENDPOINTS = {
     `${API_BASE}/organizer/${organizerId}/events/${id}`,
   DELETE_EVENT: (organizerId: string, id: string) =>
     `${API_BASE}/organizer/${organizerId}/events/${id}`,
+  SUBMIT_EVENT_FOR_REVIEW: (organizerId: string, id: string) =>
+    `${API_BASE}/organizer/${organizerId}/events/${id}/submit`,
 
   // Event Tickets
   EVENT_TICKETS: (organizerId: string, eventId: string) =>

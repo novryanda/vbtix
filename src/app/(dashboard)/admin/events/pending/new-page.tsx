@@ -16,8 +16,6 @@ export default function PendingEventsPage() {
   const { updateStatus } = useUpdateEventStatus();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-
-
   const handleApprove = async (eventId: string, feedback?: string) => {
     try {
       await updateStatus(eventId, "PUBLISHED", feedback);
@@ -130,21 +128,7 @@ export default function PendingEventsPage() {
         )}
 
         {/* Content */}
-        {isLoading ? (
-          <Card>
-            <CardContent className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-blue-500" />
-                <h3 className="mb-2 text-lg font-semibold">
-                  Memuat data...
-                </h3>
-                <p className="text-muted-foreground">
-                  Sedang mengambil data event pending.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : !pendingEvents || pendingEvents.length === 0 ? (
+        {!pendingEvents || pendingEvents.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center py-12">
               <div className="text-center">

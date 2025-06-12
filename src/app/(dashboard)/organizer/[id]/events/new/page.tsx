@@ -24,6 +24,7 @@ import {
   Save,
   ImageIcon,
   ShieldAlert,
+  AlertTriangle,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -81,17 +82,8 @@ export default function CreateEventPage() {
   const { settings, isLoading: isLoadingSettings } =
     useOrganizerSettings(organizerId);
 
-  // Check if organizer is verified and redirect if not
-  useEffect(() => {
-    if (settings && !settings.verified) {
-      // Redirect to verification page after a short delay
-      const timer = setTimeout(() => {
-        router.push(`/organizer/${organizerId}/verification`);
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [settings, organizerId, router]);
+  // Note: Removed verification redirect - unverified organizers can create events
+  // but they will require admin approval before publication
 
   // State for image uploads
   const [isUploading, setIsUploading] = useState(false);
@@ -255,24 +247,35 @@ export default function CreateEventPage() {
             <CardHeader>
               <CardTitle>Event Details</CardTitle>
               <CardDescription>
-                Fill in the details for your new event
+                Fill in the details for your new event. All events require admin approval before publication.
               </CardDescription>
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-amber-800">Approval Required</h4>
+                    <p className="text-sm text-amber-700 mt-1">
+                      Your event will be saved as a draft and must be submitted for admin approval before it becomes visible to the public.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {settings && !settings.verified && (
-                <Alert className="mb-6 border-red-200 bg-red-50">
-                  <ShieldAlert className="h-4 w-4 text-red-600" />
-                  <AlertTitle className="text-red-800">
+                <Alert className="mb-6 border-blue-200 bg-blue-50">
+                  <ShieldAlert className="h-4 w-4 text-blue-600" />
+                  <AlertTitle className="text-blue-800">
                     Account Not Verified
                   </AlertTitle>
-                  <AlertDescription className="text-red-700">
+                  <AlertDescription className="text-blue-700">
                     <p className="mb-2">
-                      Your organizer account is not verified. You will be
-                      redirected to the verification page.
+                      Your organizer account is not verified. You can still create events,
+                      but they will require admin approval before publication.
                     </p>
                     <Button
                       variant="outline"
-                      className="mt-2 border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      className="mt-2 border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                       onClick={() =>
                         router.push(`/organizer/${organizerId}/verification`)
                       }
@@ -567,14 +570,8 @@ export default function CreateEventPage() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={
-                        isSubmitting || (settings && !settings.verified)
-                      }
-                      title={
-                        settings && !settings.verified
-                          ? "Your account must be verified to create events"
-                          : ""
-                      }
+                      disabled={isSubmitting}
+                      title=""
                     >
                       {isSubmitting ? (
                         <>
@@ -586,7 +583,7 @@ export default function CreateEventPage() {
                       ) : (
                         <>
                           <Save className="mr-2 h-4 w-4" />
-                          Create Event
+                          Save as Draft
                         </>
                       )}
                     </Button>

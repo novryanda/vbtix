@@ -12,11 +12,14 @@ import {
   SettingsIcon,
   UsersIcon,
   PartyPopperIcon,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 
 import { NavMain } from "~/components/dashboard/admin/nav-main";
 import { NavSecondary } from "~/components/dashboard/admin/nav-secondary";
 import { NavUser } from "~/components/dashboard/admin/nav-user";
+import { useAdminSidebarStats } from "~/lib/api/hooks/admin-sidebar";
 import {
   Sidebar,
   SidebarContent,
@@ -32,20 +35,25 @@ const data = {
     name: "shadcn",
     email: "m@example.com",
     avatar: "/avatars/shadcn.jpg",
-  },
-  navMain: [
+  },  navMain: [
+    {
+      title: "Event Approval",
+      url: "/admin/approval",
+      icon: CheckCircle2,
+      badge: "pending", // Will be replaced with actual count
+    },
+    {
+      title: "Event Management",
+      url: "/admin/events",
+      icon: PartyPopperIcon,
+    },
     {
       title: "Dashboard",
       url: "/admin/dashboard",
       icon: LayoutDashboardIcon,
     },
     {
-      title: "Events",
-      url: "/admin/events",
-      icon: PartyPopperIcon,
-    },
-    {
-      title: "Organizer",
+      title: "Organizers",
       url: "/admin/organizers",
       icon: UsersIcon,
     },
@@ -109,12 +117,27 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
+  const { pendingEventsCount, isLoading } = useAdminSidebarStats();
 
   // Gunakan data user dari session jika tersedia
   const userData = {
     name: session?.user?.name || "Guest",
     email: session?.user?.email || "guest@example.com",
     avatar: session?.user?.image || "/avatars/default.jpg",
+  };
+
+  // Update navigation data with pending count
+  const navigationData = {
+    ...data,
+    navMain: data.navMain.map(item => {
+      if (item.title === "Event Approval") {
+        return {
+          ...item,
+          badge: isLoading ? "..." : pendingEventsCount > 0 ? pendingEventsCount : undefined,
+        };
+      }
+      return item;
+    }),
   };
 
   return (
@@ -151,8 +174,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={navigationData.navMain} />
+        <NavSecondary items={navigationData.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={userData} />

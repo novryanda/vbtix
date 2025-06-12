@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleReviewEvent } from "~/server/api/events";
 import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
-import { eventApprovalSchema } from "~/lib/validations/event.schema";
+import {
+  handleApproveEvent,
+  handleRejectEvent,
+} from "~/server/api/admin-events";
+import { z } from "zod";
+
+// Validation schemas
+const approvalSchema = z.object({
+  action: z.enum(["approve", "reject"]),
+  notes: z.string().optional(),
+});
 
 /**
- * PUT /api/admin/events/[id]/status
- * Approve or reject an event
+ * POST /api/admin/events/[eventid]/approval
+ * Approve or reject an event with simplified workflow
  */
-export async function PUT(
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ eventid: string }> },
 ) {
@@ -43,23 +52,31 @@ export async function PUT(
     const body = await request.json();
 
     try {
-      // Validate input using Zod schema
-      const validatedData = eventApprovalSchema.parse({
-        id: eventid,
-        ...body,
-      });
+      // Validate input
+      const { action, notes } = approvalSchema.parse(body);
 
-      // Update event status
-      const updatedEvent = await handleReviewEvent(
-        validatedData.id,
-        validatedData.status,
-        validatedData.notes,
-      );
+      let result;
+      if (action === "approve") {
+        result = await handleApproveEvent(eventid, session.user.id, notes);
+      } else {
+        // For rejection, notes should be required
+        if (!notes?.trim()) {
+          return NextResponse.json(
+            { success: false, error: "Notes are required for rejection" },
+            { status: 400 },
+          );
+        }
+        result = await handleRejectEvent(eventid, session.user.id, notes);
+      }
 
       return NextResponse.json({
         success: true,
-        data: updatedEvent,
-      });    } catch (validationError) {
+        data: result,
+        message: action === "approve" 
+          ? "Event berhasil disetujui" 
+          : "Event berhasil ditolak",
+      });
+    } catch (validationError) {
       return NextResponse.json(
         { success: false, error: "Validation error", details: validationError },
         { status: 400 },
@@ -67,11 +84,11 @@ export async function PUT(
     }
   } catch (error: any) {
     const { eventid } = await params;
-    console.error(`Error reviewing event ${eventid}:`, error);
+    console.error(`Error processing event approval ${eventid}:`, error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to review event",
+        error: error.message || "Failed to process event approval",
       },
       {
         status:
