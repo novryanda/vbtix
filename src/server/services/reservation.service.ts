@@ -81,7 +81,7 @@ export const reservationService = {
       throw new Error("You already have a reservation for this ticket type");
     }
 
-    // Create the reservation (defaults to PENDING status - user is in checkout)
+    // Create the reservation (defaults to ACTIVE status - user is in checkout)
     const reservation = await prisma.ticketReservation.create({
       data: {
         sessionId,
@@ -151,7 +151,7 @@ export const reservationService = {
   },
 
   /**
-   * Get active reservations for a session (includes PENDING and ACTIVE)
+   * Get active reservations for a session (only ACTIVE reservations)
    */
   async getActiveReservations(params: { sessionId: string }) {
     const { sessionId } = params;
@@ -162,7 +162,7 @@ export const reservationService = {
 
     return await prisma.ticketReservation.findMany({
       where: {
-        status: { in: ["PENDING", "ACTIVE"] },
+        status: "ACTIVE",
         expiresAt: {
           gt: new Date(),
         },
@@ -208,8 +208,8 @@ export const reservationService = {
       throw new Error("You don't have permission to cancel this reservation");
     }
 
-    if (!["PENDING", "ACTIVE"].includes(reservation.status)) {
-      throw new Error("Reservation cannot be cancelled");
+    if (reservation.status !== "ACTIVE") {
+      throw new Error("Only active reservations can be cancelled");
     }
 
     // Update reservation status and release reserved tickets
@@ -253,8 +253,8 @@ export const reservationService = {
       throw new Error("You don't have permission to delete this reservation");
     }
 
-    if (!["PENDING", "ACTIVE"].includes(reservation.status)) {
-      throw new Error("Only pending or active reservations can be deleted");
+    if (reservation.status !== "ACTIVE") {
+      throw new Error("Only active reservations can be deleted");
     }
 
     // Delete reservation and release reserved tickets
@@ -286,10 +286,10 @@ export const reservationService = {
       throw new Error("Session ID is required");
     }
 
-    // Build where clause - only cleanup PENDING reservations (user left checkout)
+    // Build where clause - only cleanup ACTIVE reservations (user left checkout)
     const whereClause: any = {
       sessionId,
-      status: "PENDING",
+      status: "ACTIVE",
     };
 
     // If specific reservation IDs are provided, filter by them
@@ -338,47 +338,7 @@ export const reservationService = {
     };
   },
 
-  /**
-   * Activate reservation when user proceeds to payment
-   */
-  async activateReservation(id: string, params: { sessionId: string }) {
-    const { sessionId } = params;
 
-    const reservation = await prisma.ticketReservation.findUnique({
-      where: { id },
-    });
-
-    if (!reservation) {
-      throw new Error("Reservation not found");
-    }
-
-    // Check ownership
-    if (reservation.sessionId !== sessionId) {
-      throw new Error("You don't have permission to activate this reservation");
-    }
-
-    if (reservation.status !== "PENDING") {
-      throw new Error("Only pending reservations can be activated");
-    }
-
-    if (reservation.expiresAt < new Date()) {
-      throw new Error("Reservation has expired");
-    }
-
-    // Update reservation status to ACTIVE
-    const updatedReservation = await prisma.ticketReservation.update({
-      where: { id },
-      data: {
-        status: "ACTIVE",
-        metadata: {
-          ...((reservation.metadata as any) || {}),
-          activatedAt: new Date().toISOString(),
-        },
-      },
-    });
-
-    return updatedReservation;
-  },
 
   /**
    * Convert reservation to purchase (used during checkout)
@@ -423,10 +383,10 @@ export const reservationService = {
    * Clean up expired reservations (delete them permanently)
    */
   async cleanupExpiredReservations() {
-    // Find expired reservations (both PENDING and ACTIVE)
+    // Find expired reservations (only ACTIVE ones can expire)
     const expiredReservations = await prisma.ticketReservation.findMany({
       where: {
-        status: { in: ["PENDING", "ACTIVE"] },
+        status: "ACTIVE",
         expiresAt: {
           lt: new Date(),
         },
@@ -477,11 +437,11 @@ export const reservationService = {
       throw new Error("Ticket type not found");
     }
 
-    // Calculate active reservations (both PENDING and ACTIVE)
+    // Calculate active reservations (only ACTIVE reservations count)
     const activeReservations = await prisma.ticketReservation.aggregate({
       where: {
         ticketTypeId,
-        status: { in: ["PENDING", "ACTIVE"] },
+        status: "ACTIVE",
         expiresAt: {
           gt: new Date(),
         },

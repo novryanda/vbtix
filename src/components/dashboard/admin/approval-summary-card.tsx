@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { MagicCard } from "~/components/ui/magic-card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Clock, CheckCircle2, XCircle, TrendingUp, ArrowRight } from "lucide-react";
@@ -65,60 +65,63 @@ export function ApprovalSummaryCard({
   // Error state
   if (error) {
     return (
-      <Card className="border-red-200 bg-gradient-to-r from-red-50 to-pink-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-800">
-            <XCircle className="h-5 w-5" />
-            Error Loading Data
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-4">
-            <p className="text-sm text-red-600 mb-3">
-              Gagal memuat statistik approval
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.location.reload()}
-              className="border-red-300 text-red-700 hover:bg-red-50"
-            >
-              Coba Lagi
-            </Button>
+      <MagicCard 
+        className="p-6 bg-gradient-to-br from-red-50/90 to-pink-50/90 backdrop-blur-sm border-red-200/50"
+        gradientColor="rgba(239, 68, 68, 0.1)"
+      >
+        <div className="text-center py-4">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <XCircle className="h-5 w-5 text-red-600" />
+            <h3 className="font-semibold text-red-800">Error Loading Data</h3>
           </div>
-        </CardContent>
-      </Card>
+          <p className="text-sm text-red-600 mb-3">
+            Gagal memuat statistik approval
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.reload()}
+            className="border-red-300 text-red-700 hover:bg-red-50"
+          >
+            Coba Lagi
+          </Button>
+        </div>
+      </MagicCard>
     );
   }
+
   if (isLoading) {
     return (
-      <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-800">
-            <Clock className="h-5 w-5 animate-pulse" />
-            Approval Dashboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <MagicCard 
+        className="p-6 bg-gradient-to-br from-amber-50/90 to-orange-50/90 backdrop-blur-sm border-amber-200/50"
+        gradientColor="rgba(245, 158, 11, 0.1)"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 animate-pulse text-amber-600" />
+            <h3 className="text-lg font-semibold text-amber-800">Approval Dashboard</h3>
+          </div>
           <div className="animate-pulse space-y-3">
             <div className="h-4 bg-amber-200 rounded w-3/4"></div>
             <div className="h-4 bg-amber-200 rounded w-1/2"></div>
             <div className="h-8 bg-amber-200 rounded w-full"></div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </MagicCard>
     );
   }
 
   return (
-    <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-amber-800">
-          <Clock className="h-5 w-5" />
-          Approval Dashboard
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <MagicCard 
+      className="p-6 bg-gradient-to-br from-amber-50/90 to-orange-50/90 backdrop-blur-sm border-amber-200/50"
+      gradientColor="rgba(245, 158, 11, 0.1)"
+    >
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Clock className="h-5 w-5 text-amber-600" />
+          <h3 className="text-lg font-semibold text-amber-800">Approval Dashboard</h3>
+        </div>
+
         {/* Pending Events Alert */}
         {pendingCount > 0 && (
           <div className="rounded-lg bg-amber-100 p-3 border border-amber-200">
@@ -208,7 +211,7 @@ export function ApprovalSummaryCard({
         </div>
 
         {/* Action Button */}
-        <Button asChild className="w-full bg-amber-600 hover:bg-amber-700">
+        <Button asChild className="w-full bg-amber-600 hover:bg-amber-700 transition-colors">
           <Link href="/admin/approval">
             <CheckCircle2 className="mr-2 h-4 w-4" />
             Review Pengajuan Event
@@ -227,7 +230,7 @@ export function ApprovalSummaryCard({
             </p>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </MagicCard>
   );
 }

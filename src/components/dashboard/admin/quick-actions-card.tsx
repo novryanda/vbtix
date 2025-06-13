@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { MagicCard } from "~/components/ui/magic-card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { 
@@ -31,36 +31,41 @@ export function QuickActionsCard({
 }: QuickActionsProps) {
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 animate-pulse" />
-            Quick Actions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <MagicCard 
+        className="p-6 bg-gradient-to-br from-white/90 to-gray-50/90 backdrop-blur-sm border-gray-200/50"
+        gradientColor="rgba(59, 130, 246, 0.1)"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 animate-pulse text-orange-600" />
+            <h3 className="text-lg font-semibold">Quick Actions</h3>
+          </div>
           <div className="animate-pulse space-y-3">
             <div className="h-4 bg-gray-200 rounded w-3/4"></div>
             <div className="h-8 bg-gray-200 rounded w-full"></div>
             <div className="h-8 bg-gray-200 rounded w-full"></div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </MagicCard>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
-          Quick Actions
-        </CardTitle>
-        <CardDescription>
-          Aksi cepat untuk manajemen admin
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <MagicCard 
+      className="p-6 bg-gradient-to-br from-white/90 to-gray-50/90 backdrop-blur-sm border-gray-200/50"
+      gradientColor="rgba(59, 130, 246, 0.1)"
+    >
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-orange-600" />
+            <h3 className="text-lg font-semibold">Quick Actions</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Aksi cepat untuk manajemen admin
+          </p>
+        </div>
+
         {/* Statistics Overview */}
         <div className="grid grid-cols-3 gap-3 text-center">
           <div className="space-y-1">
@@ -72,10 +77,10 @@ export function QuickActionsCard({
           </div>
           <div className="space-y-1">
             <div className="flex items-center justify-center gap-1">
-              <Calendar className="h-3 w-3 text-blue-600" />
+              <Calendar className="h-3 w-3 text-orange-600" />
               <span className="text-xs text-muted-foreground">Events</span>
             </div>
-            <div className="text-lg font-bold text-blue-600">{totalEvents}</div>
+            <div className="text-lg font-bold text-orange-600">{totalEvents}</div>
           </div>
           <div className="space-y-1">
             <div className="flex items-center justify-center gap-1">
@@ -88,28 +93,28 @@ export function QuickActionsCard({
 
         {/* Quick Action Buttons */}
         <div className="space-y-2">
-          <Button asChild variant="outline" className="w-full justify-start">
+          <Button asChild variant="outline" className="w-full justify-start hover:bg-blue-50 hover:border-blue-200 transition-colors">
             <Link href="/admin/approval?status=PENDING_REVIEW">
               <Filter className="mr-2 h-4 w-4" />
               Filter Pending Events
             </Link>
           </Button>
 
-          <Button asChild variant="outline" className="w-full justify-start">
+          <Button asChild variant="outline" className="w-full justify-start hover:bg-green-50 hover:border-green-200 transition-colors">
             <Link href="/admin/events?status=PUBLISHED">
               <CheckCircle2 className="mr-2 h-4 w-4" />
               View Published Events
             </Link>
           </Button>
 
-          <Button asChild variant="outline" className="w-full justify-start">
+          <Button asChild variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-200 transition-colors">
             <Link href="/admin/organizers">
               <Users className="mr-2 h-4 w-4" />
               Manage Organizers
             </Link>
           </Button>
 
-          <Button asChild variant="outline" className="w-full justify-start">
+          <Button asChild variant="outline" className="w-full justify-start hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
             <Link href="/admin/dashboard">
               <TrendingUp className="mr-2 h-4 w-4" />
               View Analytics
@@ -145,7 +150,7 @@ export function QuickActionsCard({
             </p>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </MagicCard>
   );
 }

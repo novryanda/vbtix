@@ -104,6 +104,18 @@ export const ORGANIZER_ENDPOINTS = {
   // Verification
   VERIFICATION: (organizerId: string) =>
     `${API_BASE}/organizer/${organizerId}/verification`,
+
+  // Sold Tickets Management
+  SOLD_TICKETS: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/sold-tickets`,
+  SOLD_TICKETS_STATS: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/sold-tickets/stats`,
+  SOLD_TICKET_DETAIL: (organizerId: string, ticketId: string) =>
+    `${API_BASE}/organizer/${organizerId}/sold-tickets/${ticketId}`,
+  SOLD_TICKET_CHECK_IN: (organizerId: string, ticketId: string) =>
+    `${API_BASE}/organizer/${organizerId}/sold-tickets/${ticketId}/check-in`,
+  SOLD_TICKETS_EXPORT: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/sold-tickets/export`,
 };
 
 // Public endpoints (formerly buyer endpoints)

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { ArrowLeft, Save, AlertTriangle, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { MagicCard, MagicInput, MagicTextarea } from "~/components/ui/magic-card";
 
 export default function AdminCreateEventPage() {
   const router = useRouter();
@@ -109,66 +110,67 @@ export default function AdminCreateEventPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <Label htmlFor="title">Judul Event *</Label>
-                      <Input
-                        id="title"
-                        name="title"
-                        value={formData.title}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Masukkan judul event"
-                      />
-                    </div>
+                <MagicCard className="p-6 bg-gradient-to-br from-card/90 to-muted/20 backdrop-blur-sm border-border/50">
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <Label htmlFor="title">Judul Event *</Label>
+                        <MagicInput
+                          id="title"
+                          name="title"
+                          value={formData.title}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="Masukkan judul event"
+                        />
+                      </div>
 
-                    <div className="md:col-span-2">
-                      <Label htmlFor="description">Deskripsi</Label>
-                      <Textarea
-                        id="description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        placeholder="Deskripsi event"
-                        rows={3}
-                      />
-                    </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="description">Deskripsi</Label>
+                        <MagicTextarea
+                          id="description"
+                          name="description"
+                          value={formData.description}
+                          onChange={handleInputChange}
+                          placeholder="Deskripsi event"
+                          rows={3}
+                        />
+                      </div>
 
-                    <div>
-                      <Label htmlFor="venue">Venue *</Label>
-                      <Input
-                        id="venue"
-                        name="venue"
-                        value={formData.venue}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Nama venue"
-                      />
-                    </div>
+                      <div>
+                        <Label htmlFor="venue">Venue *</Label>
+                        <MagicInput
+                          id="venue"
+                          name="venue"
+                          value={formData.venue}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="Nama venue"
+                        />
+                      </div>
 
-                    <div>
-                      <Label htmlFor="city">Kota</Label>
-                      <Input
-                        id="city"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        placeholder="Kota"
-                      />
-                    </div>
+                      <div>
+                        <Label htmlFor="city">Kota</Label>
+                        <MagicInput
+                          id="city"
+                          name="city"
+                          value={formData.city}
+                          onChange={handleInputChange}
+                          placeholder="Kota"
+                        />
+                      </div>
 
-                    <div>
-                      <Label htmlFor="province">Provinsi *</Label>
-                      <Input
-                        id="province"
-                        name="province"
-                        value={formData.province}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Provinsi"
-                      />
-                    </div>
+                      <div>
+                        <Label htmlFor="province">Provinsi *</Label>
+                        <MagicInput
+                          id="province"
+                          name="province"
+                          value={formData.province}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="Provinsi"
+                        />
+                      </div>
 
                     <div>
                       <Label htmlFor="category">Kategori</Label>
@@ -187,49 +189,50 @@ export default function AdminCreateEventPage() {
                       </Select>
                     </div>
 
-                    <div>
-                      <Label htmlFor="startDate">Tanggal Mulai *</Label>
-                      <Input
-                        id="startDate"
-                        name="startDate"
-                        type="datetime-local"
-                        value={formData.startDate}
-                        onChange={handleInputChange}
-                        required
-                      />
+                      <div>
+                        <Label htmlFor="startDate">Tanggal Mulai *</Label>
+                        <MagicInput
+                          id="startDate"
+                          name="startDate"
+                          type="datetime-local"
+                          value={formData.startDate}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="endDate">Tanggal Selesai *</Label>
+                        <MagicInput
+                          id="endDate"
+                          name="endDate"
+                          type="datetime-local"
+                          value={formData.endDate}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
                     </div>
 
-                    <div>
-                      <Label htmlFor="endDate">Tanggal Selesai *</Label>
-                      <Input
-                        id="endDate"
-                        name="endDate"
-                        type="datetime-local"
-                        value={formData.endDate}
-                        onChange={handleInputChange}
-                        required
-                      />
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="flex-1"
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        {isSubmitting ? "Membuat..." : "Buat Event"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => router.back()}
+                      >
+                        Batal
+                      </Button>
                     </div>
-                  </div>
-
-                  <div className="flex gap-2 pt-4">
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="flex-1"
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      {isSubmitting ? "Membuat..." : "Buat Event"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => router.back()}
-                    >
-                      Batal
-                    </Button>
-                  </div>
-                </form>
+                  </form>
+                </MagicCard>
               </CardContent>
             </Card>
           </div>

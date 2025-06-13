@@ -15,10 +15,14 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
 import { Alert, AlertDescription } from "~/components/ui/alert";
+import {
+  MagicInput,
+  MagicCard,
+  MagicButton,
+} from "~/components/ui/magic-card";
 import {
   Select,
   SelectContent,
@@ -239,11 +243,11 @@ export default function TicketPurchasePage() {
     // Set session ID from URL or generate new one
     const currentSessionId =
       urlSessionId ||
-      localStorage.getItem("vbtix_session_id") ||
+      localStorage.getItem("vbticket_session_id") ||
       `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
     // Store session ID in localStorage for guest access
-    localStorage.setItem("vbtix_session_id", currentSessionId);
+    localStorage.setItem("vbticket_session_id", currentSessionId);
     setSessionId(currentSessionId);
 
     console.log("Using session ID:", currentSessionId);
@@ -277,11 +281,22 @@ export default function TicketPurchasePage() {
     currentSessionId: string,
   ) => {
     try {
-      // Fetch event details
+      console.log("Fetching event and tickets:", { eventId, ticketParams, currentSessionId });
+
+      // Fetch event details with enhanced error handling
       const eventResponse = await fetch(`/api/public/events/${eventId}`);
+
+      if (!eventResponse.ok) {
+        const errorText = await eventResponse.text();
+        console.error("Event fetch failed:", { status: eventResponse.status, error: errorText });
+        throw new Error(`Failed to load event: ${eventResponse.status} ${errorText}`);
+      }
+
       const eventData = await eventResponse.json();
+      console.log("Event data received:", eventData);
 
       if (!eventData.success) {
+        console.error("Event API returned error:", eventData.error);
         throw new Error(eventData.error || "Failed to load event");
       }
 
@@ -741,7 +756,7 @@ export default function TicketPurchasePage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Buyer Information */}
-              <Card>
+              <MagicCard className="bg-gradient-to-br from-background/90 to-muted/20">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
@@ -752,7 +767,7 @@ export default function TicketPurchasePage() {
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <Label htmlFor="fullName">Nama Lengkap *</Label>
-                      <Input
+                      <MagicInput
                         id="fullName"
                         value={buyerInfo.fullName}
                         onChange={(e) =>
@@ -790,7 +805,7 @@ export default function TicketPurchasePage() {
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <Label htmlFor="identityNumber">Nomor Identitas *</Label>
-                      <Input
+                      <MagicInput
                         id="identityNumber"
                         value={buyerInfo.identityNumber}
                         onChange={(e) =>
@@ -805,7 +820,7 @@ export default function TicketPurchasePage() {
                     </div>
                     <div>
                       <Label htmlFor="email">Email *</Label>
-                      <Input
+                      <MagicInput
                         id="email"
                         type="email"
                         value={buyerInfo.email}
@@ -822,7 +837,7 @@ export default function TicketPurchasePage() {
                   </div>
                   <div>
                     <Label htmlFor="whatsapp">Nomor WhatsApp *</Label>
-                    <Input
+                    <MagicInput
                       id="whatsapp"
                       value={buyerInfo.whatsapp}
                       onChange={(e) =>
@@ -836,10 +851,10 @@ export default function TicketPurchasePage() {
                     />
                   </div>
                 </CardContent>
-              </Card>
+              </MagicCard>
 
               {/* Ticket Holders */}
-              <Card>
+              <MagicCard className="bg-gradient-to-br from-background/90 to-muted/20">
                 <CardHeader>
                   <CardTitle>Data Pemilik Tiket</CardTitle>
                 </CardHeader>
@@ -872,7 +887,7 @@ export default function TicketPurchasePage() {
                           <Label htmlFor={`holder-name-${index}`}>
                             Nama Lengkap *
                           </Label>
-                          <Input
+                          <MagicInput
                             id={`holder-name-${index}`}
                             value={holder.fullName}
                             onChange={(e) =>
@@ -914,7 +929,7 @@ export default function TicketPurchasePage() {
                           <Label htmlFor={`holder-identity-${index}`}>
                             Nomor Identitas *
                           </Label>
-                          <Input
+                          <MagicInput
                             id={`holder-identity-${index}`}
                             value={holder.identityNumber}
                             onChange={(e) =>
@@ -933,7 +948,7 @@ export default function TicketPurchasePage() {
                           <Label htmlFor={`holder-email-${index}`}>
                             Email *
                           </Label>
-                          <Input
+                          <MagicInput
                             id={`holder-email-${index}`}
                             type="email"
                             value={holder.email}
@@ -950,7 +965,7 @@ export default function TicketPurchasePage() {
                         <Label htmlFor={`holder-whatsapp-${index}`}>
                           Nomor WhatsApp *
                         </Label>
-                        <Input
+                        <MagicInput
                           id={`holder-whatsapp-${index}`}
                           value={holder.whatsapp}
                           onChange={(e) =>
@@ -968,7 +983,7 @@ export default function TicketPurchasePage() {
                     </div>
                   ))}
                 </CardContent>
-              </Card>
+              </MagicCard>
             </form>
           </div>
 
@@ -1022,15 +1037,16 @@ export default function TicketPurchasePage() {
                   </div>
                 </div>
 
-                <Button
+                <MagicButton
                   type="submit"
                   className="w-full"
                   size="lg"
+                  variant="magic"
                   disabled={isSubmitting}
                   onClick={handleSubmit}
                 >
                   {isSubmitting ? "Memproses..." : "Lanjut ke Pembayaran"}
-                </Button>
+                </MagicButton>
 
                 <p className="text-center text-xs text-gray-500">
                   Dengan melanjutkan, Anda menyetujui syarat dan ketentuan yang
@@ -1104,27 +1120,28 @@ export default function TicketPurchasePage() {
                 pembayaran:
               </p>
               <ul className="list-inside list-disc space-y-1 text-xs">
-                <li>Silahkan ketik "vbtix" dikolom pencarian email</li>
+                <li>Silahkan ketik "vbticket" dikolom pencarian email</li>
                 <li>Cek e-Tiket difolder spam/promotion email Anda</li>
               </ul>
             </div>
           </div>
 
           <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button
+            <MagicButton
               variant="outline"
               onClick={() => setShowConfirmationModal(false)}
               className="w-full sm:w-auto"
             >
               Edit Data (kembali)
-            </Button>
-            <Button
+            </MagicButton>
+            <MagicButton
               onClick={handleConfirmOrder}
               disabled={isSubmitting}
               className="w-full sm:w-auto"
+              variant="magic"
             >
               {isSubmitting ? "Memproses..." : "Saya Mengerti"}
-            </Button>
+            </MagicButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

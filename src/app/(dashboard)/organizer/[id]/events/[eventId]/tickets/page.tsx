@@ -162,9 +162,9 @@ export default function EventTicketsPage({
         allowTransfer: ticketFormData.allowTransfer,
         ticketFeatures: ticketFormData.ticketFeatures || undefined,
         perks: ticketFormData.perks || undefined,
-        earlyBirdDeadline: ticketFormData.earlyBirdDeadline || undefined,
-        saleStartDate: ticketFormData.saleStartDate || undefined,
-        saleEndDate: ticketFormData.saleEndDate || undefined,
+        earlyBirdDeadline: ticketFormData.earlyBirdDeadline.trim() || undefined,
+        saleStartDate: ticketFormData.saleStartDate.trim() || undefined,
+        saleEndDate: ticketFormData.saleEndDate.trim() || undefined,
       };
 
       // Create the ticket first

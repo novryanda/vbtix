@@ -13,6 +13,7 @@ import {
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Badge } from "~/components/ui/badge";
+import { MagicCard, MagicInput, MagicButton } from "~/components/ui/magic-card";
 import {
   Select,
   SelectContent,
@@ -162,116 +163,114 @@ export default function AdminApprovalDashboard() {
         {/* Statistics Cards */}
         {statistics && (
           <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+            <MagicCard className="p-4 bg-gradient-to-br from-card/90 to-muted/20 backdrop-blur-sm border-border/50">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 className="text-sm font-medium">Pending Review</h3>
                 <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="space-y-1">
                 <div className="text-2xl font-bold">{statistics.totalPending}</div>
                 <p className="text-xs text-muted-foreground">
                   Menunggu persetujuan admin
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </MagicCard>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Event Disetujui</CardTitle>
+            <MagicCard className="p-4 bg-gradient-to-br from-green-50/90 to-green-100/20 backdrop-blur-sm border-green-200/50">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 className="text-sm font-medium">Event Disetujui</h3>
                 <CheckCircle className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="space-y-1">
                 <div className="text-2xl font-bold text-green-600">
                   {statistics.totalApproved}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Total event yang dipublikasikan
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </MagicCard>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Event Ditolak</CardTitle>
+            <MagicCard className="p-4 bg-gradient-to-br from-red-50/90 to-red-100/20 backdrop-blur-sm border-red-200/50">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 className="text-sm font-medium">Event Ditolak</h3>
                 <XCircle className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="space-y-1">
                 <div className="text-2xl font-bold text-red-600">
                   {statistics.totalRejected}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Total event yang ditolak
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </MagicCard>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg. Review Time</CardTitle>
+            <MagicCard className="p-4 bg-gradient-to-br from-blue-50/90 to-blue-100/20 backdrop-blur-sm border-blue-200/50">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 className="text-sm font-medium">Avg. Review Time</h3>
                 <Timer className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="space-y-1">
                 <div className="text-2xl font-bold">
                   {statistics.averageApprovalTimeHours}h
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Rata-rata waktu review
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </MagicCard>
           </div>
         )}
 
         {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSearch} className="space-y-4">
-              <div className="flex flex-col gap-4 md:flex-row">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Cari event berdasarkan judul, deskripsi, atau organizer..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="w-48">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filter Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Status</SelectItem>
-                      <SelectItem value="PENDING_REVIEW">Pending Review</SelectItem>
-                      <SelectItem value="PUBLISHED">Approved</SelectItem>
-                      <SelectItem value="REJECTED">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button type="submit" variant="outline">
-                    <Search className="h-4 w-4 mr-2" />
-                    Cari
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleClearFilters}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Reset
-                  </Button>
+        <MagicCard className="p-6 bg-gradient-to-br from-card/90 to-muted/20 backdrop-blur-sm border-border/50">
+          <form onSubmit={handleSearch} className="space-y-4">
+            <div className="flex flex-col gap-4 md:flex-row">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-40" />
+                  <MagicInput
+                    placeholder="Cari event berdasarkan judul, deskripsi, atau organizer..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
               </div>
-            </form>
-          </CardContent>
-        </Card>
+
+              <div className="w-48">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="magic-input border-2 border-border/50 rounded-xl bg-gradient-to-br from-background/90 to-muted/20">
+                    <SelectValue placeholder="Filter Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    <SelectItem value="PENDING_REVIEW">Pending Review</SelectItem>
+                    <SelectItem value="PUBLISHED">Approved</SelectItem>
+                    <SelectItem value="REJECTED">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-2">
+                <MagicButton type="submit" variant="outline">
+                  <Search className="h-4 w-4 mr-2" />
+                  Cari
+                </MagicButton>
+
+                <MagicButton
+                  type="button"
+                  variant="outline"
+                  onClick={handleClearFilters}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reset
+                </MagicButton>
+              </div>
+            </div>
+          </form>
+        </MagicCard>
 
         {/* Error State */}
         {error && (
@@ -312,52 +311,52 @@ export default function AdminApprovalDashboard() {
           {/* Pagination */}
           {meta.totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-6">
-              <Button
+              <MagicButton
                 variant="outline"
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage <= 1}
               >
                 Previous
-              </Button>
-              
+              </MagicButton>
+
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(5, meta.totalPages) }, (_, i) => {
                   const pageNumber = i + 1;
                   const isCurrentPage = pageNumber === currentPage;
-                  
+
                   return (
-                    <Button
+                    <MagicButton
                       key={pageNumber}
-                      variant={isCurrentPage ? "default" : "outline"}
+                      variant={isCurrentPage ? "magic" : "outline"}
                       size="sm"
                       onClick={() => handlePageChange(pageNumber)}
                     >
                       {pageNumber}
-                    </Button>
+                    </MagicButton>
                   );
                 })}
-                
+
                 {meta.totalPages > 5 && (
                   <>
                     <span className="px-2">...</span>
-                    <Button
+                    <MagicButton
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(meta.totalPages)}
                     >
                       {meta.totalPages}
-                    </Button>
+                    </MagicButton>
                   </>
                 )}
               </div>
-              
-              <Button
+
+              <MagicButton
                 variant="outline"
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage >= meta.totalPages}
               >
                 Next
-              </Button>
+              </MagicButton>
             </div>
           )}
         </div>

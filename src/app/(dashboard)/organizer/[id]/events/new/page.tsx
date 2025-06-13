@@ -48,6 +48,7 @@ import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { ImagePreviewGallery } from "~/components/ui/image-preview-gallery";
 import { useOrganizerSettings } from "~/lib/api/hooks/organizer";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { MagicCard, MagicInput, MagicTextarea } from "~/components/ui/magic-card";
 
 // Create a schema for event creation
 const createEventSchema = z.object({
@@ -141,6 +142,15 @@ export default function CreateEventPage() {
       imagePublicIds: [],
     },
   });
+
+  // Debug: Add click handler untuk memastikan focus bekerja
+  const handleInputFocus = (fieldName: string) => {
+    console.log(`Focus on field: ${fieldName}`);
+  };
+
+  const handleInputClick = (fieldName: string) => {
+    console.log(`Click on field: ${fieldName}`);
+  };
 
   // Handle form submission
   const onSubmit = async (data: CreateEventFormValues) => {
@@ -308,61 +318,31 @@ export default function CreateEventPage() {
                 </div>
               )}
 
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6"
-                >
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Event Title</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter event title" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            The name of your event as it will appear to
-                            attendees
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Describe your event"
-                              className="min-h-32"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Provide details about your event
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <MagicCard className="p-6 bg-gradient-to-br from-card/90 to-muted/20 backdrop-blur-sm border-border/50">
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="space-y-6"
+                  >
+                    <div className="space-y-4">
                       <FormField
                         control={form.control}
-                        name="startDate"
+                        name="title"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Start Date & Time</FormLabel>
+                            <FormLabel>Event Title</FormLabel>
                             <FormControl>
-                              <Input type="datetime-local" {...field} />
+                              <MagicInput
+                                placeholder="Enter event title"
+                                {...field}
+                                onFocus={() => handleInputFocus("title")}
+                                onClick={() => handleInputClick("title")}
+                              />
                             </FormControl>
+                            <FormDescription>
+                              The name of your event as it will appear to
+                              attendees
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -370,92 +350,165 @@ export default function CreateEventPage() {
 
                       <FormField
                         control={form.control}
-                        name="endDate"
+                        name="description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>End Date & Time</FormLabel>
+                            <FormLabel>Description</FormLabel>
                             <FormControl>
-                              <Input type="datetime-local" {...field} />
+                              <MagicTextarea
+                                placeholder="Describe your event"
+                                className="min-h-32"
+                                {...field}
+                                onFocus={() => handleInputFocus("description")}
+                                onClick={() => handleInputClick("description")}
+                              />
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="venue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Venue</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter venue name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="address"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Address</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter address" {...field} />
-                            </FormControl>
+                            <FormDescription>
+                              Provide details about your event
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="city"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>City</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter city" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="startDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Start Date & Time</FormLabel>
+                              <FormControl>
+                                <MagicInput
+                                  type="datetime-local"
+                                  {...field}
+                                  onFocus={() => handleInputFocus("startDate")}
+                                  onClick={() => handleInputClick("startDate")}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="province"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Province</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter province" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                          control={form.control}
+                          name="endDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>End Date & Time</FormLabel>
+                              <FormControl>
+                                <MagicInput
+                                  type="datetime-local"
+                                  {...field}
+                                  onFocus={() => handleInputFocus("endDate")}
+                                  onClick={() => handleInputClick("endDate")}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
                       <FormField
                         control={form.control}
-                        name="country"
+                        name="venue"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Country</FormLabel>
+                            <FormLabel>Venue</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter country" {...field} />
+                              <MagicInput
+                                placeholder="Enter venue name"
+                                {...field}
+                                onFocus={() => handleInputFocus("venue")}
+                                onClick={() => handleInputClick("venue")}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </div>
+
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="address"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Address</FormLabel>
+                              <FormControl>
+                                <MagicInput
+                                  placeholder="Enter address"
+                                  {...field}
+                                  onFocus={() => handleInputFocus("address")}
+                                  onClick={() => handleInputClick("address")}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>City</FormLabel>
+                              <FormControl>
+                                <MagicInput
+                                  placeholder="Enter city"
+                                  {...field}
+                                  onFocus={() => handleInputFocus("city")}
+                                  onClick={() => handleInputClick("city")}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="province"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Province</FormLabel>
+                              <FormControl>
+                                <MagicInput
+                                  placeholder="Enter province"
+                                  {...field}
+                                  onFocus={() => handleInputFocus("province")}
+                                  onClick={() => handleInputClick("province")}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="country"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Country</FormLabel>
+                              <FormControl>
+                                <MagicInput
+                                  placeholder="Enter country"
+                                  {...field}
+                                  onFocus={() => handleInputFocus("country")}
+                                  onClick={() => handleInputClick("country")}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
                     <FormField
                       control={form.control}
@@ -467,6 +520,8 @@ export default function CreateEventPage() {
                             <Input
                               placeholder="Enter event category"
                               {...field}
+                              onFocus={() => handleInputFocus("category")}
+                              onClick={() => handleInputClick("category")}
                             />
                           </FormControl>
                           <FormDescription>
@@ -587,9 +642,10 @@ export default function CreateEventPage() {
                         </>
                       )}
                     </Button>
-                  </div>
-                </form>
-              </Form>
+                    </div>
+                  </form>
+                </Form>
+              </MagicCard>
             </CardContent>
           </Card>
         </div>

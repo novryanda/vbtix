@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Textarea } from "~/components/ui/textarea";
+import { MagicTextarea, MagicButton, MagicCard } from "~/components/ui/magic-card";
 import {
   CalendarDays,
   MapPin,
@@ -111,7 +112,7 @@ export function EventApprovalCard({
   };
 
   return (
-    <Card className="transition-all hover:shadow-lg">
+    <MagicCard className="transition-all bg-gradient-to-br from-card/90 to-muted/20 backdrop-blur-sm border-border/50">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -156,17 +157,17 @@ export function EventApprovalCard({
             </div>
             
             {!showActions ? (
-              <Button
+              <MagicButton
                 variant="outline"
                 size="sm"
                 onClick={() => setShowActions(true)}
                 className="w-full"
               >
                 Review Event
-              </Button>
+              </MagicButton>
             ) : (
               <div className="space-y-3">
-                <Textarea
+                <MagicTextarea
                   placeholder="Feedback untuk organizer (opsional)"
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
@@ -174,7 +175,7 @@ export function EventApprovalCard({
                   className="text-sm"
                 />
                 <div className="flex gap-2">
-                  <Button
+                  <MagicButton
                     size="sm"
                     onClick={handleApprove}
                     disabled={isProcessing}
@@ -186,8 +187,8 @@ export function EventApprovalCard({
                       <Check className="h-4 w-4" />
                     )}
                     Setujui
-                  </Button>
-                  <Button
+                  </MagicButton>
+                  <MagicButton
                     size="sm"
                     variant="destructive"
                     onClick={handleReject}
@@ -200,9 +201,9 @@ export function EventApprovalCard({
                       <X className="h-4 w-4" />
                     )}
                     Tolak
-                  </Button>
+                  </MagicButton>
                 </div>
-                <Button
+                <MagicButton
                   variant="ghost"
                   size="sm"
                   onClick={() => {
@@ -212,7 +213,7 @@ export function EventApprovalCard({
                   className="w-full"
                 >
                   Batal
-                </Button>
+                </MagicButton>
               </div>
             )}
           </div>
@@ -249,13 +250,13 @@ export function EventApprovalCard({
         )}
       </CardContent>
 
-      <CardFooter>
-        <Button variant="outline" className="w-full" asChild>
+      <div className="p-6 pt-0">
+        <MagicButton variant="outline" className="w-full" asChild>
           <Link href={`/admin/events/${event.id}`}>
             Lihat Detail
           </Link>
-        </Button>
-      </CardFooter>
-    </Card>
+        </MagicButton>
+      </div>
+    </MagicCard>
   );
 }

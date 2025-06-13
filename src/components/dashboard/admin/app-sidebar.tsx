@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { useSession } from "next-auth/react";
 import {
-  BarChartIcon,
   CameraIcon,
   FileCodeIcon,
   FileTextIcon,
@@ -13,13 +11,13 @@ import {
   UsersIcon,
   PartyPopperIcon,
   CheckCircle2,
-  Clock,
 } from "lucide-react";
 
 import { NavMain } from "~/components/dashboard/admin/nav-main";
 import { NavSecondary } from "~/components/dashboard/admin/nav-secondary";
 import { NavUser } from "~/components/dashboard/admin/nav-user";
 import { useAdminSidebarStats } from "~/lib/api/hooks/admin-sidebar";
+import { BrandLogo } from "~/components/ui/logo";
 import {
   Sidebar,
   SidebarContent,
@@ -125,7 +123,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     email: session?.user?.email || "guest@example.com",
     avatar: session?.user?.image || "/avatars/default.jpg",
   };
-
   // Update navigation data with pending count
   const navigationData = {
     ...data,
@@ -133,7 +130,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       if (item.title === "Event Approval") {
         return {
           ...item,
-          badge: isLoading ? "..." : pendingEventsCount > 0 ? pendingEventsCount : undefined,
+          badge: isLoading ? "..." : pendingEventsCount > 0 ? pendingEventsCount.toString() : undefined,
         };
       }
       return item;
@@ -147,25 +144,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:h-auto data-[slot=sidebar-menu-button]:min-h-[3.5rem] data-[slot=sidebar-menu-button]:!p-0 data-[slot=sidebar-menu-button]:pl-0"
+              className="data-[slot=sidebar-menu-button]:h-auto data-[slot=sidebar-menu-button]:min-h-[3.5rem] data-[slot=sidebar-menu-button]:!p-3"
             >
               <a
                 href="/admin/dashboard"
-                className="ml-0 flex items-center gap-0 pl-0"
+                className="flex items-center gap-3"
               >
-                <div className="ml-0 flex items-center pl-0">
-                  <div className="relative ml-0">
-                    <Image
-                      src="/desain_logo.png"
-                      alt="VBTix Logo"
-                      width={96}
-                      height={96}
-                      className="object-contain"
-                      priority
-                    />
-                  </div>
-                  <span className="-ml-1 flex h-10 items-center text-xl font-semibold text-white">
-                    ADMIN
+                <BrandLogo size="lg" showText={false} />
+                <div className="flex flex-col">
+                  <span className="text-lg font-bold text-sidebar-foreground">
+                    VBTicket
+                  </span>
+                  <span className="text-xs font-medium text-sidebar-primary uppercase tracking-wider">
+                    Admin Panel
                   </span>
                 </div>
               </a>

@@ -26,7 +26,7 @@ async function createTestEvent() {
       // Create a test user with organizer role
       const testUser = await prisma.user.create({
         data: {
-          email: "test-organizer@vbtix.com",
+          email: "test-organizer@vbticket.com",
           name: "Test Organizer",
           role: "ORGANIZER",
           phone: "+6281234567890",
@@ -36,9 +36,8 @@ async function createTestEvent() {
       // Create organizer profile
       organizer = await prisma.organizer.create({
         data: {
-          userId: testUser.id,
-          orgName: "VBTix Test Events",
-          legalName: "VBTix Test Events Ltd",
+          userId: testUser.id,          orgName: "VBTicket Test Events",
+          legalName: "VBTicket Test Events Ltd",
           npwp: "123456789012345",
           verified: true,
         },

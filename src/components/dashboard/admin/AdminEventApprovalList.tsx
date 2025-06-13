@@ -15,6 +15,7 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Textarea } from "~/components/ui/textarea";
+import { MagicTextarea, MagicButton, MagicCard } from "~/components/ui/magic-card";
 import {
   Dialog,
   DialogContent,
@@ -218,7 +219,7 @@ export function AdminEventApprovalList({
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {events.map((event) => (
-        <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+        <MagicCard key={event.id} className="overflow-hidden bg-gradient-to-br from-card/90 to-muted/20 backdrop-blur-sm border-border/50 p-0">
           {/* Event Poster */}
           <div className="relative h-48 bg-gradient-to-br from-primary/10 to-secondary/10">
             {event.posterUrl ? (
@@ -341,9 +342,9 @@ export function AdminEventApprovalList({
             )}
           </CardContent>
 
-          <CardFooter className="flex flex-col gap-2 pt-0">
+          <div className="flex flex-col gap-2 pt-0 p-6">
             {/* View Details Button */}
-            <Button
+            <MagicButton
               variant="outline"
               size="sm"
               className="w-full"
@@ -351,7 +352,7 @@ export function AdminEventApprovalList({
             >
               <Eye className="h-4 w-4 mr-2" />
               Lihat Detail
-            </Button>
+            </MagicButton>
 
             {/* Action Buttons - Only show for pending events */}
             {event.status === "PENDING_REVIEW" && (
@@ -359,14 +360,14 @@ export function AdminEventApprovalList({
                 {/* Approve Dialog */}
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button
+                    <MagicButton
                       size="sm"
                       className="flex-1 bg-green-600 hover:bg-green-700"
                       disabled={processingEventId === event.id}
                     >
                       <Check className="h-4 w-4 mr-1" />
                       Setujui
-                    </Button>
+                    </MagicButton>
                   </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -380,7 +381,7 @@ export function AdminEventApprovalList({
                     <label className="text-sm font-medium">
                       Catatan untuk organizer (opsional)
                     </label>
-                    <Textarea
+                    <MagicTextarea
                       placeholder="Tambahkan catatan atau feedback untuk organizer..."
                       value={approvalNotes}
                       onChange={(e) => setApprovalNotes(e.target.value)}
@@ -389,15 +390,15 @@ export function AdminEventApprovalList({
                   </div>
                   <DialogFooter>
                     <DialogTrigger asChild>
-                      <Button variant="outline">Batal</Button>
+                      <MagicButton variant="outline">Batal</MagicButton>
                     </DialogTrigger>
-                    <Button
+                    <MagicButton
                       onClick={() => handleApprove(event.id)}
                       disabled={processingEventId === event.id}
                       className="bg-green-600 hover:bg-green-700"
                     >
                       {processingEventId === event.id ? "Memproses..." : "Setujui Event"}
-                    </Button>
+                    </MagicButton>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -405,7 +406,7 @@ export function AdminEventApprovalList({
               {/* Reject Dialog */}
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button
+                  <MagicButton
                     variant="destructive"
                     size="sm"
                     className="flex-1"
@@ -413,7 +414,7 @@ export function AdminEventApprovalList({
                   >
                     <X className="h-4 w-4 mr-1" />
                     Tolak
-                  </Button>
+                  </MagicButton>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -427,7 +428,7 @@ export function AdminEventApprovalList({
                     <label className="text-sm font-medium">
                       Alasan penolakan <span className="text-red-500">*</span>
                     </label>
-                    <Textarea
+                    <MagicTextarea
                       placeholder="Jelaskan alasan penolakan untuk membantu organizer..."
                       value={rejectionNotes}
                       onChange={(e) => setRejectionNotes(e.target.value)}
@@ -437,22 +438,22 @@ export function AdminEventApprovalList({
                   </div>
                   <DialogFooter>
                     <DialogTrigger asChild>
-                      <Button variant="outline">Batal</Button>
+                      <MagicButton variant="outline">Batal</MagicButton>
                     </DialogTrigger>
-                    <Button
+                    <MagicButton
                       variant="destructive"
                       onClick={() => handleReject(event.id)}
                       disabled={!rejectionNotes.trim() || processingEventId === event.id}
                     >
                       {processingEventId === event.id ? "Memproses..." : "Tolak Event"}
-                    </Button>
+                    </MagicButton>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
               </div>
             )}
-          </CardFooter>
-        </Card>
+          </div>
+        </MagicCard>
       ))}
     </div>
   );

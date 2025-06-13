@@ -66,7 +66,7 @@ export default function OrderDetailPage({
     const fetchOrderData = async () => {
       try {
         // Get session ID from localStorage for guest access
-        const sessionId = localStorage.getItem("vbtix_session_id");
+        const sessionId = localStorage.getItem("vbticket_session_id");
 
         // Build URL with session ID for guest access
         const url = sessionId
@@ -152,7 +152,7 @@ export default function OrderDetailPage({
 
     try {
       // Get session ID from localStorage for guest access
-      const sessionId = localStorage.getItem("vbtix_session_id");
+      const sessionId = localStorage.getItem("vbticket_session_id");
 
       const requestData = {
         orderId,

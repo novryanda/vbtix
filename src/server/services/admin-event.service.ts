@@ -23,7 +23,7 @@ export const adminEventService = {
         organizer = await prisma.organizer.create({
           data: {
             userId: adminUserId,
-            orgName: "VBTix Admin",
+            orgName: "VBTicket Admin",
             verified: true, // Admin organizer is automatically verified
           },
         });

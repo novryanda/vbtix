@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { PaymentStatus } from "@prisma/client";
 import { OrganizerRoute } from "~/components/auth/organizer-route";
@@ -26,15 +26,16 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { 
-  Search, 
-  Filter, 
-  Eye, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Search,
+  Filter,
+  Eye,
+  CheckCircle,
+  XCircle,
   Clock,
   AlertCircle,
-  Loader2
+  Loader2,
+  Plus
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "~/lib/utils";
@@ -71,6 +72,7 @@ interface Order {
 
 export default function OrganizerOrdersPage() {
   const params = useParams();
+  const router = useRouter();
   const { data: session } = useSession();
   const organizerId = params.id as string;
 
@@ -181,11 +183,20 @@ export default function OrganizerOrdersPage() {
       <OrganizerPageWrapper>
         <div className="space-y-6">
           {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold">Kelola Pesanan</h1>
-            <p className="text-muted-foreground">
-              Kelola pesanan tiket dan konfirmasi pembayaran manual
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Kelola Pesanan</h1>
+              <p className="text-muted-foreground">
+                Kelola pesanan tiket dan konfirmasi pembayaran manual
+              </p>
+            </div>
+            <Button
+              onClick={() => router.push(`/organizer/${organizerId}/orders/create`)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Buat Pesanan
+            </Button>
           </div>
 
           {/* Filters */}

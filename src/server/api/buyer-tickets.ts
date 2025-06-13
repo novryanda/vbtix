@@ -609,7 +609,7 @@ export async function handlePurchaseFromReservation(params: {
     // Create a temporary guest user for this purchase
     const guestUser = await prisma.user.create({
       data: {
-        email: `guest_${sessionId}@vbtix.temp`,
+        email: `guest_${sessionId}@vbticket.temp`,
         name: buyerInfo.fullName,
         role: "BUYER",
         // Mark as temporary guest user

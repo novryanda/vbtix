@@ -125,29 +125,132 @@ export type TicketTypeSchema = z.infer<typeof ticketTypeSchema>;
 
 /**
  * Schema for creating a new ticket type
+ * Enhanced with comprehensive validation for approved events
  */
 export const createTicketTypeSchema = z.object({
-  name: z.string().min(1, { message: "Name cannot be empty" }),
-  description: z.string().optional(),
+  name: z
+    .string()
+    .min(1, { message: "Ticket name cannot be empty" })
+    .max(100, { message: "Ticket name cannot exceed 100 characters" })
+    .trim(),
+  description: z
+    .string()
+    .max(500, { message: "Description cannot exceed 500 characters" })
+    .optional(),
   price: z
     .number()
     .or(z.string().transform((val) => parseFloat(val)))
     .refine((val) => val >= 0, {
       message: "Price must be a positive number",
+    })
+    .refine((val) => val <= 100000000, {
+      message: "Price cannot exceed 100,000,000",
     }),
   currency: z.string().optional().default("IDR"),
   quantity: z
     .number()
     .int()
-    .positive({ message: "Quantity must be a positive integer" }),
-  maxPerPurchase: z.number().int().positive().optional().default(10),
+    .positive({ message: "Quantity must be a positive integer" })
+    .max(100000, { message: "Quantity cannot exceed 100,000 tickets" }),
+  maxPerPurchase: z
+    .number()
+    .int()
+    .positive({ message: "Max per purchase must be a positive integer" })
+    .max(100, { message: "Max per purchase cannot exceed 100" })
+    .optional()
+    .default(10),
   isVisible: z.boolean().optional().default(true),
   allowTransfer: z.boolean().optional().default(false),
-  ticketFeatures: z.string().optional(),
-  perks: z.string().optional(),
-  earlyBirdDeadline: z.string().datetime().optional(),
-  saleStartDate: z.string().datetime().optional(),
-  saleEndDate: z.string().datetime().optional(),
+  ticketFeatures: z
+    .string()
+    .max(1000, { message: "Ticket features cannot exceed 1000 characters" })
+    .optional(),
+  perks: z
+    .string()
+    .max(1000, { message: "Perks cannot exceed 1000 characters" })
+    .optional(),
+  earlyBirdDeadline: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val || val.trim() === "") return undefined;
+      // Handle datetime-local format (YYYY-MM-DDTHH:mm) by converting to ISO string
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        return new Date(val).toISOString();
+      }
+      // Handle full ISO datetime strings
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+        return new Date(val).toISOString();
+      }
+      return val;
+    })
+    .pipe(z.string().datetime().optional()),
+  saleStartDate: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val || val.trim() === "") return undefined;
+      // Handle datetime-local format (YYYY-MM-DDTHH:mm) by converting to ISO string
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        return new Date(val).toISOString();
+      }
+      // Handle full ISO datetime strings
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+        return new Date(val).toISOString();
+      }
+      return val;
+    })
+    .pipe(z.string().datetime().optional()),
+  saleEndDate: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val || val.trim() === "") return undefined;
+      // Handle datetime-local format (YYYY-MM-DDTHH:mm) by converting to ISO string
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        return new Date(val).toISOString();
+      }
+      // Handle full ISO datetime strings
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+        return new Date(val).toISOString();
+      }
+      return val;
+    })
+    .pipe(z.string().datetime().optional()),
+})
+.refine((data) => {
+  // Validate that maxPerPurchase doesn't exceed quantity
+  if (data.maxPerPurchase && data.maxPerPurchase > data.quantity) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Max per purchase cannot exceed total quantity",
+  path: ["maxPerPurchase"],
+})
+.refine((data) => {
+  // Validate date logic if both dates are provided
+  if (data.saleStartDate && data.saleEndDate) {
+    const startDate = new Date(data.saleStartDate);
+    const endDate = new Date(data.saleEndDate);
+    return startDate < endDate;
+  }
+  return true;
+}, {
+  message: "Sale start date must be before sale end date",
+  path: ["saleEndDate"],
+})
+.refine((data) => {
+  // Validate early bird deadline is before sale end date
+  if (data.earlyBirdDeadline && data.saleEndDate) {
+    const earlyBirdDate = new Date(data.earlyBirdDeadline);
+    const endDate = new Date(data.saleEndDate);
+    return earlyBirdDate <= endDate;
+  }
+  return true;
+}, {
+  message: "Early bird deadline must be before or equal to sale end date",
+  path: ["earlyBirdDeadline"],
 });
 
 /**
@@ -174,9 +277,54 @@ export const updateTicketTypeSchema = z.object({
   allowTransfer: z.boolean().optional(),
   ticketFeatures: z.string().optional(),
   perks: z.string().optional(),
-  earlyBirdDeadline: z.string().datetime().optional(),
-  saleStartDate: z.string().datetime().optional(),
-  saleEndDate: z.string().datetime().optional(),
+  earlyBirdDeadline: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val || val.trim() === "") return undefined;
+      // Handle datetime-local format (YYYY-MM-DDTHH:mm) by converting to ISO string
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        return new Date(val).toISOString();
+      }
+      // Handle full ISO datetime strings
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+        return new Date(val).toISOString();
+      }
+      return val;
+    })
+    .pipe(z.string().datetime().optional()),
+  saleStartDate: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val || val.trim() === "") return undefined;
+      // Handle datetime-local format (YYYY-MM-DDTHH:mm) by converting to ISO string
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        return new Date(val).toISOString();
+      }
+      // Handle full ISO datetime strings
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+        return new Date(val).toISOString();
+      }
+      return val;
+    })
+    .pipe(z.string().datetime().optional()),
+  saleEndDate: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val || val.trim() === "") return undefined;
+      // Handle datetime-local format (YYYY-MM-DDTHH:mm) by converting to ISO string
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        return new Date(val).toISOString();
+      }
+      // Handle full ISO datetime strings
+      if (val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+        return new Date(val).toISOString();
+      }
+      return val;
+    })
+    .pipe(z.string().datetime().optional()),
 });
 
 /**
