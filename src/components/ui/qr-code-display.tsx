@@ -188,8 +188,13 @@ export function QRCodeDisplay({
             <div className="flex flex-col items-center space-y-2 text-center">
               <QrCode className="w-12 h-12 text-gray-400" />
               <p className={cn("text-gray-500", sizeInfo.text)}>
-                QR Code not available
+                {status === "PENDING" ? "QR Code will be generated after payment verification" : "QR Code not available"}
               </p>
+              {status === "PENDING" && (
+                <p className={cn("text-xs text-gray-400", sizeInfo.text)}>
+                  Please wait for organizer approval
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -267,7 +272,10 @@ export function QRCodeDisplayCompact({
             className="w-full h-full object-cover rounded"
           />
         ) : (
-          <QrCode className="w-4 h-4 text-gray-400" />
+          <QrCode className={cn(
+            "w-4 h-4",
+            status === "PENDING" ? "text-orange-400" : "text-gray-400"
+          )} />
         )}
       </div>
       <Badge variant="secondary" className={cn("text-xs", statusInfo.color)}>

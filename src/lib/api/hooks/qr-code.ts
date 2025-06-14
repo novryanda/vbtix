@@ -206,10 +206,40 @@ export function useBatchQROperations() {
 }
 
 /**
+ * Hook for organizer QR code generation
+ */
+export function useOrganizerQRGeneration() {
+  const generateOrderQRCodes = async (organizerId: string, orderId: string) => {
+    try {
+      const response = await fetch(`/api/organizer/${organizerId}/orders/${orderId}/generate-qr`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "QR generation failed");
+      }
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  return {
+    generateOrderQRCodes,
+  };
+}
+
+/**
  * Hook for QR code statistics
  */
 export function useQRCodeStats(organizerId?: string) {
-  const endpoint = organizerId 
+  const endpoint = organizerId
     ? `${ORGANIZER_ENDPOINTS.SOLD_TICKETS_STATS(organizerId)}?includeQR=true`
     : null;
 

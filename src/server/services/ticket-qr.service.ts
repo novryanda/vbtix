@@ -237,9 +237,10 @@ export async function validateTicketQRCode(encryptedData: string): Promise<{
 
     // Check if already checked in
     if (ticket.checkedIn) {
+      const checkInTime = ticket.checkInTime ? new Date(ticket.checkInTime).toLocaleString() : "Unknown time";
       return {
         isValid: false,
-        error: "Ticket already checked in",
+        error: `Ticket already checked in at ${checkInTime}`,
       };
     }
 
@@ -285,6 +286,15 @@ export async function checkInTicketWithQR(
       return {
         success: false,
         error: "You don't have permission to check in this ticket",
+      };
+    }
+
+    // Additional check for already checked in (double-check for race conditions)
+    if (ticket.checkedIn) {
+      const checkInTime = ticket.checkInTime ? new Date(ticket.checkInTime).toLocaleString() : "Unknown time";
+      return {
+        success: false,
+        error: `Ticket was already checked in at ${checkInTime}`,
       };
     }
 
@@ -383,6 +393,21 @@ export async function getTicketQRCode(ticketId: string, userId?: string): Promis
 
     // Check if QR code exists
     if (!ticket.qrCodeImageUrl || ticket.qrCodeStatus === QRCodeStatus.PENDING) {
+      // If payment is verified but QR code not generated, try to generate it
+      if (ticket.transaction.status === "SUCCESS") {
+        console.log(`🎫 Payment verified but QR code missing for ticket ${ticketId}, attempting generation...`);
+        const generateResult = await generateTicketQRCode(ticketId);
+
+        if (generateResult.success && generateResult.qrCodeImageUrl) {
+          return {
+            success: true,
+            qrCodeImageUrl: generateResult.qrCodeImageUrl,
+          };
+        } else {
+          console.warn(`⚠️ Failed to generate QR code for ticket ${ticketId}:`, generateResult.error);
+        }
+      }
+
       return {
         success: false,
         error: "QR code not generated yet",

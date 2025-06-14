@@ -71,8 +71,11 @@ export async function POST(
     if (checkIn) {
       // Check in the ticket
       const result = await checkInTicketWithQR(qrCodeData, organizerId);
-      
+
       if (!result.success) {
+        // Log failed check-in attempt
+        console.warn(`❌ Failed check-in attempt by organizer ${organizerId}: ${result.error}`);
+
         return NextResponse.json(
           {
             success: false,
@@ -81,6 +84,9 @@ export async function POST(
           { status: 400 }
         );
       }
+
+      // Log successful check-in
+      console.log(`✅ Ticket checked in successfully by organizer ${organizerId} for ticket ${result.ticket?.id}`);
 
       return NextResponse.json({
         success: true,
@@ -92,13 +98,20 @@ export async function POST(
             checkInTime: result.ticket?.checkInTime,
             event: {
               title: result.ticket?.transaction?.event?.title,
+              startDate: result.ticket?.transaction?.event?.startDate,
+              venue: result.ticket?.transaction?.event?.venue,
             },
             ticketType: {
               name: result.ticket?.ticketType?.name,
+              price: result.ticket?.ticketType?.price,
             },
             holder: result.ticket?.ticketHolder || {
               fullName: result.ticket?.user?.name,
               email: result.ticket?.user?.email,
+            },
+            transaction: {
+              invoiceNumber: result.ticket?.transaction?.invoiceNumber,
+              status: result.ticket?.transaction?.status,
             },
           },
         },
@@ -117,6 +130,9 @@ export async function POST(
         );
       }
 
+      // Log validation activity
+      console.log(`🎫 QR code validated by organizer ${organizerId} for ticket ${result.ticket?.id}`);
+
       return NextResponse.json({
         success: true,
         message: "QR code is valid",
@@ -124,15 +140,23 @@ export async function POST(
           ticket: {
             id: result.ticket?.id,
             checkedIn: result.ticket?.checkedIn,
+            checkInTime: result.ticket?.checkInTime,
             event: {
               title: result.ticket?.transaction?.event?.title,
+              startDate: result.ticket?.transaction?.event?.startDate,
+              venue: result.ticket?.transaction?.event?.venue,
             },
             ticketType: {
               name: result.ticket?.ticketType?.name,
+              price: result.ticket?.ticketType?.price,
             },
             holder: result.ticket?.ticketHolder || {
               fullName: result.ticket?.user?.name,
               email: result.ticket?.user?.email,
+            },
+            transaction: {
+              invoiceNumber: result.ticket?.transaction?.invoiceNumber,
+              status: result.ticket?.transaction?.status,
             },
           },
         },

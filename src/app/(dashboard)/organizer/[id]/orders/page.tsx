@@ -18,10 +18,12 @@ import {
   XCircle,
   Clock,
   Loader2,
-  Plus
+  Plus,
+  QrCode
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "~/lib/utils";
+import { useOrganizerQRGeneration } from "~/lib/api/hooks/qr-code";
 
 interface Order {
   id: string;
@@ -75,6 +77,9 @@ export default function OrganizerOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
+  const [generatingQROrderId, setGeneratingQROrderId] = useState<string | null>(null);
+
+  const { generateOrderQRCodes } = useOrganizerQRGeneration();
 
   // Fetch orders
   const fetchOrders = async () => {
@@ -149,6 +154,27 @@ export default function OrganizerOrdersPage() {
       toast.error("Failed to verify payment");
     } finally {
       setProcessingOrderId(null);
+    }
+  };
+
+  // Generate QR codes for an order
+  const generateQRCodes = async (orderId: string) => {
+    try {
+      setGeneratingQROrderId(orderId);
+
+      const result = await generateOrderQRCodes(organizerId, orderId);
+
+      if (result.success) {
+        toast.success(`Successfully generated ${result.data.generatedCount} QR codes`);
+        fetchOrders(); // Refresh the list
+      } else {
+        toast.error(result.error || "Failed to generate QR codes");
+      }
+    } catch (error) {
+      console.error("Error generating QR codes:", error);
+      toast.error("Failed to generate QR codes");
+    } finally {
+      setGeneratingQROrderId(null);
     }
   };
 
@@ -319,6 +345,22 @@ export default function OrganizerOrdersPage() {
                                   <span className="ml-2">Tolak</span>
                                 </Button>
                               </>
+                            )}
+                            {order.status === "SUCCESS" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => generateQRCodes(order.id)}
+                                disabled={generatingQROrderId === order.id}
+                                className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                              >
+                                {generatingQROrderId === order.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <QrCode className="h-4 w-4" />
+                                )}
+                                <span className="ml-2">Generate QR</span>
+                              </Button>
                             )}
                             <Button variant="outline" size="sm" asChild>
                               <Link href={`/organizer/${organizerId}/orders/${order.id}`}>

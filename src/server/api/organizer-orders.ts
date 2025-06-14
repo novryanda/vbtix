@@ -2,6 +2,7 @@ import { prisma } from "~/server/db";
 import { organizerService } from "~/server/services/organizer.service";
 import { PaymentStatus } from "@prisma/client";
 import { emailService } from "~/lib/email-service";
+import { generateTransactionQRCodes } from "~/server/services/ticket-qr.service";
 
 /**
  * Get orders for an organizer's events
@@ -453,6 +454,23 @@ export async function handleUpdateOrganizerOrderStatus(params: {
       timeout: 15000, // 15 seconds
     },
   );
+
+  // Generate QR codes for approved orders
+  if (status === "SUCCESS") {
+    try {
+      console.log(`🎫 Generating QR codes for approved order: ${orderId}`);
+      const qrResult = await generateTransactionQRCodes(orderId);
+      console.log(`🎫 QR code generation result: ${qrResult.generatedCount} generated, errors:`, qrResult.errors);
+
+      if (!qrResult.success && qrResult.errors.length > 0) {
+        console.warn(`⚠️ Some QR codes failed to generate for order ${orderId}:`, qrResult.errors);
+        // Don't fail the entire process if QR generation fails
+      }
+    } catch (qrError) {
+      console.error(`❌ Error generating QR codes for order ${orderId}:`, qrError);
+      // Don't fail the entire process if QR generation fails
+    }
+  }
 
   // Send email notification if order is approved
   if (status === "SUCCESS") {
