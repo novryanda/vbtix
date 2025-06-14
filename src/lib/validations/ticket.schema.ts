@@ -12,6 +12,17 @@ export const TicketStatus = z.enum([
 ]);
 
 /**
+ * Enum for QR code status matching the Prisma schema
+ */
+export const QRCodeStatus = z.enum([
+  "PENDING",
+  "GENERATED",
+  "ACTIVE",
+  "USED",
+  "EXPIRED",
+]);
+
+/**
  * Validation schema for Ticket
  */
 export const ticketSchema = z.object({
@@ -20,6 +31,10 @@ export const ticketSchema = z.object({
   transactionId: z.string(),
   userId: z.string(),
   qrCode: z.string().min(1, { message: "QR Code cannot be empty" }),
+  qrCodeImageUrl: z.string().nullable().optional(),
+  qrCodeData: z.string().nullable().optional(),
+  qrCodeGeneratedAt: z.date().nullable().optional(),
+  qrCodeStatus: QRCodeStatus,
   imageUrl: z.string().nullable().optional(),
   imagePublicId: z.string().nullable().optional(),
   status: TicketStatus,
@@ -42,6 +57,10 @@ export const createTicketSchema = z.object({
   transactionId: z.string(),
   userId: z.string(),
   qrCode: z.string().min(1, { message: "QR Code cannot be empty" }),
+  qrCodeImageUrl: z.string().nullable().optional(),
+  qrCodeData: z.string().nullable().optional(),
+  qrCodeGeneratedAt: z.date().nullable().optional(),
+  qrCodeStatus: QRCodeStatus.optional().default("PENDING"),
   imageUrl: z.string().nullable().optional(),
   imagePublicId: z.string().nullable().optional(),
   status: TicketStatus.optional().default("ACTIVE"),
@@ -53,6 +72,10 @@ export const createTicketSchema = z.object({
  */
 export const updateTicketSchema = z.object({
   status: TicketStatus.optional(),
+  qrCodeImageUrl: z.string().nullable().optional(),
+  qrCodeData: z.string().nullable().optional(),
+  qrCodeGeneratedAt: z.date().nullable().optional(),
+  qrCodeStatus: QRCodeStatus.optional(),
   checkedIn: z.boolean().optional(),
   checkInTime: z.date().nullable().optional(),
   imageUrl: z.string().nullable().optional(),

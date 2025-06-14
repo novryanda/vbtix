@@ -34,6 +34,9 @@ export const ADMIN_ENDPOINTS = {
   // Users
   USERS: `${API_BASE}/admin/users`,
   USER_DETAIL: (id: string) => `${API_BASE}/admin/users/${id}`,
+
+  // QR Code Management
+  GENERATE_TRANSACTION_QR: (transactionId: string) => `${API_BASE}/admin/transactions/${transactionId}/generate-qr`,
 };
 
 // Organizer endpoints
@@ -116,6 +119,10 @@ export const ORGANIZER_ENDPOINTS = {
     `${API_BASE}/organizer/${organizerId}/sold-tickets/${ticketId}/check-in`,
   SOLD_TICKETS_EXPORT: (organizerId: string) =>
     `${API_BASE}/organizer/${organizerId}/sold-tickets/export`,
+
+  // QR Code Management
+  QR_CODE_VALIDATE: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/qr-code/validate`,
 };
 
 // Public endpoints (formerly buyer endpoints)
@@ -124,6 +131,7 @@ export const PUBLIC_ENDPOINTS = {
   EVENT_DETAIL: (eventId: string) => `${API_BASE}/public/events/${eventId}`,
   PURCHASE_TICKET: `${API_BASE}/public/tickets/purchase`,
   CANCEL_TICKET: (id: string) => `${API_BASE}/public/tickets/${id}/cancel`,
+  TICKET_QR_CODE: (ticketId: string) => `${API_BASE}/public/tickets/${ticketId}/qr-code`,
 };
 
 // Buyer endpoints (deprecated - use PUBLIC_ENDPOINTS instead)

@@ -1,6 +1,7 @@
 import { prisma } from "~/server/db";
 import { PaymentStatus } from "@prisma/client";
 import { env } from "~/env";
+import { generateTransactionQRCodes } from "~/server/services/ticket-qr.service";
 
 // Import both Xendit and Mock payment services
 import {
@@ -316,8 +317,14 @@ export async function handlePaymentCallback(params: {
           },
         });
 
-        // Note: E-tickets are now handled within the Ticket model
-        // No separate eTicket creation needed
+        // Generate QR codes for all tickets in the transaction
+        try {
+          const qrResult = await generateTransactionQRCodes(actualOrderId);
+          console.log(`QR code generation result: ${qrResult.generatedCount} generated, errors:`, qrResult.errors);
+        } catch (qrError) {
+          console.error("Error generating QR codes:", qrError);
+          // Don't fail the payment process if QR generation fails
+        }
       }
 
       return updated;

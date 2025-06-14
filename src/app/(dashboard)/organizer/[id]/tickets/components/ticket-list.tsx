@@ -22,6 +22,8 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { useOrganizerSoldTickets } from "~/lib/api/hooks/organizer-tickets";
+import { QRCodeDisplayCompact } from "~/components/ui/qr-code-display";
+import { TicketQRModal } from "~/components/ui/ticket-qr-modal";
 import { formatPrice } from "~/lib/utils";
 import {
   MoreHorizontalIcon,
@@ -33,6 +35,7 @@ import {
   RefreshCwIcon,
   TicketIcon,
   AlertCircleIcon,
+  QrCode,
 } from "lucide-react";
 
 interface TicketListProps {
@@ -42,6 +45,8 @@ interface TicketListProps {
 
 export function TicketList({ organizerId, filters }: TicketListProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
   // Combine filters with search term directly
   const currentFilters = useMemo(() => ({
@@ -56,6 +61,16 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
+  };
+
+  const handleViewQRCode = (ticket: any) => {
+    setSelectedTicket(ticket);
+    setIsQRModalOpen(true);
+  };
+
+  const handleCloseQRModal = () => {
+    setIsQRModalOpen(false);
+    setSelectedTicket(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -181,6 +196,7 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
                   <TableHead>Type</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>QR Code</TableHead>
                   <TableHead>Purchase Date</TableHead>
                   <TableHead>Check-in</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -219,6 +235,14 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
                     <TableCell>
                       {getStatusBadge(ticket.status)}
                     </TableCell>
+                    <TableCell>
+                      <QRCodeDisplayCompact
+                        ticketId={ticket.id}
+                        qrCodeImageUrl={ticket.qrCodeImageUrl}
+                        status={ticket.qrCodeStatus || "PENDING"}
+                        onClick={() => handleViewQRCode(ticket)}
+                      />
+                    </TableCell>
                     <TableCell className="text-sm">
                       {formatDate(ticket.createdAt)}
                     </TableCell>
@@ -250,6 +274,10 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
                           <DropdownMenuItem>
                             <EyeIcon className="mr-2 h-4 w-4" />
                             View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewQRCode(ticket)}>
+                            <QrCode className="mr-2 h-4 w-4" />
+                            View QR Code
                           </DropdownMenuItem>
                           {!ticket.checkedIn && ticket.status === "ACTIVE" && (
                             <DropdownMenuItem>
@@ -302,6 +330,14 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
           </div>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      <TicketQRModal
+        isOpen={isQRModalOpen}
+        onClose={handleCloseQRModal}
+        ticket={selectedTicket}
+        organizerId={organizerId}
+      />
     </MagicCard>
   );
 }

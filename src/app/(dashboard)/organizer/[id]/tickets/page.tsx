@@ -5,6 +5,8 @@ import { OrganizerRoute } from "~/components/auth/organizer-route";
 import { TicketDashboard } from "./components/ticket-dashboard";
 import { TicketList } from "./components/ticket-list";
 import { TicketFilters } from "./components/ticket-filters";
+import { RecentTicketsQR } from "./components/recent-tickets-qr";
+import { QRCodeScanner } from "~/components/ui/qr-code-scanner";
 import { MagicCard } from "~/components/ui/magic-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
@@ -21,7 +23,7 @@ export default function OrganizerTicketsPage({
   params: Promise<{ id: string }>;
 }) {
   const [organizerId, setOrganizerId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("overview");
   const [filters, setFilters] = useState<any>({});
 
   useEffect(() => {
@@ -76,9 +78,9 @@ export default function OrganizerTicketsPage({
         <div className="px-4 lg:px-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4">
-              <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">Dashboard</span>
+                <span className="hidden sm:inline">Overview</span>
               </TabsTrigger>
               <TabsTrigger value="tickets" className="flex items-center gap-2">
                 <ListIcon className="h-4 w-4" />
@@ -94,8 +96,34 @@ export default function OrganizerTicketsPage({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="dashboard" className="space-y-6">
+            <TabsContent value="overview" className="space-y-6">
               <TicketDashboard organizerId={organizerId} />
+              <div className="grid gap-6 lg:grid-cols-2">
+                <RecentTicketsQR organizerId={organizerId} />
+                <MagicCard className="border-0 bg-background/50 backdrop-blur-sm">
+                  <div className="p-8 text-center">
+                    <ScanIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-xl font-semibold mb-2">Quick Actions</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Access frequently used ticket management features.
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        onClick={() => setActiveTab("checkin")}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+                      >
+                        Scan QR Code
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("tickets")}
+                        className="px-4 py-2 border border-input rounded-md hover:bg-accent"
+                      >
+                        View All Tickets
+                      </button>
+                    </div>
+                  </div>
+                </MagicCard>
+              </div>
             </TabsContent>
 
             <TabsContent value="tickets" className="space-y-6">
@@ -104,15 +132,17 @@ export default function OrganizerTicketsPage({
             </TabsContent>
 
             <TabsContent value="checkin" className="space-y-6">
-              <MagicCard className="border-0 bg-background/50 backdrop-blur-sm">
-                <div className="p-8 text-center">
-                  <ScanIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-xl font-semibold mb-2">Check-in Interface</h3>
-                  <p className="text-muted-foreground">
-                    Quick ticket validation and check-in functionality coming soon.
-                  </p>
-                </div>
-              </MagicCard>
+              <QRCodeScanner
+                organizerId={organizerId}
+                onScanSuccess={(result) => {
+                  console.log("Scan successful:", result);
+                  // You can add additional success handling here
+                }}
+                onScanError={(error) => {
+                  console.error("Scan error:", error);
+                  // You can add additional error handling here
+                }}
+              />
             </TabsContent>
 
             <TabsContent value="analytics" className="space-y-6">

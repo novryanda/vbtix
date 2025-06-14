@@ -289,27 +289,31 @@ model Voucher {
 }
 
 model Ticket {
-  id            String        @id @default(cuid())
-  ticketTypeId  String
-  transactionId String
-  userId        String
-  qrCode        String        @unique
-  status        TicketStatus  @default(ACTIVE)
-  checkedIn     Boolean       @default(false)
-  checkInTime   DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  imagePublicId String?
-  imageUrl      String?
-  delivered     Boolean       @default(false)
-  deliveredAt   DateTime?
-  filePublicId  String?
-  fileUrl       String?
-  scannedAt     DateTime?
-  ticketType    TicketType    @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
-  transaction   Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ticketHolder  TicketHolder?
+  id               String        @id @default(cuid())
+  ticketTypeId     String
+  transactionId    String
+  userId           String
+  qrCode           String        @unique
+  qrCodeImageUrl   String?       // URL to the generated QR code image
+  qrCodeData       String?       // Encrypted QR code data for validation
+  qrCodeGeneratedAt DateTime?    // When QR code was generated
+  qrCodeStatus     QRCodeStatus  @default(PENDING) // Status of QR code
+  status           TicketStatus  @default(ACTIVE)
+  checkedIn        Boolean       @default(false)
+  checkInTime      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  imagePublicId    String?
+  imageUrl         String?
+  delivered        Boolean       @default(false)
+  deliveredAt      DateTime?
+  filePublicId     String?
+  fileUrl          String?
+  scannedAt        DateTime?
+  ticketType       TicketType    @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+  transaction      Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticketHolder     TicketHolder?
 }
 
 model OrganizerVerification {
@@ -442,4 +446,12 @@ enum ReservationStatus {
   EXPIRED
   CONVERTED
   CANCELLED
+}
+
+enum QRCodeStatus {
+  PENDING
+  GENERATED
+  ACTIVE
+  USED
+  EXPIRED
 }

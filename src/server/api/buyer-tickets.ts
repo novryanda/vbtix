@@ -1,5 +1,6 @@
 import { ticketService } from "~/server/services/ticket.service";
 import { reservationService } from "~/server/services/reservation.service";
+import { generateTransactionQRCodes } from "~/server/services/ticket-qr.service";
 import { prisma } from "~/server/db";
 import { TicketStatus } from "@prisma/client";
 import { formatDate } from "~/lib/utils";
