@@ -19,10 +19,7 @@ import {
 import { toast } from "sonner";
 import { OrganizerRoute } from "~/components/auth/organizer-route";
 import { OrganizerPageWrapper } from "~/components/dashboard/organizer/organizer-page-wrapper";
-import { MagicCard } from "~/components/ui/magic-card";
-import { MagicInput } from "~/components/ui/magic-input";
-import { MagicTextarea } from "~/components/ui/magic-textarea";
-import { MagicButton } from "~/components/ui/magic-button";
+import { MagicCard, MagicInput, MagicTextarea, MagicButton } from "~/components/ui/magic-card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";

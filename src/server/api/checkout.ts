@@ -72,12 +72,18 @@ export async function handleInitiateCheckout(params: {
 
   // Handle manual payment
   if (paymentMethod === "MANUAL_PAYMENT") {
-    // Update order status to PENDING_PAYMENT for manual approval
+    // Update order status to PENDING for manual approval
+    // We'll use the details field to mark this as awaiting manual verification
     const updatedOrder = await prisma.transaction.update({
       where: { id: orderId },
       data: {
         paymentMethod: "MANUAL_PAYMENT",
-        status: "PENDING_PAYMENT",
+        status: "PENDING",
+        details: {
+          type: "manual_payment",
+          awaitingVerification: true,
+          submittedAt: new Date().toISOString(),
+        },
       },
     });
 

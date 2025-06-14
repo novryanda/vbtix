@@ -48,7 +48,8 @@ interface SoldTicket {
 }
 
 interface SoldTicketsResponse {
-  tickets: SoldTicket[];
+  success: boolean;
+  data: SoldTicket[];
   meta: {
     page: number;
     limit: number;
@@ -157,8 +158,7 @@ export function useOrganizerSoldTickets(organizerId: string, filters: FilterPara
   }, [organizerId, JSON.stringify(filters)]);
 
   return {
-    data: data?.data || [],
-    meta: data?.meta,
+    data: data,
     isLoading,
     error,
     refetch: fetchTickets,

@@ -65,11 +65,11 @@ export const reservationService = {
       throw new Error(`Only ${availableTickets} tickets available`);
     }
 
-    // Check if session already has pending or active reservations for this ticket type
+    // Check if session already has active reservations for this ticket type
     const existingReservation = await prisma.ticketReservation.findFirst({
       where: {
         ticketTypeId,
-        status: { in: ["PENDING", "ACTIVE"] },
+        status: "ACTIVE", // Only check for ACTIVE reservations
         expiresAt: {
           gt: new Date(),
         },
@@ -81,13 +81,14 @@ export const reservationService = {
       throw new Error("You already have a reservation for this ticket type");
     }
 
-    // Create the reservation (defaults to ACTIVE status - user is in checkout)
+    // Create the reservation (explicitly set to ACTIVE status - user is in checkout)
     const reservation = await prisma.ticketReservation.create({
       data: {
         sessionId,
         ticketTypeId,
         quantity,
         expiresAt,
+        status: "ACTIVE", // Explicitly set status
         metadata: {
           eventId: ticketType.event.id,
           eventTitle: ticketType.event.title,

@@ -285,11 +285,19 @@ export default function OrderDetailPage({
                   </p>
                 </div>
                 <div className="rounded-full bg-yellow-100 px-3 py-1 text-sm text-yellow-800">
-                  {orderData.status === "PENDING"
-                    ? "Menunggu Pembayaran"
-                    : orderData.status === "PENDING_PAYMENT"
-                      ? "Menunggu Konfirmasi"
-                      : orderData.status}
+                  {orderData.status === "PENDING" &&
+                   orderData.paymentMethod === "MANUAL_PAYMENT" &&
+                   orderData.details?.awaitingVerification
+                    ? "Menunggu Konfirmasi Admin"
+                    : orderData.status === "PENDING"
+                      ? "Menunggu Pembayaran"
+                      : orderData.status === "SUCCESS"
+                        ? "Lunas"
+                        : orderData.status === "FAILED"
+                          ? "Gagal"
+                          : orderData.status === "EXPIRED"
+                            ? "Kadaluarsa"
+                            : orderData.status}
                 </div>
               </div>
             </CardHeader>

@@ -138,7 +138,7 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
             <h3 className="text-lg font-semibold">Sold Tickets</h3>
             {meta && (
               <Badge variant="secondary">
-                {meta.totalItems} total
+                {meta.totalCount} total
               </Badge>
             )}
           </div>
@@ -202,9 +202,9 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{ticket.buyer?.name}</p>
+                        <p className="font-medium">{ticket.attendee?.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {ticket.buyer?.email}
+                          {ticket.attendee?.email}
                         </p>
                       </div>
                     </TableCell>
@@ -276,25 +276,25 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
         {meta && meta.totalPages > 1 && (
           <div className="flex items-center justify-between mt-6">
             <p className="text-sm text-muted-foreground">
-              Showing {((meta.currentPage - 1) * meta.itemsPerPage) + 1} to{" "}
-              {Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)} of{" "}
-              {meta.totalItems} tickets
+              Showing {((meta.page - 1) * meta.limit) + 1} to{" "}
+              {Math.min(meta.page * meta.limit, meta.totalCount)} of{" "}
+              {meta.totalCount} tickets
             </p>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                disabled={meta.currentPage <= 1}
+                disabled={meta.page <= 1}
               >
                 Previous
               </Button>
               <span className="text-sm">
-                Page {meta.currentPage} of {meta.totalPages}
+                Page {meta.page} of {meta.totalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={meta.currentPage >= meta.totalPages}
+                disabled={meta.page >= meta.totalPages}
               >
                 Next
               </Button>
