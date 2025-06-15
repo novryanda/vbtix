@@ -2,6 +2,7 @@ import { prisma } from "~/server/db";
 import { PaymentStatus } from "@prisma/client";
 import { formatDate } from "~/lib/utils";
 import { generateTransactionQRCodes } from "~/server/services/ticket-qr.service";
+import { emailService } from "~/lib/email-service";
 
 /**
  * Get all orders for admin with filtering and pagination
@@ -246,6 +247,91 @@ export async function handleUpdateOrderStatus(params: {
         console.error("Error generating QR codes:", qrError);
         // Don't fail the approval process if QR generation fails
       }
+    }
+  }
+
+  // Send email notification if order is approved
+  if (status === "SUCCESS") {
+    try {
+      // Get the updated order with all related data for email
+      const orderWithDetails = await prisma.transaction.findUnique({
+        where: { id: orderId },
+        include: {
+          user: true,
+          event: true,
+          tickets: {
+            include: {
+              ticketType: true,
+              ticketHolder: true,
+            },
+          },
+          buyerInfo: true,
+        },
+      });
+
+      if (orderWithDetails) {
+        // Get the email to send to (buyer info email or user email)
+        const emailTo = orderWithDetails.buyerInfo?.email || orderWithDetails.user.email;
+
+        if (emailTo) {
+          // Format event date and time
+          const eventDate = new Date(orderWithDetails.event.startDate).toLocaleDateString(
+            "id-ID",
+            {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            },
+          );
+
+          const eventTime = orderWithDetails.event.startTime || "Waktu akan diumumkan";
+          const customerName =
+            orderWithDetails.buyerInfo?.fullName || orderWithDetails.user.name || "Customer";
+
+          // Format payment date
+          const paymentDate =
+            new Date().toLocaleDateString("id-ID", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }) + " WIB";
+
+          await emailService.sendTicketDelivery({
+            to: emailTo,
+            customerName,
+            event: {
+              title: orderWithDetails.event.title,
+              date: eventDate,
+              time: eventTime,
+              location: orderWithDetails.event.venue,
+              address: `${orderWithDetails.event.address}, ${orderWithDetails.event.city}, ${orderWithDetails.event.province}`,
+              image: orderWithDetails.event.posterUrl || undefined,
+            },
+            order: {
+              invoiceNumber: orderWithDetails.invoiceNumber,
+              totalAmount: Number(orderWithDetails.amount),
+              paymentDate,
+            },
+            tickets: orderWithDetails.tickets.map((ticket) => ({
+              id: ticket.id,
+              ticketNumber: ticket.id,
+              ticketType: ticket.ticketType.name,
+              holderName: ticket.ticketHolder?.fullName || customerName,
+              qrCode: ticket.qrCodeImageUrl || undefined,
+            })),
+          });
+
+          console.log(
+            `✅ Admin verification: Ticket delivery email sent to ${emailTo} for order ${orderWithDetails.invoiceNumber}`,
+          );
+        }
+      }
+    } catch (emailError) {
+      console.error("Failed to send ticket email after admin verification:", emailError);
+      // Don't throw error here, order update should still succeed
     }
   }
 

@@ -19,9 +19,17 @@ import {
   Copy,
   AlertTriangle,
   ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import {
+  useOrderStatus,
+  getStatusMessage,
+  getStatusColor,
+  isOrderCompleted,
+  isOrderPending
+} from "~/lib/services/realtime-updates.service";
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
@@ -31,6 +39,19 @@ export default function CheckoutSuccessPage() {
   const [orderData, setOrderData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Real-time order status updates
+  const {
+    status: realtimeStatus,
+    isLoading: statusLoading,
+    error: statusError,
+    lastUpdated,
+    refresh: refreshStatus,
+  } = useOrderStatus({
+    orderId: orderId || "",
+    enabled: !!orderId && !!orderData,
+    pollingInterval: 5000, // Poll every 5 seconds
+  });
 
   useEffect(() => {
     if (!orderId) {
@@ -97,6 +118,23 @@ export default function CheckoutSuccessPage() {
     fetchOrderData();
   }, [orderId]);
 
+  // Update order status when real-time status changes
+  useEffect(() => {
+    if (realtimeStatus && orderData && realtimeStatus !== orderData.status) {
+      setOrderData((prev: any) => ({
+        ...prev,
+        status: realtimeStatus,
+      }));
+
+      // Show notification for status changes
+      if (isOrderCompleted(realtimeStatus)) {
+        toast.success("Pembayaran berhasil! Tiket Anda sudah siap.", {
+          description: "Silakan cek email Anda untuk tiket digital.",
+        });
+      }
+    }
+  }, [realtimeStatus, orderData]);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -156,8 +194,10 @@ export default function CheckoutSuccessPage() {
     );
   }
 
-  const isPaymentSuccessful =
-    orderData.status === "SUCCESS" || orderData.status === "PAID";
+  // Use real-time status if available, otherwise use initial order status
+  const currentStatus = realtimeStatus || orderData.status;
+  const isPaymentSuccessful = isOrderCompleted(currentStatus);
+  const isPending = isOrderPending(currentStatus);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
@@ -204,12 +244,29 @@ export default function CheckoutSuccessPage() {
                     <AlertTriangle className="h-8 w-8 text-yellow-600" />
                   </div>
                   <h2 className="mb-2 text-2xl font-bold text-yellow-600">
-                    Payment Pending
+                    {isPending ? "Payment Pending" : "Processing Payment"}
                   </h2>
                   <p className="text-gray-600">
-                    Your payment is being processed. You will receive
-                    confirmation shortly.
+                    {getStatusMessage(currentStatus)}
                   </p>
+                  {isPending && (
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={refreshStatus}
+                        disabled={statusLoading}
+                      >
+                        <RefreshCw className={`mr-2 h-4 w-4 ${statusLoading ? 'animate-spin' : ''}`} />
+                        Refresh Status
+                      </Button>
+                      {lastUpdated && (
+                        <span className="text-xs text-gray-500">
+                          Last updated: {new Date(lastUpdated).toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -257,11 +314,17 @@ export default function CheckoutSuccessPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Payment Status</span>
-                  <Badge
-                    variant={isPaymentSuccessful ? "default" : "secondary"}
-                  >
-                    {orderData.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={isPaymentSuccessful ? "default" : "secondary"}
+                      className={getStatusColor(currentStatus)}
+                    >
+                      {currentStatus}
+                    </Badge>
+                    {statusLoading && (
+                      <RefreshCw className="h-3 w-3 animate-spin text-gray-400" />
+                    )}
+                  </div>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between font-semibold">

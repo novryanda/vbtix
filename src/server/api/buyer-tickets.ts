@@ -32,13 +32,27 @@ export async function handleGetUserTickets(params: {
   // Process tickets for response
   const processedTickets = tickets.map((ticket) => ({
     id: ticket.id,
-    qrCode: ticket.qrCode,
+    eventTitle: ticket.ticketType.event.title,
+    eventDate: ticket.ticketType.event.startDate.toISOString(),
+    eventLocation: ticket.ticketType.event.venue,
+    eventAddress: `${ticket.ticketType.event.address}, ${ticket.ticketType.event.city}, ${ticket.ticketType.event.province}`,
+    ticketType: ticket.ticketType.name,
+    price: Number(ticket.ticketType.price),
     status: ticket.status,
+    qrCodeStatus: ticket.qrCodeStatus || "PENDING",
+    qrCodeImageUrl: ticket.qrCodeImageUrl,
+    purchaseDate: ticket.createdAt.toISOString(),
+    holderName: ticket.ticketHolder?.fullName || ticket.user?.name || "Unknown",
+    holderEmail: ticket.ticketHolder?.email || ticket.user?.email || "",
+    invoiceNumber: ticket.transaction?.invoiceNumber || "",
+    eventImage: ticket.ticketType.event.posterUrl,
+    // Legacy fields for compatibility
+    qrCode: ticket.qrCode,
     checkedIn: ticket.checkedIn,
     checkInTime: ticket.checkInTime,
     createdAt: ticket.createdAt,
     formattedCreatedAt: formatDate(ticket.createdAt),
-    ticketType: {
+    ticketTypeDetails: {
       id: ticket.ticketType.id,
       name: ticket.ticketType.name,
       price: Number(ticket.ticketType.price),

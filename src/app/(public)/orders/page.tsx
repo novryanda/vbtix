@@ -9,6 +9,7 @@ import {
   Receipt,
   CreditCard,
   ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
@@ -69,6 +70,7 @@ export default function OrdersPage() {
   // State for orders and loading
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [meta, setMeta] = useState<PaginationMeta>({
     currentPage: 1,
     totalPages: 1,
@@ -81,8 +83,12 @@ export default function OrdersPage() {
     (searchParams.get("status") as PaymentStatus) || PaymentStatus.PENDING;
 
   // Fetch orders from API
-  const fetchOrders = async () => {
-    setIsLoading(true);
+  const fetchOrders = async (isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
 
     try {
       // Build query parameters
@@ -106,8 +112,17 @@ export default function OrdersPage() {
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {
-      setIsLoading(false);
+      if (isRefresh) {
+        setIsRefreshing(false);
+      } else {
+        setIsLoading(false);
+      }
     }
+  };
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    fetchOrders(true);
   };
 
   // Handle status change
@@ -129,6 +144,17 @@ export default function OrdersPage() {
   useEffect(() => {
     fetchOrders();
   }, [searchParams]);
+
+  // Auto-refresh for pending orders every 30 seconds
+  useEffect(() => {
+    if (currentStatus === PaymentStatus.PENDING || currentStatus === "MANUAL_PENDING") {
+      const interval = setInterval(() => {
+        fetchOrders(true);
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [currentStatus]);
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -328,9 +354,20 @@ export default function OrdersPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Pesanan Saya</h1>
-        <p className="text-gray-500">Kelola semua pesanan tiket Anda</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Pesanan Saya</h1>
+          <p className="text-gray-500">Kelola semua pesanan tiket Anda</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       <Tabs defaultValue={currentStatus} onValueChange={handleStatusChange}>

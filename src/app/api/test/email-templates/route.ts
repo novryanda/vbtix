@@ -7,7 +7,41 @@ import { emailService } from "~/lib/email-service";
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Check if request has content
+    const contentType = request.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Content-Type must be application/json",
+          example: {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "ticket", email: "test@example.com" })
+          }
+        },
+        { status: 400 }
+      );
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid JSON in request body",
+          details: jsonError instanceof Error ? jsonError.message : "JSON parsing failed",
+          example: {
+            type: "ticket",
+            email: "test@example.com"
+          }
+        },
+        { status: 400 }
+      );
+    }
+
     const { type, email } = body;
 
     if (!email) {

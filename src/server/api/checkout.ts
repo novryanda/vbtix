@@ -2,6 +2,7 @@ import { prisma } from "~/server/db";
 import { PaymentStatus } from "@prisma/client";
 import { env } from "~/env";
 import { generateTransactionQRCodes } from "~/server/services/ticket-qr.service";
+import { emailService } from "~/lib/email-service";
 
 // Import both Xendit and Mock payment services
 import {
@@ -321,6 +322,17 @@ export async function handlePaymentCallback(params: {
         try {
           const qrResult = await generateTransactionQRCodes(actualOrderId);
           console.log(`QR code generation result: ${qrResult.generatedCount} generated, errors:`, qrResult.errors);
+
+          // Send email with tickets after QR codes are generated
+          if (qrResult.success && qrResult.generatedCount > 0) {
+            try {
+              await sendTicketDeliveryEmail(actualOrderId);
+              console.log(`✅ Ticket delivery email sent for order ${actualOrderId}`);
+            } catch (emailError) {
+              console.error("Error sending ticket delivery email:", emailError);
+              // Don't fail the payment process if email sending fails
+            }
+          }
         } catch (qrError) {
           console.error("Error generating QR codes:", qrError);
           // Don't fail the payment process if QR generation fails
@@ -484,4 +496,96 @@ function extractCheckoutUrl(xenditPayment: any): string | null {
 
   // For some payment methods like VA, there might not be a redirect URL
   return null;
+}
+
+/**
+ * Send ticket delivery email after successful payment and QR code generation
+ */
+async function sendTicketDeliveryEmail(orderId: string): Promise<void> {
+  try {
+    // Get order with all related data
+    const order = await prisma.transaction.findUnique({
+      where: { id: orderId },
+      include: {
+        user: true,
+        event: true,
+        tickets: {
+          include: {
+            ticketType: true,
+            ticketHolder: true,
+          },
+        },
+        buyerInfo: true,
+      },
+    });
+
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    // Get the email to send to (buyer info email or user email)
+    const emailTo = order.buyerInfo?.email || order.user.email;
+
+    if (!emailTo) {
+      throw new Error("No email address found for order");
+    }
+
+    // Format event date and time
+    const eventDate = new Date(order.event.startDate).toLocaleDateString(
+      "id-ID",
+      {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      },
+    );
+
+    const eventTime = order.event.startTime || "Waktu akan diumumkan";
+    const customerName =
+      order.buyerInfo?.fullName || order.user.name || "Customer";
+
+    // Format payment date
+    const paymentDate =
+      new Date().toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }) + " WIB";
+
+    // Send email with tickets
+    await emailService.sendTicketDelivery({
+      to: emailTo,
+      customerName,
+      event: {
+        title: order.event.title,
+        date: eventDate,
+        time: eventTime,
+        location: order.event.venue,
+        address: `${order.event.address}, ${order.event.city}, ${order.event.province}`,
+        image: order.event.posterUrl || undefined,
+      },
+      order: {
+        invoiceNumber: order.invoiceNumber,
+        totalAmount: Number(order.amount),
+        paymentDate,
+      },
+      tickets: order.tickets.map((ticket) => ({
+        id: ticket.id,
+        ticketNumber: ticket.id,
+        ticketType: ticket.ticketType.name,
+        holderName: ticket.ticketHolder?.fullName || customerName,
+        qrCode: ticket.qrCodeImageUrl || undefined,
+      })),
+    });
+
+    console.log(
+      `✅ Ticket delivery email sent to ${emailTo} for order ${order.invoiceNumber}`,
+    );
+  } catch (error) {
+    console.error("Error sending ticket delivery email:", error);
+    throw error;
+  }
 }

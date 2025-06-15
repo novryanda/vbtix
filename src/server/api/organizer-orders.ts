@@ -525,7 +525,7 @@ export async function handleUpdateOrganizerOrderStatus(params: {
             ticketNumber: ticket.id,
             ticketType: ticket.ticketType.name,
             holderName: ticket.ticketHolder?.fullName || customerName,
-            qrCode: ticket.qrCode || undefined,
+            qrCode: ticket.qrCodeImageUrl || undefined,
           })),
         });
 

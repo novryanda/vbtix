@@ -26,6 +26,7 @@ export const ticketService = {
             },
           },
           transaction: true,
+          ticketHolder: true,
           user: {
             select: {
               id: true,
@@ -137,6 +138,7 @@ export const ticketService = {
                 email: true,
               },
             },
+            ticketHolder: true,
             transaction: true,
           },
         }),

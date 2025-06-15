@@ -1,7 +1,13 @@
 import { Resend } from "resend";
+import { env } from "~/env";
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend with proper error handling
+const resend = new Resend(env.RESEND_API_KEY);
+
+// Check if email service is properly configured
+const isEmailConfigured = () => {
+  return !!(env.RESEND_API_KEY && env.EMAIL_FROM);
+};
 
 interface EmailConfig {
   from: string;
@@ -9,7 +15,8 @@ interface EmailConfig {
   companyName: string;
 }
 
-const defaultConfig: EmailConfig = {  from: process.env.EMAIL_FROM || "noreply@vbticket.com",
+const defaultConfig: EmailConfig = {
+  from: env.EMAIL_FROM || "noreply@vbticket.com",
   replyTo: "support@vbticket.com",
   companyName: "VBTicket",
 };
@@ -164,7 +171,7 @@ Jika Anda memiliki pertanyaan, hubungi kami di ${this.config.replyTo}
         text: textContent,
         tags: [
           { name: "category", value: "account-verification" },
-          { name: "user", value: userName },
+          { name: "user", value: this.sanitizeTagValue(userName) },
         ],
       });
 
@@ -364,6 +371,14 @@ Jika Anda memiliki pertanyaan, hubungi kami di ${this.config.replyTo}
     }>;
   }) {
     try {
+      // Check if email service is configured
+      if (!isEmailConfigured()) {
+        console.log("📧 Email service not configured. Ticket email would be sent to:", to);
+        return {
+          success: false,
+          error: "Email service not configured. Please set RESEND_API_KEY and EMAIL_FROM environment variables."
+        };
+      }
       const htmlContent = this.createTicketDeliveryHTML(
         customerName,
         event,
@@ -388,13 +403,25 @@ Jika Anda memiliki pertanyaan, hubungi kami di ${this.config.replyTo}
         text: textContent,
         tags: [
           { name: "category", value: "ticket-delivery" },
-          { name: "event", value: event.title },
-          { name: "invoice", value: order.invoiceNumber },
+          { name: "event", value: this.sanitizeTagValue(event.title) },
+          { name: "invoice", value: this.sanitizeTagValue(order.invoiceNumber) },
         ],
       });
 
-      console.log("✅ Ticket delivery email sent:", result.data?.id);
-      return { success: true, messageId: result.data?.id };
+      console.log("✅ Ticket delivery email sent - Full result:", JSON.stringify(result, null, 2));
+
+      // Check if there's an error in the result
+      if (result.error) {
+        console.error("❌ Resend API error:", result.error);
+        return {
+          success: false,
+          error: result.error.message || "Email sending failed",
+          resendError: result.error
+        };
+      }
+
+      console.log("✅ Ticket delivery email sent - Message ID:", result.data?.id);
+      return { success: true, messageId: result.data?.id, fullResult: result };
     } catch (error: any) {
       console.error("❌ Failed to send ticket delivery email:", error);
       return { success: false, error: error.message };
@@ -497,12 +524,33 @@ Butuh bantuan? Hubungi kami di support@vbticket.com
         tags,
       });
 
-      console.log("✅ Email sent:", result.data?.id);
-      return { success: true, messageId: result.data?.id };
+      console.log("✅ Email sent - Full result:", JSON.stringify(result, null, 2));
+
+      // Check if there's an error in the result
+      if (result.error) {
+        console.error("❌ Resend API error:", result.error);
+        return {
+          success: false,
+          error: result.error.message || "Email sending failed",
+          resendError: result.error
+        };
+      }
+
+      console.log("✅ Email sent - Message ID:", result.data?.id);
+      return { success: true, messageId: result.data?.id, fullResult: result };
     } catch (error: any) {
       console.error("❌ Failed to send email:", error);
       return { success: false, error: error.message };
     }
+  }
+
+  /**
+   * Sanitize tag values to only contain ASCII letters, numbers, underscores, or dashes
+   */
+  sanitizeTagValue(value: string): string {
+    return value
+      .replace(/[^a-zA-Z0-9_-]/g, '_') // Replace invalid characters with underscore
+      .substring(0, 50); // Limit length to 50 characters
   }
 
   /**

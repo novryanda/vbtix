@@ -2,12 +2,20 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, MapPin, Clock, CheckCircle, ArrowLeft } from "lucide-react";
+import { Calendar, MapPin, Clock, CheckCircle, ArrowLeft, RefreshCw, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { formatPrice } from "~/lib/utils";
+import { toast } from "sonner";
+import {
+  useOrderStatus,
+  getStatusMessage,
+  getStatusColor,
+  isOrderCompleted,
+  isOrderPending
+} from "~/lib/services/realtime-updates.service";
 
 interface OrderData {
   id: string;
@@ -57,6 +65,19 @@ export default function PendingPaymentPage({
     params.then((p) => setOrderId(p.orderId));
   }, [params]);
 
+  // Real-time order status updates
+  const {
+    status: realtimeStatus,
+    isLoading: statusLoading,
+    error: statusError,
+    lastUpdated,
+    refresh: refreshStatus,
+  } = useOrderStatus({
+    orderId: orderId || "",
+    enabled: !!orderId && !!orderData,
+    pollingInterval: 3000, // Poll every 3 seconds for pending payments
+  });
+
   // Fetch order data
   useEffect(() => {
     if (!orderId) return;
@@ -90,6 +111,27 @@ export default function PendingPaymentPage({
     fetchOrderData();
   }, [orderId]);
 
+  // Update order status when real-time status changes
+  useEffect(() => {
+    if (realtimeStatus && orderData && realtimeStatus !== orderData.status) {
+      setOrderData((prev) => ({
+        ...prev!,
+        status: realtimeStatus,
+      }));
+
+      // Show notification for status changes
+      if (isOrderCompleted(realtimeStatus)) {
+        toast.success("Pembayaran berhasil dikonfirmasi!", {
+          description: "Tiket Anda sudah siap. Silakan cek email Anda.",
+          action: {
+            label: "Lihat Tiket",
+            onClick: () => router.push(`/checkout/success?orderId=${orderId}`),
+          },
+        });
+      }
+    }
+  }, [realtimeStatus, orderData, orderId, router]);
+
   // Calculate totals from order data
   const calculateTotals = () => {
     if (!orderData) return { subtotal: 0, serviceFee: 0, total: 0 };
@@ -105,6 +147,11 @@ export default function PendingPaymentPage({
   };
 
   const { subtotal, serviceFee, total } = calculateTotals();
+
+  // Use real-time status if available, otherwise use initial order status
+  const currentStatus = realtimeStatus || orderData?.status || "PENDING";
+  const isPaymentSuccessful = isOrderCompleted(currentStatus);
+  const isPending = isOrderPending(currentStatus);
 
   // Show loading state
   if (loading) {
@@ -163,29 +210,65 @@ export default function PendingPaymentPage({
           <Card className="mb-6">
             <CardHeader>
               <div className="flex items-center justify-center">
-                <div className="rounded-full bg-yellow-100 p-4">
-                  <Clock className="h-8 w-8 text-yellow-600" />
+                <div className={`rounded-full p-4 ${isPaymentSuccessful ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                  {isPaymentSuccessful ? (
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  ) : (
+                    <Clock className="h-8 w-8 text-yellow-600" />
+                  )}
                 </div>
               </div>
               <div className="text-center">
-                <CardTitle className="text-xl">
-                  Menunggu Konfirmasi Pembayaran
+                <CardTitle className={`text-xl ${isPaymentSuccessful ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {isPaymentSuccessful ? "Pembayaran Dikonfirmasi!" : "Menunggu Konfirmasi Pembayaran"}
                 </CardTitle>
                 <p className="text-muted-foreground mt-2">
-                  Pesanan Anda sedang menunggu konfirmasi pembayaran dari admin
+                  {isPaymentSuccessful
+                    ? "Pembayaran Anda telah dikonfirmasi. Tiket sudah siap!"
+                    : getStatusMessage(currentStatus)
+                  }
                 </p>
+                {isPaymentSuccessful && (
+                  <div className="mt-4">
+                    <Button onClick={() => router.push(`/checkout/success?orderId=${orderId}`)}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Lihat Tiket Anda
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              <Alert className="mb-4">
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Pesanan berhasil dibuat!</strong>
-                  <br />
-                  Anda akan menerima email konfirmasi dan tiket setelah
-                  pembayaran disetujui oleh admin.
-                </AlertDescription>
-              </Alert>
+              {!isPaymentSuccessful && (
+                <Alert className="mb-4">
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Pesanan berhasil dibuat!</strong>
+                    <br />
+                    Halaman ini akan otomatis terupdate ketika pembayaran dikonfirmasi.
+                    Anda juga akan menerima email konfirmasi dan tiket.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {isPending && (
+                <div className="mb-4 flex items-center justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={refreshStatus}
+                    disabled={statusLoading}
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${statusLoading ? 'animate-spin' : ''}`} />
+                    Cek Status
+                  </Button>
+                  {lastUpdated && (
+                    <span className="text-xs text-gray-500">
+                      Terakhir dicek: {new Date(lastUpdated).toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
@@ -194,9 +277,14 @@ export default function PendingPaymentPage({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
-                  <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs text-yellow-800">
-                    Menunggu Konfirmasi
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-1 text-xs ${getStatusColor(currentStatus)}`}>
+                      {currentStatus}
+                    </span>
+                    {statusLoading && (
+                      <RefreshCw className="h-3 w-3 animate-spin text-gray-400" />
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">

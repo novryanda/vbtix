@@ -148,8 +148,22 @@ export const registerOrganizer = async (
   });
   console.log("🎉 Transaction completed successfully!");
 
-  // Kirim email verifikasi (implementasi akan dibuat nanti)
-  // await sendVerificationEmail(email, verificationToken);
+  // Send verification email
+  try {
+    const { emailService } = await import("~/lib/email-service");
+    const verificationUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/verify?token=${verificationToken}`;
+
+    await emailService.sendAccountVerification({
+      to: email,
+      userName: name,
+      verificationUrl,
+    });
+
+    console.log("✅ Verification email sent successfully to:", email);
+  } catch (emailError) {
+    console.error("❌ Failed to send verification email:", emailError);
+    // Don't fail registration if email sending fails
+  }
 
   return result;
 };

@@ -9,6 +9,7 @@ import { Badge } from "~/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { QRCodeDisplay, QRCodeDisplayCompact } from "~/components/ui/qr-code-display";
 import { useTicketQRCode } from "~/lib/api/hooks/qr-code";
+import { useBuyerTickets } from "~/lib/api/hooks/buyer-tickets";
 import {
   Calendar,
   MapPin,
@@ -20,45 +21,23 @@ import {
   Eye,
   AlertCircle,
   CheckCircle,
+  RefreshCw,
 } from "lucide-react";
 import { formatDate, formatPrice } from "~/lib/utils";
 import Link from "next/link";
-
-// Mock data - replace with actual API call
-const mockTickets = [
-  {
-    id: "ticket_1",
-    eventTitle: "Tech Conference 2024",
-    eventDate: "2024-07-15T09:00:00Z",
-    eventLocation: "Jakarta Convention Center",
-    ticketType: "VIP",
-    price: 500000,
-    status: "ACTIVE",
-    qrCodeStatus: "ACTIVE",
-    purchaseDate: "2024-06-01T10:00:00Z",
-    holderName: "John Doe",
-    holderEmail: "john@example.com",
-  },
-  {
-    id: "ticket_2",
-    eventTitle: "Music Festival",
-    eventDate: "2024-08-20T18:00:00Z",
-    eventLocation: "Gelora Bung Karno",
-    ticketType: "Regular",
-    price: 250000,
-    status: "ACTIVE",
-    qrCodeStatus: "GENERATED",
-    purchaseDate: "2024-06-10T15:30:00Z",
-    holderName: "Jane Smith",
-    holderEmail: "jane@example.com",
-  },
-];
 
 export default function MyTicketsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("active");
+
+  // Fetch real tickets data
+  const { tickets, isLoading: ticketsLoading, error: ticketsError, refresh } = useBuyerTickets({
+    page: 1,
+    limit: 50,
+    status: activeTab === "all" ? undefined : activeTab.toUpperCase(),
+  });
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -68,7 +47,7 @@ export default function MyTicketsPage() {
     }
   }, [session, status, router]);
 
-  if (status === "loading") {
+  if (status === "loading" || ticketsLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-6">
@@ -87,16 +66,32 @@ export default function MyTicketsPage() {
     return null;
   }
 
+  if (ticketsError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <AlertCircle className="h-16 w-16 mx-auto mb-4 text-red-500" />
+          <h3 className="text-xl font-semibold mb-2">Error Loading Tickets</h3>
+          <p className="text-gray-600 mb-4">{ticketsError}</p>
+          <Button onClick={refresh} className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const filterTickets = (status: string) => {
     switch (status) {
       case "active":
-        return mockTickets.filter((ticket) => ticket.status === "ACTIVE");
+        return tickets.filter((ticket) => ticket.status === "ACTIVE");
       case "used":
-        return mockTickets.filter((ticket) => ticket.status === "USED");
+        return tickets.filter((ticket) => ticket.status === "USED");
       case "expired":
-        return mockTickets.filter((ticket) => ticket.status === "EXPIRED");
+        return tickets.filter((ticket) => ticket.status === "EXPIRED");
       default:
-        return mockTickets;
+        return tickets;
     }
   };
 
@@ -116,8 +111,12 @@ export default function MyTicketsPage() {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                {mockTickets.length} Total Tickets
+                {tickets.length} Total Tickets
               </Badge>
+              <Button variant="outline" size="sm" onClick={refresh} className="flex items-center gap-1">
+                <RefreshCw className="h-3 w-3" />
+                Refresh
+              </Button>
             </div>
           </div>
         </div>
@@ -232,6 +231,7 @@ function TicketCard({
         <div className="flex items-center justify-between">
           <QRCodeDisplayCompact
             ticketId={ticket.id}
+            qrCodeImageUrl={ticket.qrCodeImageUrl}
             status={ticket.qrCodeStatus}
           />
           <div className="text-right">
