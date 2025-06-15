@@ -117,21 +117,25 @@ export async function POST(
         },
       });
     } else {
-      // Just validate the QR code
-      const result = await validateTicketQRCode(qrCodeData);
-      
+      // Just validate the QR code with organizer context
+      const result = await validateTicketQRCode(qrCodeData, organizerId);
+
       if (!result.isValid) {
+        // Log validation failure with error code
+        console.warn(`❌ QR code validation failed by organizer ${organizerId}: ${result.error} (${result.errorCode})`);
+
         return NextResponse.json(
           {
             success: false,
             error: result.error,
+            errorCode: result.errorCode,
           },
           { status: 400 }
         );
       }
 
-      // Log validation activity
-      console.log(`🎫 QR code validated by organizer ${organizerId} for ticket ${result.ticket?.id}`);
+      // Log successful validation activity
+      console.log(`✅ QR code validated by organizer ${organizerId} for ticket ${result.ticket?.id}`);
 
       return NextResponse.json({
         success: true,

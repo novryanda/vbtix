@@ -64,7 +64,15 @@ export function generateQRCodeData(params: {
   const { ticketId, eventId, userId, transactionId, ticketTypeId, eventDate } = params;
   
   const issuedAt = new Date().toISOString();
-  const expiresAt = eventDate ? new Date(eventDate.getTime() + 24 * 60 * 60 * 1000).toISOString() : undefined; // 24 hours after event
+
+  // Set expiration to the later of: 24 hours after event OR 7 days from now
+  // This ensures QR codes remain valid for a reasonable period
+  let expiresAt: string | undefined;
+  if (eventDate) {
+    const eventExpiry = new Date(eventDate.getTime() + 24 * 60 * 60 * 1000); // 24 hours after event
+    const minimumExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+    expiresAt = new Date(Math.max(eventExpiry.getTime(), minimumExpiry.getTime())).toISOString();
+  }
   
   // Create checksum for data integrity
   const dataToHash = `${ticketId}:${eventId}:${userId}:${transactionId}:${ticketTypeId}:${issuedAt}`;
@@ -129,16 +137,29 @@ export function decryptQRCodeData(encryptedData: string): TicketQRData {
  */
 export function validateQRCodeData(data: TicketQRData): boolean {
   try {
-    // Check if expired
-    if (data.expiresAt && new Date() > new Date(data.expiresAt)) {
-      return false;
+    // Check if expired (with some tolerance for clock differences)
+    if (data.expiresAt) {
+      const expirationDate = new Date(data.expiresAt);
+      const now = new Date();
+      const timeDifference = now.getTime() - expirationDate.getTime();
+
+      // Allow 1 hour grace period for clock differences
+      if (timeDifference > 60 * 60 * 1000) {
+        console.warn(`QR code expired: ${data.expiresAt} (${Math.round(timeDifference / (60 * 60 * 1000))} hours ago)`);
+        return false;
+      }
     }
-    
+
     // Verify checksum
     const dataToHash = `${data.ticketId}:${data.eventId}:${data.userId}:${data.transactionId}:${data.ticketTypeId}:${data.issuedAt}`;
     const expectedChecksum = createHash("sha256").update(dataToHash).digest("hex").substring(0, 16);
-    
-    return data.checksum === expectedChecksum;
+
+    const checksumValid = data.checksum === expectedChecksum;
+    if (!checksumValid) {
+      console.warn(`QR code checksum mismatch: expected ${expectedChecksum}, got ${data.checksum}`);
+    }
+
+    return checksumValid;
   } catch (error) {
     console.error("Error validating QR code data:", error);
     return false;

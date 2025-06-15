@@ -11,6 +11,44 @@ import {
 import { QRCodeStatus, TicketStatus } from "@prisma/client";
 
 /**
+ * Audit logging interface for check-in activities
+ */
+interface CheckInAuditLog {
+  attemptId: string;
+  ticketId?: string;
+  organizerId: string;
+  eventId?: string;
+  action: 'CHECK_IN_SUCCESS' | 'CHECK_IN_ERROR' | 'VALIDATION_FAILED';
+  timestamp: Date;
+  error?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Log check-in activity for audit purposes
+ */
+async function logCheckInActivity(log: CheckInAuditLog): Promise<void> {
+  try {
+    // For now, we'll use console logging with structured format
+    // This can be extended to use a proper audit logging service
+    console.log(`📋 AUDIT LOG: ${log.action}`, {
+      attemptId: log.attemptId,
+      ticketId: log.ticketId,
+      organizerId: log.organizerId,
+      eventId: log.eventId,
+      timestamp: log.timestamp.toISOString(),
+      error: log.error,
+      metadata: log.metadata,
+    });
+
+    // TODO: Implement proper audit logging to database or external service
+    // await prisma.auditLog.create({ data: log });
+  } catch (error) {
+    console.error('Failed to write audit log:', error);
+  }
+}
+
+/**
  * Generate QR code for a ticket after payment verification
  */
 export async function generateTicketQRCode(ticketId: string): Promise<{
@@ -172,33 +210,61 @@ export async function generateTransactionQRCodes(transactionId: string): Promise
 }
 
 /**
- * Validate a scanned QR code
+ * Validate a scanned QR code with enhanced error handling and logging
  */
-export async function validateTicketQRCode(encryptedData: string): Promise<{
+export async function validateTicketQRCode(encryptedData: string, organizerId?: string): Promise<{
   isValid: boolean;
   ticket?: any;
   error?: string;
+  errorCode?: string;
 }> {
+  const startTime = Date.now();
+
   try {
-    // Validate and decrypt QR code data
-    const validation = validateScannedQRCode(encryptedData);
-    
-    if (!validation.isValid || !validation.data) {
+    // Log validation attempt
+    console.log(`🔍 QR code validation started by organizer: ${organizerId || 'unknown'}`);
+
+    // Basic input validation
+    if (!encryptedData || typeof encryptedData !== 'string') {
+      console.warn(`❌ Invalid QR code input: ${typeof encryptedData}`);
       return {
         isValid: false,
-        error: validation.error || "Invalid QR code",
+        error: "Invalid QR code format",
+        errorCode: "INVALID_INPUT",
+      };
+    }
+
+    // Validate and decrypt QR code data
+    const validation = validateScannedQRCode(encryptedData);
+
+    if (!validation.isValid || !validation.data) {
+      console.warn(`❌ QR code decryption failed: ${validation.error}`);
+      return {
+        isValid: false,
+        error: validation.error || "Invalid QR code format",
+        errorCode: "DECRYPTION_FAILED",
       };
     }
 
     const qrData = validation.data;
+    console.log(`🎫 QR code decrypted successfully for ticket: ${qrData.ticketId}`);
 
-    // Get ticket from database
+    // Get ticket from database with comprehensive includes
     const ticket = await prisma.ticket.findUnique({
       where: { id: qrData.ticketId },
       include: {
         transaction: {
           include: {
-            event: true,
+            event: {
+              include: {
+                organizer: {
+                  select: {
+                    id: true,
+                    userId: true,
+                  },
+                },
+              },
+            },
           },
         },
         ticketType: true,
@@ -208,57 +274,125 @@ export async function validateTicketQRCode(encryptedData: string): Promise<{
     });
 
     if (!ticket) {
+      console.warn(`❌ Ticket not found in database: ${qrData.ticketId}`);
       return {
         isValid: false,
-        error: "Ticket not found",
+        error: "Ticket not found in system",
+        errorCode: "TICKET_NOT_FOUND",
       };
     }
 
-    // Verify QR data matches ticket
-    if (
-      ticket.transaction.eventId !== qrData.eventId ||
-      ticket.userId !== qrData.userId ||
-      ticket.transactionId !== qrData.transactionId ||
-      ticket.ticketTypeId !== qrData.ticketTypeId
-    ) {
+    // Verify QR data matches ticket (enhanced validation)
+    const dataMatches = {
+      eventId: ticket.transaction.eventId === qrData.eventId,
+      userId: ticket.userId === qrData.userId,
+      transactionId: ticket.transactionId === qrData.transactionId,
+      ticketTypeId: ticket.ticketTypeId === qrData.ticketTypeId,
+    };
+
+    if (!dataMatches.eventId || !dataMatches.userId || !dataMatches.transactionId || !dataMatches.ticketTypeId) {
+      console.warn(`❌ QR code data mismatch for ticket ${qrData.ticketId}:`, dataMatches);
       return {
         isValid: false,
-        error: "QR code data does not match ticket",
+        error: "QR code does not match ticket data",
+        errorCode: "DATA_MISMATCH",
+      };
+    }
+
+    // Check if organizer has permission to validate this ticket
+    if (organizerId && ticket.transaction.event.organizer?.id !== organizerId) {
+      console.warn(`❌ Organizer ${organizerId} attempted to validate ticket for different event`);
+      return {
+        isValid: false,
+        error: "You don't have permission to validate this ticket",
+        errorCode: "PERMISSION_DENIED",
+      };
+    }
+
+    // Check payment status
+    if (ticket.transaction.status !== "SUCCESS") {
+      console.warn(`❌ Ticket ${qrData.ticketId} payment not verified: ${ticket.transaction.status}`);
+      return {
+        isValid: false,
+        error: "Payment not verified for this ticket",
+        errorCode: "PAYMENT_NOT_VERIFIED",
       };
     }
 
     // Check ticket status
     if (ticket.status !== TicketStatus.ACTIVE) {
+      console.warn(`❌ Ticket ${qrData.ticketId} is not active: ${ticket.status}`);
       return {
         isValid: false,
         error: `Ticket is ${ticket.status.toLowerCase()}`,
+        errorCode: "TICKET_INACTIVE",
+      };
+    }
+
+    // Check QR code status
+    if (ticket.qrCodeStatus === QRCodeStatus.EXPIRED) {
+      console.warn(`❌ QR code expired for ticket ${qrData.ticketId}`);
+      return {
+        isValid: false,
+        error: "QR code has expired",
+        errorCode: "QR_EXPIRED",
+      };
+    }
+
+    if (ticket.qrCodeStatus === QRCodeStatus.USED) {
+      console.warn(`❌ QR code already used for ticket ${qrData.ticketId}`);
+      return {
+        isValid: false,
+        error: "QR code has already been used",
+        errorCode: "QR_ALREADY_USED",
       };
     }
 
     // Check if already checked in
     if (ticket.checkedIn) {
       const checkInTime = ticket.checkInTime ? new Date(ticket.checkInTime).toLocaleString() : "Unknown time";
+      console.warn(`❌ Ticket ${qrData.ticketId} already checked in at ${checkInTime}`);
       return {
         isValid: false,
         error: `Ticket already checked in at ${checkInTime}`,
+        errorCode: "ALREADY_CHECKED_IN",
       };
     }
+
+    // Check if event date is valid (not too far in the past)
+    const eventDate = new Date(ticket.transaction.event.startDate);
+    const now = new Date();
+    const daysDifference = (now.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (daysDifference > 7) { // Event was more than 7 days ago
+      console.warn(`❌ Event too old for check-in: ${daysDifference} days ago`);
+      return {
+        isValid: false,
+        error: "Event date has passed the check-in window",
+        errorCode: "EVENT_EXPIRED",
+      };
+    }
+
+    const validationTime = Date.now() - startTime;
+    console.log(`✅ QR code validation successful for ticket ${qrData.ticketId} (${validationTime}ms)`);
 
     return {
       isValid: true,
       ticket,
     };
   } catch (error) {
-    console.error("Error validating ticket QR code:", error);
+    const validationTime = Date.now() - startTime;
+    console.error(`💥 Error validating ticket QR code (${validationTime}ms):`, error);
     return {
       isValid: false,
       error: error instanceof Error ? error.message : "Validation failed",
+      errorCode: "SYSTEM_ERROR",
     };
   }
 }
 
 /**
- * Check in a ticket using QR code
+ * Check in a ticket using QR code with enhanced logging and audit trail
  */
 export async function checkInTicketWithQR(
   encryptedData: string,
@@ -267,44 +401,61 @@ export async function checkInTicketWithQR(
   success: boolean;
   ticket?: any;
   error?: string;
+  errorCode?: string;
 }> {
+  const startTime = Date.now();
+  const checkInAttemptId = `checkin_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
   try {
-    // First validate the QR code
-    const validation = await validateTicketQRCode(encryptedData);
-    
+    console.log(`🎫 Check-in attempt started: ${checkInAttemptId} by organizer ${organizerId}`);
+
+    // First validate the QR code with organizer context
+    const validation = await validateTicketQRCode(encryptedData, organizerId);
+
     if (!validation.isValid || !validation.ticket) {
+      console.warn(`❌ Check-in validation failed: ${checkInAttemptId} - ${validation.error}`);
       return {
         success: false,
         error: validation.error,
+        errorCode: validation.errorCode,
       };
     }
 
     const ticket = validation.ticket;
+    console.log(`🎫 Ticket validated for check-in: ${ticket.id} (${ticket.transaction.event.title})`);
 
     // Verify organizer has permission to check in this ticket
-    if (ticket.transaction.event.organizerId !== organizerId) {
+    if (ticket.transaction.event.organizer?.id !== organizerId) {
+      console.warn(`❌ Permission denied for check-in: ${checkInAttemptId} - organizer ${organizerId} vs event organizer ${ticket.transaction.event.organizer?.id}`);
       return {
         success: false,
         error: "You don't have permission to check in this ticket",
+        errorCode: "PERMISSION_DENIED",
       };
     }
 
     // Additional check for already checked in (double-check for race conditions)
     if (ticket.checkedIn) {
       const checkInTime = ticket.checkInTime ? new Date(ticket.checkInTime).toLocaleString() : "Unknown time";
+      console.warn(`❌ Ticket already checked in: ${checkInAttemptId} - ${ticket.id} at ${checkInTime}`);
       return {
         success: false,
         error: `Ticket was already checked in at ${checkInTime}`,
+        errorCode: "ALREADY_CHECKED_IN",
       };
     }
 
-    // Check in the ticket
+    // Perform the check-in with atomic update
+    const checkInTime = new Date();
     const updatedTicket = await prisma.ticket.update({
-      where: { id: ticket.id },
+      where: {
+        id: ticket.id,
+        checkedIn: false, // Additional safety check to prevent race conditions
+      },
       data: {
         checkedIn: true,
-        checkInTime: new Date(),
-        scannedAt: new Date(),
+        checkInTime: checkInTime,
+        scannedAt: checkInTime,
         qrCodeStatus: QRCodeStatus.USED,
       },
       include: {
@@ -319,15 +470,66 @@ export async function checkInTicketWithQR(
       },
     });
 
+    const processingTime = Date.now() - startTime;
+
+    // Log successful check-in with audit information
+    console.log(`✅ Check-in successful: ${checkInAttemptId}`, {
+      ticketId: updatedTicket.id,
+      eventTitle: updatedTicket.transaction.event.title,
+      attendeeName: updatedTicket.ticketHolder?.fullName || updatedTicket.user.name,
+      organizerId: organizerId,
+      checkInTime: checkInTime.toISOString(),
+      processingTimeMs: processingTime,
+    });
+
+    // Create audit log entry (if audit logging is implemented)
+    try {
+      await logCheckInActivity({
+        attemptId: checkInAttemptId,
+        ticketId: updatedTicket.id,
+        organizerId: organizerId,
+        eventId: updatedTicket.transaction.eventId,
+        action: 'CHECK_IN_SUCCESS',
+        timestamp: checkInTime,
+        metadata: {
+          attendeeName: updatedTicket.ticketHolder?.fullName || updatedTicket.user.name,
+          ticketType: updatedTicket.ticketType.name,
+          processingTimeMs: processingTime,
+        },
+      });
+    } catch (auditError) {
+      console.warn(`⚠️ Failed to log check-in activity: ${auditError}`);
+      // Don't fail the check-in if audit logging fails
+    }
+
     return {
       success: true,
       ticket: updatedTicket,
     };
   } catch (error) {
-    console.error("Error checking in ticket with QR:", error);
+    const processingTime = Date.now() - startTime;
+    console.error(`💥 Check-in error: ${checkInAttemptId} (${processingTime}ms):`, error);
+
+    // Log failed check-in attempt
+    try {
+      await logCheckInActivity({
+        attemptId: checkInAttemptId,
+        organizerId: organizerId,
+        action: 'CHECK_IN_ERROR',
+        timestamp: new Date(),
+        error: error instanceof Error ? error.message : 'Unknown error',
+        metadata: {
+          processingTimeMs: processingTime,
+        },
+      });
+    } catch (auditError) {
+      console.warn(`⚠️ Failed to log check-in error: ${auditError}`);
+    }
+
     return {
       success: false,
       error: error instanceof Error ? error.message : "Check-in failed",
+      errorCode: "SYSTEM_ERROR",
     };
   }
 }

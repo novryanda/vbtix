@@ -36,6 +36,8 @@ export interface QRCodeScannerProps {
 interface ScanResult {
   success: boolean;
   message: string;
+  error?: string;
+  errorCode?: string;
   ticket?: {
     id: string;
     checkedIn: boolean;
@@ -52,6 +54,70 @@ interface ScanResult {
     };
   };
 }
+
+// Error code to user-friendly message mapping
+const ERROR_MESSAGES: Record<string, { title: string; description: string; icon: string }> = {
+  INVALID_INPUT: {
+    title: "Invalid QR Code",
+    description: "The QR code format is not recognized. Please try scanning again.",
+    icon: "❌",
+  },
+  DECRYPTION_FAILED: {
+    title: "Cannot Read QR Code",
+    description: "Unable to decrypt QR code data. This may be an old or corrupted QR code.",
+    icon: "🔒",
+  },
+  TICKET_NOT_FOUND: {
+    title: "Ticket Not Found",
+    description: "This ticket does not exist in our system.",
+    icon: "🎫",
+  },
+  DATA_MISMATCH: {
+    title: "QR Code Mismatch",
+    description: "The QR code data doesn't match the ticket information.",
+    icon: "⚠️",
+  },
+  PERMISSION_DENIED: {
+    title: "Access Denied",
+    description: "You don't have permission to validate this ticket.",
+    icon: "🚫",
+  },
+  PAYMENT_NOT_VERIFIED: {
+    title: "Payment Pending",
+    description: "Payment for this ticket has not been verified yet.",
+    icon: "💳",
+  },
+  TICKET_INACTIVE: {
+    title: "Ticket Inactive",
+    description: "This ticket has been cancelled or is no longer active.",
+    icon: "❌",
+  },
+  QR_EXPIRED: {
+    title: "QR Code Expired",
+    description: "This QR code has expired and can no longer be used.",
+    icon: "⏰",
+  },
+  QR_ALREADY_USED: {
+    title: "QR Code Used",
+    description: "This QR code has already been used for check-in.",
+    icon: "✅",
+  },
+  ALREADY_CHECKED_IN: {
+    title: "Already Checked In",
+    description: "This ticket has already been checked in.",
+    icon: "✅",
+  },
+  EVENT_EXPIRED: {
+    title: "Event Expired",
+    description: "The check-in window for this event has closed.",
+    icon: "📅",
+  },
+  SYSTEM_ERROR: {
+    title: "System Error",
+    description: "A technical error occurred. Please try again or contact support.",
+    icon: "💥",
+  },
+};
 
 export function QRCodeScanner({
   organizerId,
@@ -100,6 +166,8 @@ export function QRCodeScanner({
         const errorResult = {
           success: false,
           message: errorMessage,
+          error: errorMessage,
+          errorCode: "SYSTEM_ERROR",
         };
         setScanResult(errorResult);
         setScanHistory((prev) => [errorResult, ...prev.slice(0, 9)]);
@@ -136,6 +204,8 @@ export function QRCodeScanner({
         const errorResult = {
           success: false,
           message: errorMessage,
+          error: errorMessage,
+          errorCode: "SYSTEM_ERROR",
         };
         setScanResult(errorResult);
         setScanHistory((prev) => [errorResult, ...prev.slice(0, 9)]);
@@ -390,6 +460,9 @@ function ScanResultDisplay({
   const isSuccess = result.success;
   const ticket = result.ticket;
 
+  // Get enhanced error information
+  const errorInfo = result.errorCode ? ERROR_MESSAGES[result.errorCode] : null;
+
   return (
     <MagicCard
       className={cn(
@@ -411,16 +484,25 @@ function ScanResultDisplay({
             "text-lg font-semibold",
             isSuccess ? "text-green-800" : "text-red-800"
           )}>
-            {isSuccess ? "Valid Ticket" : "Invalid Ticket"}
+            {isSuccess ? "Valid Ticket" : (errorInfo?.title || "Invalid Ticket")}
           </h3>
+          {!isSuccess && errorInfo?.icon && (
+            <span className="text-lg">{errorInfo.icon}</span>
+          )}
         </div>
 
-        <p className={cn(
-          "text-sm",
+        <div className={cn(
+          "text-sm space-y-2",
           isSuccess ? "text-green-700" : "text-red-700"
         )}>
-          {result.message}
-        </p>
+          <p>{result.message}</p>
+          {!isSuccess && errorInfo?.description && (
+            <p className="text-xs opacity-80">{errorInfo.description}</p>
+          )}
+          {!isSuccess && result.errorCode && (
+            <p className="text-xs font-mono opacity-60">Error Code: {result.errorCode}</p>
+          )}
+        </div>
 
         {ticket && (
           <div className="space-y-3 pt-2 border-t border-gray-200">
