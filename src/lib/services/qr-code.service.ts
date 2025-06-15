@@ -114,22 +114,91 @@ export function encryptQRCodeData(data: TicketQRData): string {
  */
 export function decryptQRCodeData(encryptedData: string): TicketQRData {
   try {
+    // Try current encryption format first
     const [ivHex, encrypted] = encryptedData.split(":");
     if (!ivHex || !encrypted) {
       throw new Error("Invalid encrypted data format");
     }
-    
+
     const iv = Buffer.from(ivHex, "hex");
     const decipher = createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY.substring(0, 32)), iv);
-    
+
     let decrypted = decipher.update(encrypted, "hex", "utf8");
     decrypted += decipher.final("utf8");
-    
+
     return JSON.parse(decrypted) as TicketQRData;
   } catch (error) {
-    console.error("Error decrypting QR code data:", error);
-    throw new Error("Failed to decrypt QR code data");
+    console.error("Error decrypting QR code data with current method:", error);
+
+    // Try legacy decryption methods for backward compatibility
+    try {
+      return decryptLegacyQRCodeData(encryptedData);
+    } catch (legacyError) {
+      console.error("Error decrypting QR code data with legacy methods:", legacyError);
+      throw new Error("Failed to decrypt QR code data");
+    }
   }
+}
+
+/**
+ * Attempt to decrypt QR codes using legacy encryption methods
+ */
+function decryptLegacyQRCodeData(encryptedData: string): TicketQRData {
+  const legacyMethods = [
+    // Method 1: Try with full encryption key (64 chars)
+    () => {
+      const [ivHex, encrypted] = encryptedData.split(":");
+      if (!ivHex || !encrypted) {
+        throw new Error("Invalid format");
+      }
+      const iv = Buffer.from(ivHex, "hex");
+      const decipher = createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY), iv);
+      let decrypted = decipher.update(encrypted, "hex", "utf8");
+      decrypted += decipher.final("utf8");
+      return JSON.parse(decrypted);
+    },
+
+    // Method 2: Try with different key derivation
+    () => {
+      const [ivHex, encrypted] = encryptedData.split(":");
+      if (!ivHex || !encrypted) {
+        throw new Error("Invalid format");
+      }
+      const iv = Buffer.from(ivHex, "hex");
+      const key = createHash("sha256").update(ENCRYPTION_KEY).digest();
+      const decipher = createDecipheriv(ALGORITHM, key, iv);
+      let decrypted = decipher.update(encrypted, "hex", "utf8");
+      decrypted += decipher.final("utf8");
+      return JSON.parse(decrypted);
+    },
+
+    // Method 3: Try base64 decoding first
+    () => {
+      const decoded = Buffer.from(encryptedData, 'base64').toString('utf8');
+      const [ivHex, encrypted] = decoded.split(":");
+      if (!ivHex || !encrypted) {
+        throw new Error("Invalid format");
+      }
+      const iv = Buffer.from(ivHex, "hex");
+      const decipher = createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY.substring(0, 32)), iv);
+      let decrypted = decipher.update(encrypted, "hex", "utf8");
+      decrypted += decipher.final("utf8");
+      return JSON.parse(decrypted);
+    }
+  ];
+
+  for (let i = 0; i < legacyMethods.length; i++) {
+    try {
+      console.log(`🔄 Trying legacy decryption method ${i + 1}...`);
+      const result = legacyMethods[i]();
+      console.log(`✅ Legacy decryption method ${i + 1} succeeded`);
+      return result;
+    } catch (error) {
+      console.log(`❌ Legacy decryption method ${i + 1} failed:`, error instanceof Error ? error.message : error);
+    }
+  }
+
+  throw new Error("All decryption methods failed");
 }
 
 /**
