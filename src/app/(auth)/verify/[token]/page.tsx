@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Mail } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { MagicCard, GradientText, Shimmer, MagicButton } from "~/components/ui/magic-card";
 
 export default function VerifyTokenPage({
   params,
@@ -60,60 +61,91 @@ export default function VerifyTokenPage({
   }, [token, router]);
 
   return (
-    <div className="container flex h-screen w-screen flex-col items-center justify-center">
-      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-        <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Verifikasi Email
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {isLoading
-              ? "Memverifikasi email Anda..."
-              : "Verifikasi email selesai"}
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <MagicCard className="p-8 text-center">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 rounded-full bg-primary/10">
+                <Mail className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            <h1 className="text-2xl font-bold mb-2">
+              <GradientText>Verifikasi Email</GradientText>
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {isLoading
+                ? "Memverifikasi email Anda..."
+                : "Verifikasi email selesai"}
+            </p>
+          </div>
 
-        <div className="grid gap-6">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <Loader2 className="text-primary h-8 w-8 animate-spin" />
-              <p className="text-muted-foreground text-sm">
-                Sedang memverifikasi email Anda...
-              </p>
-            </div>
-          ) : error ? (
-            <div className="bg-destructive/15 text-destructive rounded-md p-4 text-sm">
-              <p>{error}</p>
-              <p className="mt-2">
-                Silakan coba lagi atau hubungi dukungan pelanggan.
-              </p>
-            </div>
-          ) : success ? (
-            <div className="rounded-md bg-green-100 p-4 text-sm text-green-800">
-              <p>{success}</p>
-              <p className="mt-2">
-                Anda akan dialihkan ke halaman login dalam beberapa detik.
-              </p>
-            </div>
-          ) : null}
+          {/* Content */}
+          <div className="space-y-6">
+            {isLoading ? (
+              <Shimmer>
+                <div className="flex flex-col items-center justify-center space-y-4 py-8">
+                  <Loader2 className="text-primary h-12 w-12 animate-spin" />
+                  <p className="text-muted-foreground">
+                    Sedang memverifikasi email Anda...
+                  </p>
+                </div>
+              </Shimmer>
+            ) : error ? (
+              <MagicCard className="bg-destructive/5 border-destructive/20 p-6">
+                <div className="flex items-start space-x-3">
+                  <XCircle className="h-6 w-6 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <p className="text-destructive font-medium">{error}</p>
+                    <p className="text-destructive/80 text-sm mt-2">
+                      Silakan coba lagi atau hubungi dukungan pelanggan.
+                    </p>
+                  </div>
+                </div>
+              </MagicCard>
+            ) : success ? (
+              <MagicCard className="bg-green-50 border-green-200 p-6">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <p className="text-green-800 font-medium">{success}</p>
+                    <p className="text-green-700 text-sm mt-2">
+                      Anda akan dialihkan ke halaman login dalam beberapa detik.
+                    </p>
+                  </div>
+                </div>
+              </MagicCard>
+            ) : null}
 
-          <Button
-            asChild
-            variant={error ? "destructive" : "default"}
-            disabled={isLoading}
-          >
-            <Link href="/login">
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Memverifikasi...
-                </>
-              ) : (
-                "Lanjutkan ke Login"
-              )}
-            </Link>
-          </Button>
-        </div>
+            <MagicButton
+              asChild
+              variant={error ? "destructive" : "magic"}
+              size="lg"
+              disabled={isLoading}
+              className="w-full"
+            >
+              <Link href="/login">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Memverifikasi...
+                  </>
+                ) : (
+                  "Lanjutkan ke Login"
+                )}
+              </Link>
+            </MagicButton>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-8 pt-6 border-t border-border/50">
+            <p className="text-xs text-muted-foreground">
+              Powered by{" "}
+              <GradientText className="font-semibold">VBTicket</GradientText>
+            </p>
+          </div>
+        </MagicCard>
       </div>
     </div>
   );

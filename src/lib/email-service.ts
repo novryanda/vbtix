@@ -1,5 +1,10 @@
 import { Resend } from "resend";
 import { env } from "~/env";
+import { generateTicketPDF, type TicketPDFData } from "./services/react-pdf-ticket.service";
+import {
+  generateQRCodeData,
+  type TicketQRData
+} from "./services/qr-code.service";
 
 // Initialize Resend with proper error handling
 const resend = new Resend(env.RESEND_API_KEY);
@@ -428,6 +433,198 @@ Jika Anda memiliki pertanyaan, hubungi kami di ${this.config.replyTo}
     }
   }
 
+  // sendTicketDeliveryWithQRImages method removed - PDF-only delivery system
+
+  /**
+   * Send ticket delivery email with PDF attachments
+   */
+  async sendTicketDeliveryWithPDF({
+    to,
+    customerName,
+    event,
+    order,
+    tickets,
+  }: {
+    to: string;
+    customerName: string;
+    event: {
+      title: string;
+      date: string;
+      time: string;
+      location: string;
+      address: string;
+      image?: string;
+    };
+    order: {
+      invoiceNumber: string;
+      totalAmount: number;
+      paymentDate: string;
+    };
+    tickets: Array<{
+      id: string;
+      ticketNumber: string;
+      ticketType: string;
+      holderName: string;
+      qrCode?: string;
+      // Additional fields needed for PDF generation
+      eventId?: string;
+      userId?: string;
+      transactionId?: string;
+      ticketTypeId?: string;
+      eventDate?: Date;
+    }>;
+  }) {
+    try {
+      // Check if email service is configured
+      if (!isEmailConfigured()) {
+        console.log("📧 Email service not configured. Ticket email would be sent to:", to);
+        return {
+          success: false,
+          error: "Email service not configured. Please set RESEND_API_KEY and EMAIL_FROM environment variables."
+        };
+      }
+
+      console.log(`📄 Starting PDF generation for ${tickets.length} tickets...`);
+
+      // Generate PDF attachments for each ticket
+      const pdfAttachments = await Promise.all(
+        tickets.map(async (ticket, index) => {
+          try {
+            console.log(`📄 Generating PDF for ticket ${index + 1}/${tickets.length}: ${ticket.ticketNumber}`);
+
+            // Generate QR data for PDF
+            const qrData = generateQRCodeData({
+              ticketId: ticket.id,
+              eventId: ticket.eventId || '',
+              userId: ticket.userId || '',
+              transactionId: ticket.transactionId || '',
+              ticketTypeId: ticket.ticketTypeId || '',
+              eventDate: ticket.eventDate || new Date(),
+            });
+
+            console.log(`✅ QR data generated for ticket ${ticket.ticketNumber}`);
+
+            // Prepare ticket data for PDF
+            const ticketPDFData: TicketPDFData = {
+              ticketId: ticket.id,
+              ticketNumber: ticket.ticketNumber,
+              ticketType: ticket.ticketType,
+              holderName: ticket.holderName,
+              qrData,
+              event: {
+                title: event.title,
+                date: event.date,
+                time: event.time,
+                location: event.location,
+                address: event.address,
+              },
+              order: {
+                invoiceNumber: order.invoiceNumber,
+                totalAmount: order.totalAmount,
+                paymentDate: order.paymentDate,
+              },
+            };
+
+            // Generate PDF
+            console.log(`🔄 Generating PDF buffer for ticket ${ticket.ticketNumber}...`);
+            const pdfBuffer = await generateTicketPDF(ticketPDFData);
+
+            console.log(`✅ PDF generated for ticket ${ticket.ticketNumber} - Size: ${pdfBuffer.length} bytes (${Math.round(pdfBuffer.length / 1024)} KB)`);
+
+            // Validate PDF buffer
+            if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+              throw new Error(`Invalid PDF buffer generated for ticket ${ticket.ticketNumber}`);
+            }
+
+            const attachment = {
+              filename: `tiket-${ticket.ticketNumber}-${event.title.replace(/[^a-zA-Z0-9]/g, '-')}.pdf`,
+              content: pdfBuffer,
+              content_type: 'application/pdf',
+            };
+
+            console.log(`📎 Attachment prepared: ${attachment.filename} (${pdfBuffer.length} bytes)`);
+
+            return attachment;
+          } catch (error) {
+            console.error(`❌ Error generating PDF for ticket ${ticket.id}:`, error);
+            throw error;
+          }
+        })
+      );
+
+      console.log(`✅ All ${pdfAttachments.length} PDF attachments generated successfully`);
+
+      // Create HTML content (modified to mention PDF attachments)
+      const htmlContent = this.createTicketDeliveryWithPDFHTML(
+        customerName,
+        event,
+        order,
+        tickets,
+      );
+
+      // Create text version (modified to mention PDF attachments)
+      const textContent = this.createTicketDeliveryWithPDFTextEmail({
+        customerName,
+        event,
+        order,
+        tickets,
+      });
+
+      console.log(`📧 Sending email with ${pdfAttachments.length} PDF attachments to: ${to}`);
+      console.log(`📎 Attachment details:`, pdfAttachments.map(att => ({
+        filename: att.filename,
+        size: att.content.length,
+        isBuffer: Buffer.isBuffer(att.content)
+      })));
+
+      const result = await resend.emails.send({
+        from: this.config.from,
+        to: [to],
+        replyTo: this.config.replyTo,
+        subject: `🎫 Tiket PDF Anda - ${event.title} | ${order.invoiceNumber}`,
+        html: htmlContent,
+        text: textContent,
+        attachments: pdfAttachments,
+        tags: [
+          { name: "category", value: "ticket-delivery-pdf" },
+          { name: "event", value: this.sanitizeTagValue(event.title) },
+          { name: "invoice", value: this.sanitizeTagValue(order.invoiceNumber) },
+        ],
+      });
+
+      console.log(`📧 Email send attempt completed. Checking result...`);
+
+      console.log("✅ Ticket delivery email with PDF sent - Full result:", JSON.stringify(result, null, 2));
+
+      // Log attachment details for debugging
+      if (result.data?.id) {
+        console.log(`📧 Email sent successfully with ID: ${result.data.id}`);
+        console.log(`📎 Attachments included: ${pdfAttachments.length}`);
+        pdfAttachments.forEach((att, index) => {
+          console.log(`   ${index + 1}. ${att.filename} (${att.content.length} bytes, ${att.content_type})`);
+        });
+      }
+
+      // Check if there's an error in the result
+      if (result.error) {
+        console.error("❌ Resend API error:", result.error);
+        return {
+          success: false,
+          error: result.error.message || "Email sending failed",
+          resendError: result.error
+        };
+      }
+
+      console.log("✅ Ticket delivery email with PDF sent - Message ID:", result.data?.id);
+      return { success: true, messageId: result.data?.id, fullResult: result };
+    } catch (error: any) {
+      console.error("❌ Failed to send ticket delivery email with PDF:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // createTicketDeliveryWithQRImagesHTML method removed - PDF-only delivery system
+
   /**
    * Create plain text version of ticket delivery email
    */
@@ -487,6 +684,227 @@ Tiket #${index + 1}
 - Tunjukkan QR Code atau nomor tiket saat masuk ke venue
 - Tiket tidak dapat dipindahtangankan tanpa persetujuan penyelenggara
 - Datang 30 menit sebelum acara dimulai untuk proses check-in
+- Hubungi customer service jika ada pertanyaan
+
+Terima kasih telah menggunakan ${this.config.companyName}
+
+Butuh bantuan? Hubungi kami di support@vbticket.com
+
+© 2025 ${this.config.companyName}. All rights reserved.
+    `.trim();
+  }
+
+  /**
+   * Create HTML template for ticket delivery with PDF attachments
+   */
+  private createTicketDeliveryWithPDFHTML(
+    customerName: string,
+    event: any,
+    order: any,
+    tickets: any[],
+  ): string {
+    const formatPrice = (amount: number) => {
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+      }).format(amount);
+    };
+
+    return `
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiket PDF Anda - ${event.title}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; padding: 30px 20px; text-align: center;">
+            <h1 style="font-size: 28px; margin: 0 0 10px 0; font-weight: bold;">🎉 Tiket PDF Anda Sudah Siap!</h1>
+            <p style="font-size: 16px; margin: 0; opacity: 0.9;">Tiket digital dalam format PDF telah dilampirkan</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 30px 20px;">
+            <p style="font-size: 16px; margin: 0 0 20px 0;">Halo <strong>${customerName}</strong>,</p>
+
+            <p style="font-size: 14px; margin: 0 0 25px 0; line-height: 1.6;">
+                Pembayaran Anda telah berhasil dikonfirmasi! Tiket digital Anda untuk event <strong>${event.title}</strong>
+                telah dilampirkan dalam format PDF pada email ini.
+            </p>
+
+            <!-- PDF Attachment Notice -->
+            <div style="background-color: #f0f9ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #1d4ed8; margin: 0 0 10px 0; font-size: 16px;">📎 Tiket PDF Terlampir</h3>
+                <p style="margin: 0; font-size: 14px; color: #1f2937;">
+                    Tiket Anda telah dilampirkan sebagai file PDF. Silakan unduh dan simpan file PDF tersebut.
+                    Tunjukkan kode QR pada tiket PDF saat masuk ke venue.
+                </p>
+            </div>
+
+            <!-- Event Details -->
+            <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">📅 Detail Event</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold; color: #374151; width: 30%;">Event:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">${event.title}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold; color: #374151;">Tanggal:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">${event.date}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold; color: #374151;">Waktu:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">${event.time}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold; color: #374151;">Lokasi:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">${event.location}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold; color: #374151;">Alamat:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">${event.address}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Order Summary -->
+            <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">🧾 Ringkasan Pesanan</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold; color: #374151; width: 30%;">Invoice:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">${order.invoiceNumber}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold; color: #374151;">Total Bayar:</td>
+                        <td style="padding: 8px 0; color: #1f2937; font-weight: bold;">${formatPrice(order.totalAmount)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold; color: #374151;">Tanggal Bayar:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">${order.paymentDate}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold; color: #374151;">Jumlah Tiket:</td>
+                        <td style="padding: 8px 0; color: #1f2937;">${tickets.length} tiket</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Tickets List -->
+            <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">🎫 Tiket Digital Anda</h3>
+                ${tickets
+                  .map(
+                    (ticket, index) => `
+                    <div style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; margin: 10px 0;">
+                        <h4 style="margin: 0 0 10px 0; color: #1f2937; font-size: 16px;">Tiket #${index + 1}</h4>
+                        <p style="margin: 5px 0; font-size: 14px;"><strong>Jenis:</strong> ${ticket.ticketType}</p>
+                        <p style="margin: 5px 0; font-size: 14px;"><strong>Nomor:</strong> ${ticket.ticketNumber}</p>
+                        <p style="margin: 5px 0; font-size: 14px;"><strong>Pemegang:</strong> ${ticket.holderName}</p>
+                    </div>
+                `,
+                  )
+                  .join("")}
+            </div>
+
+            <!-- Important Instructions -->
+            <div style="background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 16px;">⚠️ PENTING - HARAP DIBACA!</h3>
+                <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 14px;">
+                    <li style="margin: 8px 0;">Unduh dan simpan file PDF tiket yang dilampirkan</li>
+                    <li style="margin: 8px 0;">Tunjukkan kode QR pada tiket PDF saat masuk ke venue</li>
+                    <li style="margin: 8px 0;">Bawa identitas yang sesuai dengan nama pemegang tiket</li>
+                    <li style="margin: 8px 0;">Datang 30 menit sebelum acara dimulai untuk proses check-in</li>
+                    <li style="margin: 8px 0;">Tiket tidak dapat dipindahtangankan tanpa persetujuan penyelenggara</li>
+                </ul>
+            </div>
+
+            <p style="font-size: 14px; color: #6b7280; margin: 25px 0 0 0; text-align: center;">
+                Terima kasih telah menggunakan ${this.config.companyName}<br>
+                Butuh bantuan? Hubungi kami di support@vbticket.com
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0; font-size: 12px; color: #6b7280;">
+                © 2025 ${this.config.companyName}. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+    `.trim();
+  }
+
+  /**
+   * Create plain text version of ticket delivery email with PDF attachments
+   */
+  private createTicketDeliveryWithPDFTextEmail({
+    customerName,
+    event,
+    order,
+    tickets,
+  }: {
+    customerName: string;
+    event: any;
+    order: any;
+    tickets: any[];
+  }): string {
+    const formatPrice = (amount: number) => {
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+      }).format(amount);
+    };
+
+    return `
+🎉 TIKET PDF ANDA SUDAH SIAP!
+
+Halo ${customerName},
+
+Pembayaran Anda telah berhasil dikonfirmasi! Tiket digital Anda untuk event ${event.title} telah dilampirkan dalam format PDF pada email ini.
+
+📎 TIKET PDF TERLAMPIR
+Tiket Anda telah dilampirkan sebagai file PDF. Silakan unduh dan simpan file PDF tersebut. Tunjukkan kode QR pada tiket PDF saat masuk ke venue.
+
+📅 DETAIL EVENT
+Event: ${event.title}
+Tanggal: ${event.date}
+Waktu: ${event.time}
+Lokasi: ${event.location}
+Alamat: ${event.address}
+
+🧾 RINGKASAN PESANAN
+Invoice: ${order.invoiceNumber}
+Total Bayar: ${formatPrice(order.totalAmount)}
+Tanggal Bayar: ${order.paymentDate}
+Jumlah Tiket: ${tickets.length} tiket
+
+🎫 TIKET DIGITAL ANDA
+${tickets
+  .map(
+    (ticket, index) => `
+Tiket #${index + 1}
+- Jenis: ${ticket.ticketType}
+- Nomor: ${ticket.ticketNumber}
+- Pemegang: ${ticket.holderName}
+`,
+  )
+  .join("")}
+
+⚠️ PENTING - HARAP DIBACA!
+- Unduh dan simpan file PDF tiket yang dilampirkan
+- Tunjukkan kode QR pada tiket PDF saat masuk ke venue
+- Bawa identitas yang sesuai dengan nama pemegang tiket
+- Datang 30 menit sebelum acara dimulai untuk proses check-in
+- Tiket tidak dapat dipindahtangankan tanpa persetujuan penyelenggara
 - Hubungi customer service jika ada pertanyaan
 
 Terima kasih telah menggunakan ${this.config.companyName}

@@ -99,8 +99,31 @@ export default function OrdersPage() {
       params.append("page", page);
       params.append("limit", "10");
 
-      // Fetch orders from API
-      const response = await fetch(`/api/public/orders?${params.toString()}`);
+      // Fetch orders from API with credentials
+      const response = await fetch(`/api/public/orders?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'include', // Include cookies for authentication
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // Check if response is ok and content type is JSON
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Redirect to login if unauthorized
+          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Response is not JSON');
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -108,9 +131,26 @@ export default function OrdersPage() {
         setMeta(data.meta);
       } else {
         console.error("Failed to fetch orders:", data.error);
+        throw new Error(data.error || 'Failed to fetch orders');
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
+
+      // Show user-friendly error message
+      if (error instanceof Error) {
+        if (error.message.includes('not JSON')) {
+          console.error("Server returned HTML instead of JSON - possible authentication issue");
+        }
+      }
+
+      // Set empty state on error
+      setOrders([]);
+      setMeta({
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+      });
     } finally {
       if (isRefresh) {
         setIsRefreshing(false);

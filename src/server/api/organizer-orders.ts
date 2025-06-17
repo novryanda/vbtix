@@ -504,30 +504,75 @@ export async function handleUpdateOrganizerOrderStatus(params: {
             minute: "2-digit",
           }) + " WIB";
 
-        await emailService.sendTicketDelivery({
-          to: emailTo,
-          customerName,
-          event: {
-            title: order.event.title,
-            date: eventDate,
-            time: eventTime,
-            location: order.event.venue,
-            address: `${order.event.address}, ${order.event.city}, ${order.event.province}`,
-            image: order.event.posterUrl || undefined,
-          },
-          order: {
-            invoiceNumber: order.invoiceNumber,
-            totalAmount: Number(order.amount),
-            paymentDate,
-          },
-          tickets: order.tickets.map((ticket) => ({
-            id: ticket.id,
-            ticketNumber: ticket.id,
-            ticketType: ticket.ticketType.name,
-            holderName: ticket.ticketHolder?.fullName || customerName,
-            qrCode: ticket.qrCodeImageUrl || undefined,
-          })),
-        });
+        // Send ticket delivery email with PDF attachments only
+        try {
+          await emailService.sendTicketDeliveryWithPDF({
+            to: emailTo,
+            customerName,
+            event: {
+              title: order.event.title,
+              date: eventDate,
+              time: eventTime,
+              location: order.event.venue,
+              address: `${order.event.address}, ${order.event.city}, ${order.event.province}`,
+              image: order.event.posterUrl || undefined,
+            },
+            order: {
+              invoiceNumber: order.invoiceNumber,
+              totalAmount: Number(order.amount),
+              paymentDate,
+            },
+            tickets: order.tickets.map((ticket) => ({
+              id: ticket.id,
+              ticketNumber: ticket.id,
+              ticketType: ticket.ticketType.name,
+              holderName: ticket.ticketHolder?.fullName || customerName,
+              qrCode: ticket.qrCodeImageUrl || undefined,
+              // Additional fields needed for PDF generation
+              eventId: order.event.id,
+              userId: order.userId,
+              transactionId: order.id,
+              ticketTypeId: ticket.ticketTypeId,
+              eventDate: order.event.startDate,
+            })),
+          });
+
+          console.log(
+            `✅ Organizer verification: Ticket delivery email with PDF sent to ${emailTo} for order ${order.invoiceNumber}`,
+          );
+        } catch (pdfError) {
+          console.error("Failed to send PDF email, falling back to regular email:", pdfError);
+
+          // Fallback to regular email
+          await emailService.sendTicketDelivery({
+            to: emailTo,
+            customerName,
+            event: {
+              title: order.event.title,
+              date: eventDate,
+              time: eventTime,
+              location: order.event.venue,
+              address: `${order.event.address}, ${order.event.city}, ${order.event.province}`,
+              image: order.event.posterUrl || undefined,
+            },
+            order: {
+              invoiceNumber: order.invoiceNumber,
+              totalAmount: Number(order.amount),
+              paymentDate,
+            },
+            tickets: order.tickets.map((ticket) => ({
+              id: ticket.id,
+              ticketNumber: ticket.id,
+              ticketType: ticket.ticketType.name,
+              holderName: ticket.ticketHolder?.fullName || customerName,
+              qrCode: ticket.qrCodeImageUrl || undefined,
+            })),
+          });
+
+          console.log(
+            `✅ Organizer verification: Fallback ticket delivery email sent to ${emailTo} for order ${order.invoiceNumber}`,
+          );
+        }
 
         console.log(
           `✅ Ticket delivery email sent to ${emailTo} for order ${order.invoiceNumber}`,

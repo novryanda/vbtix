@@ -92,18 +92,53 @@ export default function OrganizerOrdersPage() {
         ...(searchTerm && { search: searchTerm }),
       });
 
-      const response = await fetch(`/api/organizer/${organizerId}/orders?${params}`);
+      const response = await fetch(`/api/organizer/${organizerId}/orders?${params}`, {
+        method: 'GET',
+        credentials: 'include', // Include cookies for authentication
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // Check if response is ok and content type is JSON
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Redirect to login if unauthorized
+          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Response is not JSON');
+      }
+
       const result = await response.json();
 
       if (result.success) {
         setOrders(result.data);
         setTotalPages(result.meta?.totalPages || 1);
       } else {
-        toast.error("Failed to load orders");
+        toast.error(result.error || "Failed to load orders");
+        throw new Error(result.error || 'Failed to load orders');
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
-      toast.error("Failed to load orders");
+
+      // Show user-friendly error message
+      if (error instanceof Error) {
+        if (error.message.includes('not JSON')) {
+          console.error("Server returned HTML instead of JSON - possible authentication issue");
+          toast.error("Authentication error - please refresh the page");
+        } else if (!error.message.includes('Failed to load orders')) {
+          toast.error("Failed to load orders");
+        }
+      } else {
+        toast.error("Failed to load orders");
+      }
     } finally {
       setLoading(false);
     }
@@ -135,11 +170,27 @@ export default function OrganizerOrdersPage() {
 
       const response = await fetch(`/api/organizer/${organizerId}/orders/${orderId}/verify`, {
         method: "PATCH",
+        credentials: 'include', // Include cookies for authentication
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ status, notes }),
       });
+
+      // Check if response is ok and content type is JSON
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast.error("Authentication required - please refresh the page");
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Response is not JSON');
+      }
 
       const result = await response.json();
 
@@ -148,6 +199,7 @@ export default function OrganizerOrdersPage() {
         fetchOrders(); // Refresh the list
       } else {
         toast.error(result.error || "Failed to verify payment");
+        throw new Error(result.error || 'Failed to verify payment');
       }
     } catch (error) {
       console.error("Error verifying payment:", error);

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Slot } from "@radix-ui/react-slot";
 import { cn } from "~/lib/utils";
 
 interface MagicCardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -299,6 +300,7 @@ export const MagicButton = React.forwardRef<HTMLButtonElement, MagicButtonProps>
     disabled,
     style,
     children,
+    asChild = false,
     ...props
   }, ref) => {
     const baseStyles = "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
@@ -320,8 +322,10 @@ export const MagicButton = React.forwardRef<HTMLButtonElement, MagicButtonProps>
       icon: "h-9 w-9",
     };
 
+    const Comp = asChild ? Slot : "button";
+
     return (
-      <button
+      <Comp
         ref={ref}
         disabled={disabled}
         style={{
@@ -345,7 +349,7 @@ export const MagicButton = React.forwardRef<HTMLButtonElement, MagicButtonProps>
         {...props}
       >
         {children}
-      </button>
+      </Comp>
     );
   }
 );

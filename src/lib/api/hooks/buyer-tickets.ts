@@ -196,13 +196,23 @@ export function useBuyerOrders(params?: {
 
       const response = await fetch(`/api/public/orders?${queryParams.toString()}`, {
         method: "GET",
+        credentials: 'include', // Include cookies for authentication
         headers: {
           "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Authentication required - please log in");
+        }
         throw new Error(`Failed to fetch orders: ${response.statusText}`);
+      }
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response');
       }
 
       const result = await response.json();
