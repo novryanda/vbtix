@@ -151,7 +151,7 @@ export const registerOrganizer = async (
   // Send verification email
   try {
     const { emailService } = await import("~/lib/email-service");
-    const verificationUrl = `${process.env.NEXTAUTH_URL || 'https://vbtciket.com'}/verify/${verificationToken}`;
+    const verificationUrl = `${process.env.NEXTAUTH_URL || 'https://vbticket.com'}/verify/${verificationToken}`;
 
     await emailService.sendAccountVerification({
       to: email,
