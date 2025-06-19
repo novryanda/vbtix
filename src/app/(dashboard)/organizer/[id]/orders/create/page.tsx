@@ -150,7 +150,11 @@ export default function OrganizerOrderCreatePage() {
     if (selectedEvent) {
       const selectedTicketType = selectedEvent.ticketTypes.find(tt => tt.id === ticketTypeId);
       if (selectedTicketType) {
-        form.setValue(`orderItems.${index}.price`, selectedTicketType.price);
+        // Convert price to number to ensure proper validation
+        const price = typeof selectedTicketType.price === 'string'
+          ? parseFloat(selectedTicketType.price)
+          : selectedTicketType.price;
+        form.setValue(`orderItems.${index}.price`, price);
       }
     }
   };
@@ -482,7 +486,10 @@ export default function OrganizerOrderCreatePage() {
                                         min="0"
                                         placeholder="0"
                                         {...field}
-                                        onChange={(e) => field.onChange(Number(e.target.value))}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          field.onChange(value === '' ? 0 : Number(value));
+                                        }}
                                       />
                                     </FormControl>
                                     <FormMessage />
@@ -560,7 +567,10 @@ export default function OrganizerOrderCreatePage() {
                                     type="number"
                                     placeholder="0"
                                     {...field}
-                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      field.onChange(value === '' ? 0 : Number(value));
+                                    }}
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -627,9 +637,10 @@ export default function OrganizerOrderCreatePage() {
                                   </FormControl>
                                   <SelectContent>
                                     <SelectItem value="PENDING">Pending</SelectItem>
-                                    <SelectItem value="PAID">Lunas</SelectItem>
+                                    <SelectItem value="SUCCESS">Lunas</SelectItem>
                                     <SelectItem value="FAILED">Gagal</SelectItem>
-                                    <SelectItem value="CANCELLED">Dibatalkan</SelectItem>
+                                    <SelectItem value="EXPIRED">Kedaluwarsa</SelectItem>
+                                    <SelectItem value="REFUNDED">Dikembalikan</SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />

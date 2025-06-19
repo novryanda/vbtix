@@ -14,16 +14,13 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { Textarea } from "~/components/ui/textarea";
-import { ArrowLeft, AlertCircle, ImageIcon } from "lucide-react";
+import { ArrowLeft, AlertCircle, CheckCircle, Sparkles } from "lucide-react";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { formatPrice } from "~/lib/utils";
 import { Checkbox } from "~/components/ui/checkbox";
-import { TicketImageUploader } from "~/components/ui/ticket-image-uploader";
-import { Separator } from "~/components/ui/separator";
-import Image from "next/image";
+import { MagicCard, MagicInput, MagicTextarea, MagicButton } from "~/components/ui/magic-card";
+import { toast } from "sonner";
 
 export default function EditTicketPage({
   params,
@@ -60,8 +57,69 @@ export default function EditTicketPage({
     isLoading: isTicketLoading,
     error: ticketError,
     mutate: mutateTicket,
-  } = useEventTicketDetail(id, eventId, ticketId);
-  const ticket = ticketData?.data;
+  } = useEventTicketDetail(id, eventId, ticketId);  const ticket = ticketData?.data;
+  // Confetti effect function
+  const createConfetti = () => {
+    const colors = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6'];
+    const confettiCount = 50;
+    
+    for (let i = 0; i < confettiCount; i++) {
+      const confetti = document.createElement('div');
+      confetti.style.position = 'fixed';
+      confetti.style.left = Math.random() * 100 + 'vw';
+      confetti.style.top = '-10px';
+      confetti.style.width = '10px';
+      confetti.style.height = '10px';
+      confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)] || '#10b981';
+      confetti.style.borderRadius = '50%';
+      confetti.style.zIndex = '10000';
+      confetti.style.pointerEvents = 'none';
+      confetti.style.animation = `confetti-fall ${2 + Math.random() * 3}s linear forwards`;
+      
+      document.body.appendChild(confetti);
+      
+      // Remove confetti after animation
+      setTimeout(() => {
+        if (confetti.parentNode) {
+          confetti.parentNode.removeChild(confetti);
+        }
+      }, 5000);
+    }  };
+
+  // Success sound effect
+  const playSuccessSound = () => {
+    // Create Web Audio API context for success sound
+    if (typeof window !== 'undefined' && 'AudioContext' in window) {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Success melody: C - E - G (major chord arpeggio)
+      const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5
+      let time = audioContext.currentTime;
+      
+      frequencies.forEach((freq, index) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        
+        gain.gain.setValueAtTime(0, time + index * 0.1);
+        gain.gain.linearRampToValueAtTime(0.1, time + index * 0.1 + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + index * 0.1 + 0.3);
+        
+        osc.start(time + index * 0.1);
+        osc.stop(time + index * 0.1 + 0.3);
+      });
+    }
+  };
 
   // Populate form with ticket data when available
   useEffect(() => {
@@ -97,12 +155,21 @@ export default function EditTicketPage({
       }));
     }
   };
-
   // Handle update ticket
   const handleUpdateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setFormError("");
+
+    // Show loading toast
+    const loadingToast = toast.loading("✨ Updating ticket...", {
+      description: "Please wait while we save your changes.",
+      style: {
+        background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+        border: "1px solid #1e40af",
+        color: "white",
+      },
+    });
 
     try {
       const ticketData = {
@@ -130,24 +197,71 @@ export default function EditTicketPage({
 
       if (!response.ok) {
         throw new Error(result.error || "Failed to update ticket");
-      }
-
-      // Refresh ticket data
+      }      // Refresh ticket data
       mutateTicket();
 
-      // Show success message
-      alert("Ticket updated successfully");
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);      // Show beautiful success toast with custom styling and confetti effect
+      toast.success("🎉 Ticket Updated Successfully!", {
+        description: `"${ticketFormData.name}" has been updated with all your changes.`,
+        duration: 4000,
+        action: {
+          label: "View Details",
+          onClick: () => {
+            router.push(`/organizer/${id}/events/${eventId}/tickets/${ticketId}`);
+          },
+        },
+        style: {
+          background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+          border: "1px solid #065f46",
+          color: "white",
+        },
+        className: "toast-success",
+      });      // Create confetti effect
+      createConfetti();      // Add haptic feedback for mobile devices
+      if ('vibrate' in navigator) {
+        navigator.vibrate([100, 50, 100]); // Success vibration pattern
+      }
 
-      // Navigate to ticket details page
-      router.push(`/organizer/${id}/events/${eventId}/tickets/${ticketId}`);
-    } catch (err: any) {
+      // Play success sound
+      playSuccessSound();
+
+      // Navigate to ticket details page after a short delay
+      setTimeout(() => {
+        router.push(`/organizer/${id}/events/${eventId}/tickets/${ticketId}`);
+      }, 1500);    } catch (err: any) {
       console.error("Error updating ticket:", err);
+      
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Show error toast with custom styling
+      toast.error("❌ Update Failed", {
+        description: err.message || "Failed to update ticket. Please try again.",
+        duration: 5000,
+        action: {
+          label: "Retry",
+          onClick: () => {
+            handleUpdateTicket(new Event('submit') as any);
+          },
+        },
+        style: {
+          background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+          border: "1px solid #991b1b",
+          color: "white",
+        },        className: "toast-error",
+      });
+      
+      // Add haptic feedback for mobile devices (error pattern)
+      if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200]); // Error vibration pattern
+      }
+      
       setFormError(err.message || "Failed to update ticket. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
-
   // Loading state
   if (isEventLoading || isTicketLoading) {
     return (
@@ -157,13 +271,13 @@ export default function EditTicketPage({
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="px-4 lg:px-6">
                 <div className="flex items-center gap-2">
-                  <Button
+                  <MagicButton
                     variant="ghost"
                     size="icon"
                     onClick={() => router.back()}
                   >
                     <ArrowLeft className="h-4 w-4" />
-                  </Button>
+                  </MagicButton>
                   <h1 className="text-2xl font-semibold">Edit Ticket</h1>
                 </div>
               </div>
@@ -183,16 +297,15 @@ export default function EditTicketPage({
       <div className="flex min-h-screen flex-col">
         <div className="flex flex-1 flex-col">
           <div className="container flex flex-1 flex-col gap-2 pt-4">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <div className="px-4 lg:px-6">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">              <div className="px-4 lg:px-6">
                 <div className="flex items-center gap-2">
-                  <Button
+                  <MagicButton
                     variant="ghost"
                     size="icon"
                     onClick={() => router.back()}
                   >
                     <ArrowLeft className="h-4 w-4" />
-                  </Button>
+                  </MagicButton>
                   <h1 className="text-2xl font-semibold">Edit Ticket</h1>
                 </div>
               </div>
@@ -207,10 +320,10 @@ export default function EditTicketPage({
                     "Failed to load data. Please try again."}
                 </p>
                 <div className="mt-4 flex gap-2">
-                  <Button variant="outline" onClick={() => router.refresh()}>
+                  <MagicButton variant="outline" onClick={() => router.refresh()}>
                     Try Again
-                  </Button>
-                  <Button onClick={() => router.back()}>Back</Button>
+                  </MagicButton>
+                  <MagicButton onClick={() => router.back()}>Back</MagicButton>
                 </div>
               </div>
             </div>
@@ -225,27 +338,24 @@ export default function EditTicketPage({
     <div className="flex min-h-screen flex-col">
       <div className="flex flex-1 flex-col">
         <div className="container flex flex-1 flex-col gap-2 pt-4">
-          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-            <div className="px-4 lg:px-6">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => router.back()}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-semibold">Edit Ticket</h1>
-                  <p className="text-muted-foreground text-sm">
-                    {event?.title}
-                  </p>
+          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">              <div className="px-4 lg:px-6">
+                <div className="flex items-center gap-2">
+                  <MagicButton
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => router.back()}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </MagicButton>
+                  <div>
+                    <h1 className="text-2xl font-semibold">Edit Ticket</h1>
+                    <p className="text-muted-foreground text-sm">
+                      {event?.title}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="px-4 lg:px-6">
-              <Card>
+              </div><div className="px-4 lg:px-6">
+              <MagicCard>
                 <CardHeader>
                   <CardTitle>Edit Ticket</CardTitle>
                   <CardDescription>
@@ -259,10 +369,9 @@ export default function EditTicketPage({
                         {formError}
                       </div>
                     )}
-                    <div className="grid gap-4 py-4">
-                      <div className="grid gap-2">
+                    <div className="grid gap-4 py-4">                      <div className="grid gap-2">
                         <Label htmlFor="name">Ticket Name</Label>
-                        <Input
+                        <MagicInput
                           id="name"
                           name="name"
                           value={ticketFormData.name}
@@ -272,18 +381,17 @@ export default function EditTicketPage({
                       </div>
                       <div className="grid gap-2">
                         <Label htmlFor="description">Description</Label>
-                        <Textarea
+                        <MagicTextarea
                           id="description"
                           name="description"
                           value={ticketFormData.description}
                           onChange={handleTicketFormChange}
                           rows={3}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
+                        />                      </div>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="grid gap-2">
                           <Label htmlFor="price">Price</Label>
-                          <Input
+                          <MagicInput
                             id="price"
                             name="price"
                             type="number"
@@ -307,20 +415,21 @@ export default function EditTicketPage({
                         </div>
                         <div className="grid gap-2">
                           <Label htmlFor="quantity">Quantity</Label>
-                          <Input
+                          <MagicInput
                             id="quantity"
                             name="quantity"
-                            type="number"
-                            min="1"
+                            type="number"                            min="1"
                             value={ticketFormData.quantity}
                             onChange={handleTicketFormChange}
                             required
                           />
+                          <p className="text-muted-foreground text-xs">
+                            Total number of tickets available
+                          </p>
                         </div>
-                      </div>
-                      <div className="grid gap-2">
+                      </div>                      <div className="grid gap-2">
                         <Label htmlFor="maxPerPurchase">Max Per Purchase</Label>
-                        <Input
+                        <MagicInput
                           id="maxPerPurchase"
                           name="maxPerPurchase"
                           type="number"
@@ -329,6 +438,9 @@ export default function EditTicketPage({
                           onChange={handleTicketFormChange}
                           required
                         />
+                        <p className="text-muted-foreground text-xs">
+                          Maximum tickets per customer purchase
+                        </p>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -356,55 +468,22 @@ export default function EditTicketPage({
                         />
                         <Label htmlFor="allowTransfer">
                           Allow ticket transfer
-                        </Label>
-                      </div>
-
-                      <Separator className="my-4" />
-
-                      <div className="space-y-2">
-                        <h3 className="text-lg font-medium">Ticket Image</h3>
-                        <p className="text-muted-foreground text-sm">
-                          Upload an image that will be displayed on the ticket.
-                          This is optional but recommended.
-                        </p>
-
-                        {/* Ticket Image Upload Component */}
-                        <div className="mt-4">
-                          <TicketImageUploader
-                            organizerId={id}
-                            ticketId={ticketId}
-                            currentImageUrl={ticket?.imageUrl}
-                            onSuccess={(imageUrl) => {
-                              console.log(
-                                "Image uploaded successfully:",
-                                imageUrl,
-                              );
-                              // Refresh ticket data
-                              mutateTicket();
-                            }}
-                            onError={(error) => {
-                              console.error("Error uploading image:", error);
-                              setFormError(`Error uploading image: ${error}`);
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button
+                        </Label>                      </div>
+                    </div>                    <div className="flex justify-end gap-2">
+                      <MagicButton
                         type="button"
                         variant="outline"
                         onClick={() => router.back()}
                       >
                         Cancel
-                      </Button>
-                      <Button type="submit" disabled={isSubmitting}>
+                      </MagicButton>
+                      <MagicButton type="submit" disabled={isSubmitting}>
                         {isSubmitting ? "Updating..." : "Update Ticket"}
-                      </Button>
+                      </MagicButton>
                     </div>
                   </form>
                 </CardContent>
-              </Card>
+              </MagicCard>
             </div>
           </div>
         </div>

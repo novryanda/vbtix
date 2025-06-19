@@ -25,7 +25,10 @@ export const organizerOrderItemSchema = z.object({
     .max(100, { message: "Jumlah tiket maksimal 100" }),
   price: z
     .number()
-    .min(0, { message: "Harga tidak boleh negatif" }),
+    .or(z.string().transform((val) => parseFloat(val)))
+    .refine((val) => val >= 0, {
+      message: "Harga tidak boleh negatif",
+    }),
   notes: z
     .string()
     .max(200, { message: "Catatan maksimal 200 karakter" })
@@ -48,7 +51,7 @@ export const organizerOrderCreateSchema = z.object({
   paymentMethod: z.enum(["MANUAL", "BANK_TRANSFER", "EWALLET", "QRIS"], {
     required_error: "Metode pembayaran harus dipilih",
   }),
-  paymentStatus: z.enum(["PENDING", "PAID", "FAILED", "CANCELLED"], {
+  paymentStatus: z.enum(["PENDING", "SUCCESS", "FAILED", "EXPIRED", "REFUNDED"], {
     required_error: "Status pembayaran harus dipilih",
   }),
 
@@ -61,7 +64,10 @@ export const organizerOrderCreateSchema = z.object({
   // Discount (optional)
   discountAmount: z
     .number()
-    .min(0, { message: "Diskon tidak boleh negatif" })
+    .or(z.string().transform((val) => parseFloat(val)))
+    .refine((val) => val >= 0, {
+      message: "Diskon tidak boleh negatif",
+    })
     .optional()
     .default(0),
   discountReason: z

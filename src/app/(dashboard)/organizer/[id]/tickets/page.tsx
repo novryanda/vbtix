@@ -65,9 +65,7 @@ export default function OrganizerTicketsPage({
                   <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-800 bg-clip-text text-transparent mb-3">
                     Ticket Management
                   </h1>
-                  <p className="text-lg text-muted-foreground mb-6 max-w-2xl">
-                    Comprehensive ticket management system for your events. Monitor sales, validate tickets, and manage attendees.
-                  </p>
+                  
                 </div>
               </div>
             </div>
