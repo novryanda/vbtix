@@ -201,11 +201,12 @@ export const MagicInput = React.forwardRef<HTMLInputElement, MagicInputProps>(
             cursor: disabled ? 'not-allowed' : readOnly ? 'default' : 'text',
             position: 'relative',
             zIndex: 30,
+            fontSize: '16px', // Prevent zoom on iOS
             ...style
           }}
           className={cn(
             // Base styles with Magic UI enhancements
-            "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors",
+            "flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors",
             "file:border-0 file:bg-transparent file:text-sm file:font-medium",
             "placeholder:text-muted-foreground",
 
@@ -216,6 +217,10 @@ export const MagicInput = React.forwardRef<HTMLInputElement, MagicInputProps>(
             // Magic UI styling
             "magic-input relative transition-all duration-300 border-2 border-border/50 rounded-xl",
             "bg-gradient-to-br from-background/90 to-muted/20",
+
+            // Enhanced touch targets and mobile optimization
+            "min-h-[44px] touch-target",
+            "sm:text-sm", // Responsive text size
 
             // Disabled styles
             disabled && "cursor-not-allowed opacity-50",
@@ -253,12 +258,13 @@ export const MagicTextarea = React.forwardRef<HTMLTextAreaElement, MagicTextarea
             cursor: disabled ? 'not-allowed' : readOnly ? 'default' : 'text',
             position: 'relative',
             zIndex: 30,
+            fontSize: '16px', // Prevent zoom on iOS
             ...style
           }}
           className={cn(
             // Base styles with Magic UI enhancements
-            "flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors",
-            "placeholder:text-muted-foreground",
+            "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors",
+            "placeholder:text-muted-foreground resize-vertical",
 
             // Enhanced focus styles
             "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
@@ -267,6 +273,10 @@ export const MagicTextarea = React.forwardRef<HTMLTextAreaElement, MagicTextarea
             // Magic UI styling
             "magic-input relative transition-all duration-300 border-2 border-border/50 rounded-xl",
             "bg-gradient-to-br from-background/90 to-muted/20",
+
+            // Enhanced touch targets and mobile optimization
+            "touch-target",
+            "sm:text-sm", // Responsive text size
 
             // Disabled styles
             disabled && "cursor-not-allowed opacity-50",
@@ -316,10 +326,10 @@ export const MagicButton = React.forwardRef<HTMLButtonElement, MagicButtonProps>
     };
 
     const sizes = {
-      default: "h-9 px-4 py-2",
-      sm: "h-8 rounded-md px-3 text-xs",
-      lg: "h-10 rounded-md px-8",
-      icon: "h-9 w-9",
+      default: "h-10 px-4 py-2 min-h-[44px]",
+      sm: "h-9 rounded-md px-3 text-xs min-h-[36px] sm:min-h-[40px]",
+      lg: "h-12 rounded-md px-8 min-h-[48px]",
+      icon: "h-10 w-10 min-h-[44px] min-w-[44px]",
     };
 
     const Comp = asChild ? Slot : "button";
@@ -342,6 +352,8 @@ export const MagicButton = React.forwardRef<HTMLButtonElement, MagicButtonProps>
           // Magic UI enhancements
           "magic-button relative overflow-hidden transition-all duration-300",
           "hover:scale-105 hover:shadow-lg",
+          // Enhanced touch targets
+          "touch-target",
           // Disabled styles
           disabled && "cursor-not-allowed opacity-50",
           className

@@ -19,13 +19,55 @@ export async function getAdminDashboardStats() {
       db.organizer.count({ where: { verified: true } }),
     ]);
 
-    // Cek apakah model Transaction tersedia untuk total penjualan
+    // Get comprehensive sales data
     let totalSales = 0;
+    let totalTicketsSold = 0;
+    let totalTransactions = 0;
+    let todaysSales = 0;
+    let todaysTickets = 0;
+
     try {
+      // Total sales (all time)
       const salesData = await db.transaction.aggregate({
         _sum: { amount: true },
+        _count: true,
+        where: { status: 'SUCCESS' },
       });
       totalSales = Number(salesData._sum?.amount) || 0;
+      totalTransactions = salesData._count || 0;
+
+      // Total tickets sold
+      const ticketsData = await db.ticket.count();
+      totalTicketsSold = ticketsData;
+
+      // Today's sales
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const todaysSalesData = await db.transaction.aggregate({
+        _sum: { amount: true },
+        where: {
+          status: 'SUCCESS',
+          createdAt: {
+            gte: today,
+            lt: tomorrow,
+          },
+        },
+      });
+      todaysSales = Number(todaysSalesData._sum?.amount) || 0;
+
+      const todaysTicketsData = await db.ticket.count({
+        where: {
+          createdAt: {
+            gte: today,
+            lt: tomorrow,
+          },
+        },
+      });
+      todaysTickets = todaysTicketsData;
+
     } catch (e) {
       console.log("Transaction model not available or error:", e);
     }
@@ -35,6 +77,10 @@ export async function getAdminDashboardStats() {
       totalOrganizers,
       totalUsers,
       totalSales,
+      totalTicketsSold,
+      totalTransactions,
+      todaysSales,
+      todaysTickets,
       pendingEvents,
       verifiedOrganizers,
       pendingOrganizers: totalOrganizers - verifiedOrganizers,
@@ -49,6 +95,10 @@ export async function getAdminDashboardStats() {
       totalOrganizers: 0,
       totalUsers: 0,
       totalSales: 0,
+      totalTicketsSold: 0,
+      totalTransactions: 0,
+      todaysSales: 0,
+      todaysTickets: 0,
       pendingEvents: 0,
       verifiedOrganizers: 0,
       pendingOrganizers: 0,
@@ -257,7 +307,7 @@ export async function getSalesOverview() {
   try {
     // Cek apakah ada data transaction
     const transactionCount = await db.transaction.count();
-    
+
     if (transactionCount === 0) {
       // Jika tidak ada data, kembalikan data dummy
       return generateDummySalesData();
@@ -265,7 +315,9 @@ export async function getSalesOverview() {
 
     // Ambil data sales dalam 6 bulan terakhir
     const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);    const transactions = await db.transaction.findMany({
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const transactions = await db.transaction.findMany({
       where: {
         createdAt: {
           gte: sixMonthsAgo,
@@ -330,4 +382,198 @@ function generateDummySalesData() {
 
   // Urutkan dari bulan terlama ke terbaru
   return data.reverse();
+}
+
+// Mendapatkan analytics penjualan untuk admin (system-wide)
+export async function getAdminSalesAnalytics(timeRange: string = "30d") {
+  try {
+    const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Get transactions with related data
+    const transactions = await db.transaction.findMany({
+      where: {
+        createdAt: { gte: startDate },
+        status: 'SUCCESS',
+      },
+      include: {
+        tickets: true,
+        event: {
+          select: {
+            title: true,
+            category: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Group data by date
+    const salesByDate = new Map<string, { revenue: number; tickets: number; transactions: number }>();
+
+    transactions.forEach((transaction) => {
+      const dateKey = transaction.createdAt.toISOString().split('T')[0];
+      const existing = salesByDate.get(dateKey) || { revenue: 0, tickets: 0, transactions: 0 };
+
+      salesByDate.set(dateKey, {
+        revenue: existing.revenue + Number(transaction.amount),
+        tickets: existing.tickets + transaction.tickets.length,
+        transactions: existing.transactions + 1,
+      });
+    });
+
+    // Convert to array and fill missing dates
+    const result = [];
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      const dateKey = date.toISOString().split('T')[0];
+      const data = salesByDate.get(dateKey) || { revenue: 0, tickets: 0, transactions: 0 };
+
+      result.push({
+        date: dateKey,
+        revenue: data.revenue,
+        tickets: data.tickets,
+        transactions: data.transactions,
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error in getAdminSalesAnalytics:", error);
+    return [];
+  }
+}
+
+// Mendapatkan analytics penjualan untuk organizer (scoped to organizer's events)
+export async function getOrganizerSalesAnalytics(organizerId: string, timeRange: string = "30d") {
+  try {
+    const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Get transactions for organizer's events
+    const transactions = await db.transaction.findMany({
+      where: {
+        createdAt: { gte: startDate },
+        status: 'SUCCESS',
+        event: {
+          organizerId: organizerId,
+        },
+      },
+      include: {
+        tickets: true,
+        event: {
+          select: {
+            title: true,
+            category: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Group data by date
+    const salesByDate = new Map<string, { revenue: number; tickets: number; transactions: number }>();
+
+    transactions.forEach((transaction) => {
+      const dateKey = transaction.createdAt.toISOString().split('T')[0];
+      const existing = salesByDate.get(dateKey) || { revenue: 0, tickets: 0, transactions: 0 };
+
+      salesByDate.set(dateKey, {
+        revenue: existing.revenue + Number(transaction.amount),
+        tickets: existing.tickets + transaction.tickets.length,
+        transactions: existing.transactions + 1,
+      });
+    });
+
+    // Convert to array and fill missing dates
+    const result = [];
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      const dateKey = date.toISOString().split('T')[0];
+      const data = salesByDate.get(dateKey) || { revenue: 0, tickets: 0, transactions: 0 };
+
+      result.push({
+        date: dateKey,
+        revenue: data.revenue,
+        tickets: data.tickets,
+        transactions: data.transactions,
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error in getOrganizerSalesAnalytics:", error);
+    return [];
+  }
+}
+
+// Mendapatkan analytics pengunjung untuk admin dashboard
+export async function getVisitorAnalytics(timeRange: string = "30d") {
+  try {
+    const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Since we don't have visitor tracking, we'll use user registrations and transaction activity as proxy
+    const [userRegistrations, transactionActivity] = await Promise.all([
+      db.user.findMany({
+        where: {
+          createdAt: { gte: startDate },
+        },
+        select: {
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      db.transaction.findMany({
+        where: {
+          createdAt: { gte: startDate },
+        },
+        select: {
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
+
+    // Group data by date
+    const visitorsByDate = new Map<string, { desktop: number; mobile: number }>();
+
+    // Use user registrations as "desktop" visitors and transactions as "mobile" visitors
+    userRegistrations.forEach((user) => {
+      const dateKey = user.createdAt.toISOString().split('T')[0];
+      const existing = visitorsByDate.get(dateKey) || { desktop: 0, mobile: 0 };
+      visitorsByDate.set(dateKey, { ...existing, desktop: existing.desktop + 1 });
+    });
+
+    transactionActivity.forEach((transaction) => {
+      const dateKey = transaction.createdAt.toISOString().split('T')[0];
+      const existing = visitorsByDate.get(dateKey) || { desktop: 0, mobile: 0 };
+      visitorsByDate.set(dateKey, { ...existing, mobile: existing.mobile + 1 });
+    });
+
+    // Convert to array and fill missing dates
+    const result = [];
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      const dateKey = date.toISOString().split('T')[0];
+      const data = visitorsByDate.get(dateKey) || { desktop: 0, mobile: 0 };
+
+      result.push({
+        date: dateKey,
+        desktop: data.desktop,
+        mobile: data.mobile,
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error in getVisitorAnalytics:", error);
+    return [];
+  }
 }

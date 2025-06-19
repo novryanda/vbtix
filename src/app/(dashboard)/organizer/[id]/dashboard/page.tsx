@@ -57,17 +57,7 @@ export default function Page() {
                   </div>
                 </div>
                 
-                <div className="p-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-teal-500/10">
-                      <TrendingUpIcon className="w-4 h-4 text-teal-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Total Penjualan</p>
-                      <p className="text-lg font-bold text-teal-600">Rp 2.4M</p>
-                    </div>
-                  </div>
-                </div>
+                
                 
                 <div className="p-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-border/50">
                   <div className="flex items-center gap-3">

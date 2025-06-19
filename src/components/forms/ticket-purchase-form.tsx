@@ -134,26 +134,27 @@ export function TicketPurchaseForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-6">
       {/* Buyer Information */}
       <MagicCard className="bg-gradient-to-br from-background/90 to-muted/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
+        <CardHeader className="pb-4 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <User className="h-4 w-4 sm:h-5 sm:w-5" />
             Data Pemesan
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <CardContent className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
             <div>
-              <Label htmlFor="buyerInfo.fullName">Nama Lengkap *</Label>
+              <Label htmlFor="buyerInfo.fullName" className="text-sm font-medium">Nama Lengkap *</Label>
               <MagicInput
                 id="buyerInfo.fullName"
                 {...register("buyerInfo.fullName")}
                 placeholder="Masukkan nama lengkap"
+                className="mt-1 touch-target"
               />
               {errors.buyerInfo?.fullName && (
-                <p className="mt-1 text-sm text-red-500">
+                <p className="mt-1 text-xs sm:text-sm text-red-500">
                   {errors.buyerInfo.fullName.message}
                 </p>
               )}

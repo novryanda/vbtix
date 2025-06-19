@@ -37,6 +37,10 @@ export const ADMIN_ENDPOINTS = {
 
   // QR Code Management
   GENERATE_TRANSACTION_QR: (transactionId: string) => `${API_BASE}/admin/transactions/${transactionId}/generate-qr`,
+
+  // Analytics
+  ANALYTICS_SALES: `${API_BASE}/admin/analytics/sales`,
+  ANALYTICS_VISITORS: `${API_BASE}/admin/analytics/visitors`,
 };
 
 // Organizer endpoints
@@ -123,6 +127,10 @@ export const ORGANIZER_ENDPOINTS = {
   // QR Code Management
   QR_CODE_VALIDATE: (organizerId: string) =>
     `${API_BASE}/organizer/${organizerId}/qr-code/validate`,
+
+  // Analytics
+  ANALYTICS_SALES: (organizerId: string) =>
+    `${API_BASE}/organizer/${organizerId}/analytics/sales`,
 };
 
 // Public endpoints (formerly buyer endpoints)

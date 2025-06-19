@@ -28,6 +28,29 @@ export const useOrganizerDashboard = (organizerId: string) => {
   return { data, error, isLoading, mutate };
 };
 
+// Hook to fetch organizer sales analytics
+export const useOrganizerSalesAnalytics = (organizerId: string, timeRange: string = "30d") => {
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    data: Array<{
+      date: string;
+      revenue: number;
+      tickets: number;
+      transactions: number;
+    }>;
+  }>(
+    organizerId ? `${ORGANIZER_ENDPOINTS.ANALYTICS_SALES(organizerId)}?timeRange=${timeRange}` : null,
+    fetcher
+  );
+
+  return {
+    salesData: data?.data || [],
+    error,
+    isLoading,
+    mutate,
+  };
+};
+
 // Hook to fetch all organizer events
 export const useOrganizerEvents = (
   organizerId: string,

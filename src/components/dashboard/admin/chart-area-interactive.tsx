@@ -5,6 +5,7 @@ import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import { useIsMobile } from "~/lib/hooks/use-mobile";
 import { MagicCard } from "~/components/ui/magic-card";
+import { useAdminVisitorAnalytics } from "~/lib/api/hooks/admin";
 import {
   Card,
   CardContent,
@@ -138,25 +139,37 @@ export function ChartAreaInteractive() {
   const isMobile = useIsMobile();
   const [timeRange, setTimeRange] = React.useState("30d");
 
+  // Fetch real visitor analytics data
+  const { visitorData, isLoading, error } = useAdminVisitorAnalytics(timeRange);
+
   React.useEffect(() => {
     if (isMobile) {
       setTimeRange("7d");
     }
   }, [isMobile]);
 
-  const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date);
-    const referenceDate = new Date("2024-06-30");
-    let daysToSubtract = 90;
-    if (timeRange === "30d") {
-      daysToSubtract = 30;
-    } else if (timeRange === "7d") {
-      daysToSubtract = 7;
+  // Use real data if available, otherwise fallback to mock data
+  const filteredData = React.useMemo(() => {
+    if (error || visitorData.length === 0) {
+      // Fallback to mock data if there's an error or no data
+      return chartData.filter((item) => {
+        const date = new Date(item.date);
+        const referenceDate = new Date("2024-06-30");
+        let daysToSubtract = 90;
+        if (timeRange === "30d") {
+          daysToSubtract = 30;
+        } else if (timeRange === "7d") {
+          daysToSubtract = 7;
+        }
+        const startDate = new Date(referenceDate);
+        startDate.setDate(startDate.getDate() - daysToSubtract);
+        return date >= startDate;
+      });
     }
-    const startDate = new Date(referenceDate);
-    startDate.setDate(startDate.getDate() - daysToSubtract);
-    return date >= startDate;
-  });
+
+    // Use real data
+    return visitorData;
+  }, [visitorData, error, timeRange]);
   return (
     <MagicCard 
       className="border-0 bg-background/50 backdrop-blur-sm shadow-xl"
@@ -165,13 +178,26 @@ export function ChartAreaInteractive() {
       <CardHeader className="relative pb-6">
         <div className="space-y-2">
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-slate-600 to-slate-800 bg-clip-text text-transparent">
-            Statistik Pengunjung
+            {isLoading ? (
+              <div className="h-8 w-48 bg-muted animate-pulse rounded-lg"></div>
+            ) : (
+              "Statistik Pengunjung"
+            )}
           </CardTitle>
           <CardDescription className="text-base">
-            <span className="hidden @[540px]/card:block">
-              Total pengunjung untuk 3 bulan terakhir
-            </span>
-            <span className="@[540px]/card:hidden">3 bulan terakhir</span>
+            {isLoading ? (
+              <div className="h-5 w-64 bg-muted animate-pulse rounded-lg"></div>
+            ) : (
+              <>
+                <span className="hidden @[540px]/card:block">
+                  {error ? "Data tidak tersedia - menampilkan data contoh" :
+                   `Aktivitas pengguna untuk ${timeRange === "7d" ? "7 hari" : timeRange === "30d" ? "30 hari" : "3 bulan"} terakhir`}
+                </span>
+                <span className="@[540px]/card:hidden">
+                  {timeRange === "7d" ? "7h" : timeRange === "30d" ? "30h" : "3bl"}
+                </span>
+              </>
+            )}
           </CardDescription>
         </div>
         <div className="absolute top-4 right-4">

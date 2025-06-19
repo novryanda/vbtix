@@ -12,6 +12,10 @@ export interface AdminDashboardData {
     totalOrganizers: number;
     totalUsers: number;
     totalSales: number;
+    totalTicketsSold: number;
+    totalTransactions: number;
+    todaysSales: number;
+    todaysTickets: number;
     pendingEvents: number;
     verifiedOrganizers: number;
     pendingOrganizers: number;
@@ -78,6 +82,45 @@ export const useAdminOrganizerDashboard = (limit: number = 5) => {
 
   return {
     organizerData: data?.data,
+    error,
+    isLoading,
+    mutate,
+  };
+};
+
+// Hook to fetch admin sales analytics
+export const useAdminSalesAnalytics = (timeRange: string = "30d") => {
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    data: Array<{
+      date: string;
+      revenue: number;
+      tickets: number;
+      transactions: number;
+    }>;
+  }>(`${ADMIN_ENDPOINTS.ANALYTICS_SALES}?timeRange=${timeRange}`, fetcher);
+
+  return {
+    salesData: data?.data || [],
+    error,
+    isLoading,
+    mutate,
+  };
+};
+
+// Hook to fetch admin visitor analytics
+export const useAdminVisitorAnalytics = (timeRange: string = "30d") => {
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    data: Array<{
+      date: string;
+      desktop: number;
+      mobile: number;
+    }>;
+  }>(`${ADMIN_ENDPOINTS.ANALYTICS_VISITORS}?timeRange=${timeRange}`, fetcher);
+
+  return {
+    visitorData: data?.data || [],
     error,
     isLoading,
     mutate,

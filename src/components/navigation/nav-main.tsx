@@ -58,9 +58,9 @@ export function NavMain({
                   <SidebarMenuButton
                     asChild
                     className={cn(
-                      "w-full justify-start gap-3 bg-transparent border-0 transition-all duration-200 group relative",
-                      isActive 
-                        ? "text-blue-600 font-semibold" 
+                      "w-full justify-start gap-3 bg-transparent border-0 transition-all duration-200 group relative touch-target min-h-[44px]",
+                      isActive
+                        ? "text-blue-600 font-semibold"
                         : "text-sidebar-foreground hover:text-sidebar-foreground"
                     )}
                   >
@@ -72,27 +72,27 @@ export function NavMain({
                       
                       {Icon && (
                         <div className={cn(
-                          "p-1.5 rounded-lg transition-all duration-200",
-                          isActive 
-                            ? "bg-gradient-to-r from-blue-500 to-purple-500" 
+                          "p-1.5 rounded-lg transition-all duration-200 flex-shrink-0",
+                          isActive
+                            ? "bg-gradient-to-r from-blue-500 to-purple-500"
                             : "bg-sidebar-accent/50 group-hover:bg-sidebar-accent"
                         )}>
                           <Icon className={cn(
-                            "h-4 w-4 transition-colors",
+                            "h-4 w-4 sm:h-5 sm:w-5 transition-colors",
                             isActive ? "text-white" : "text-sidebar-foreground/70"
                           )} />
                         </div>
                       )}
                       
-                      <span className="flex-1">{item.title}</span>
-                      
+                      <span className="flex-1 text-sm sm:text-base font-medium">{item.title}</span>
+
                       {item.badge && (
-                        <Badge 
-                          variant={isActive ? "default" : "secondary"} 
+                        <Badge
+                          variant={isActive ? "default" : "secondary"}
                           className={cn(
-                            "text-xs px-2 py-0.5 font-medium",
-                            isActive 
-                              ? "bg-white/20 text-blue-700 border-blue-200" 
+                            "text-xs px-2 py-0.5 font-medium flex-shrink-0",
+                            isActive
+                              ? "bg-white/20 text-blue-700 border-blue-200"
                               : "bg-sidebar-accent text-sidebar-foreground/70"
                           )}
                         >

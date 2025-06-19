@@ -8,6 +8,8 @@ import {
   getPendingOrganizers,
   getEventStats,
   getOrganizerStats,
+  getAdminSalesAnalytics,
+  getVisitorAnalytics,
 } from "~/server/services/dashboard.service";
 import { formatDate } from "~/lib/utils";
 
@@ -173,6 +175,30 @@ export async function handleGetSalesOverview() {
   } catch (error) {
     console.error("Error getting sales overview:", error);
     throw new Error("Failed to retrieve sales overview");
+  }
+}
+
+/**
+ * Mendapatkan analytics penjualan untuk admin
+ */
+export async function handleGetAdminSalesAnalytics(timeRange: string = "30d") {
+  try {
+    return await getAdminSalesAnalytics(timeRange);
+  } catch (error) {
+    console.error("Error getting admin sales analytics:", error);
+    throw new Error("Failed to retrieve admin sales analytics");
+  }
+}
+
+/**
+ * Mendapatkan analytics pengunjung untuk admin
+ */
+export async function handleGetVisitorAnalytics(timeRange: string = "30d") {
+  try {
+    return await getVisitorAnalytics(timeRange);
+  } catch (error) {
+    console.error("Error getting visitor analytics:", error);
+    throw new Error("Failed to retrieve visitor analytics");
   }
 }
 

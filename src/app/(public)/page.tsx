@@ -35,8 +35,8 @@ const BannerCarousel = () => {
   }, [banners.length]);
 
   return (
-    <div className="relative mb-6 overflow-hidden rounded-xl sm:mb-8 lg:mb-10">
-      <div className="relative h-[200px] w-full sm:h-[280px] md:h-[320px] lg:h-[360px] xl:h-[400px]">
+    <div className="relative mb-4 overflow-hidden rounded-lg sm:mb-6 sm:rounded-xl lg:mb-8 xl:mb-10">
+      <div className="relative h-[180px] w-full xs:h-[200px] sm:h-[250px] md:h-[300px] lg:h-[350px] xl:h-[400px] 2xl:h-[450px]">
         {banners.map((banner, index) => (
           <div
             key={banner.id}
@@ -52,19 +52,19 @@ const BannerCarousel = () => {
               priority={index === 0}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-            <div className="absolute right-0 bottom-0 left-0 p-4 text-white sm:p-6 lg:p-8">
+            <div className="absolute right-0 bottom-0 left-0 p-3 text-white sm:p-4 md:p-6 lg:p-8">
               <div className="mx-auto max-w-7xl">
-                <h2 className="mb-2 text-lg font-bold sm:mb-3 sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl leading-tight">
+                <h2 className="mb-1.5 text-base font-bold sm:mb-2 sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl leading-tight">
                   {banner.title}
                 </h2>
-                <p className="mb-4 max-w-sm text-sm sm:mb-5 sm:max-w-md sm:text-base md:max-w-lg lg:max-w-xl opacity-90">
+                <p className="mb-3 max-w-xs text-xs sm:mb-4 sm:max-w-sm sm:text-sm md:max-w-md md:text-base lg:max-w-lg xl:max-w-xl opacity-90">
                   {banner.description}
                 </p>
                 <Button
                   asChild
                   variant="default"
                   size="sm"
-                  className="sm:size-default font-semibold"
+                  className="text-xs sm:text-sm md:size-default font-semibold"
                 >
                   <Link href={banner.link}>Jelajahi Sekarang</Link>
                 </Button>
@@ -73,11 +73,11 @@ const BannerCarousel = () => {
           </div>
         ))}
       </div>
-      <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 space-x-1.5 sm:bottom-4 sm:space-x-2">
+      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 space-x-1 sm:bottom-3 sm:space-x-1.5 md:bottom-4 md:space-x-2">
         {banners.map((_, index) => (
           <button
             key={index}
-            className={`h-1.5 w-1.5 rounded-full transition-all duration-200 sm:h-2 sm:w-2 ${
+            className={`h-1 w-1 rounded-full transition-all duration-200 touch-target sm:h-1.5 sm:w-1.5 md:h-2 md:w-2 ${
               index === currentSlide
                 ? "scale-125 bg-white"
                 : "bg-white/50 hover:bg-white/75"
@@ -209,15 +209,15 @@ const SectionTitle = ({
   viewAllLink: string;
   subtitle?: string;
 }) => (
-  <div className="mb-6 flex items-center justify-between sm:mb-8">
-    <div className="space-y-1">
-      <h2 className="text-xl font-bold sm:text-2xl md:text-3xl lg:text-4xl">
+  <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between md:mb-8">
+    <div className="space-y-1 flex-1">
+      <h2 className="text-lg font-bold sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl">
         <GradientText className="leading-tight">
           {title}
         </GradientText>
       </h2>
       {subtitle && (
-        <p className="text-muted-foreground text-sm sm:text-base font-medium max-w-2xl">
+        <p className="text-muted-foreground text-xs sm:text-sm md:text-base font-medium max-w-2xl">
           {subtitle}
         </p>
       )}
@@ -225,14 +225,14 @@ const SectionTitle = ({
     <Shimmer>
       <Button
         variant="outline"
-        size="default"
+        size="sm"
         asChild
-        className="text-sm font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-300 shadow-md hover:shadow-lg"
+        className="text-xs sm:text-sm font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-300 shadow-md hover:shadow-lg w-full sm:w-auto"
       >
-        <Link href={viewAllLink} className="flex items-center gap-2">
-          <span className="hidden sm:inline">Lihat Semua</span>
-          <span className="sm:hidden">Semua</span>
-          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+        <Link href={viewAllLink} className="flex items-center justify-center gap-2">
+          <span className="hidden xs:inline sm:hidden md:inline">Lihat Semua</span>
+          <span className="xs:hidden sm:inline md:hidden">Semua</span>
+          <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-300 group-hover:translate-x-1" />
         </Link>
       </Button>
     </Shimmer>
@@ -289,7 +289,7 @@ export default function BuyerHomePage() {
       <Particles className="absolute inset-0" quantity={50} />
 
       <div className="relative z-10">
-        <div className="container mx-auto space-y-10 px-4 py-6 sm:space-y-12 sm:px-6 sm:py-8 lg:space-y-16 lg:px-8 lg:py-12">
+        <div className="space-y-6 py-4 sm:space-y-8 sm:py-6 md:space-y-10 md:py-8 lg:space-y-12 lg:py-10 xl:space-y-16 xl:py-12">
           {/* Enhanced Banner Carousel */}
           <div className="relative">
             <BannerCarousel />
@@ -297,13 +297,13 @@ export default function BuyerHomePage() {
           </div>
 
           {/* Recommended Events Section */}
-          <section className="space-y-6 sm:space-y-8">
+          <section className="space-y-4 sm:space-y-6">
             <SectionTitle
               title="✨ Event Rekomendasi"
               subtitle="Event pilihan terbaik yang tidak boleh Anda lewatkan"
               viewAllLink="/events?featured=true"
             />
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 xl:gap-8">
+            <div className="responsive-grid">
               {isLoading ? (
                 Array.from({ length: 4 }).map((_, index) => (
                   <FloatingElement key={index} delay={index * 0.1}>
@@ -341,13 +341,13 @@ export default function BuyerHomePage() {
           </section>
 
           {/* Upcoming Events Section */}
-          <section className="space-y-6 sm:space-y-8">
+          <section className="space-y-4 sm:space-y-6">
             <SectionTitle
               title="� Event Terdekat"
               subtitle="Jangan sampai terlewat! Event seru yang akan segera dimulai"
               viewAllLink="/events"
             />
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 xl:gap-8">
+            <div className="responsive-grid">
               {isLoading ? (
                 Array.from({ length: 4 }).map((_, index) => (
                   <FloatingElement key={index} delay={index * 0.1}>

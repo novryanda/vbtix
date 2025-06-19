@@ -10,7 +10,11 @@ export default function BuyerLayout({
   return (
     <div className="min-h-screen bg-gradient-mesh">
       <BuyerTopNavbar />
-      <main className="relative">{children}</main>
+      <main className="relative w-full overflow-x-hidden">
+        <div className="container-responsive">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

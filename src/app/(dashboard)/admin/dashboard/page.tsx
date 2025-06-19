@@ -56,14 +56,14 @@ export default function DashboardPage() {
     );
   }
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 sm:space-y-8 animate-fade-in">
       {/* Enhanced Welcome Section with MagicCard */}
-      <div className="px-4 lg:px-6">
-        <MagicCard 
-          className="mb-8 border-0 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 backdrop-blur-sm"
+      <div>
+        <MagicCard
+          className="mb-6 sm:mb-8 border-0 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 backdrop-blur-sm"
           gradientColor="rgba(59, 130, 246, 0.15)"
         >
-          <div className="p-8 md:p-12">
+          <div className="p-4 sm:p-6 md:p-8 lg:p-12">
             <div className="flex items-start gap-6 mb-6">
               <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg">
                 <svg className="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,8 +80,8 @@ export default function DashboardPage() {
               </div>
             </div>
             
-            {/* Quick Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+            {/* Quick Stats Row - Simplified */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 sm:mt-8 max-w-2xl">
               <div className="p-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-border/50">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-green-500/10">
@@ -93,27 +93,15 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-border/50">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-blue-500/10">
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Events Aktif</p>
-                    <p className="text-lg font-bold text-blue-600">24</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-border/50">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-500/10">
-                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Organizers</p>
-                    <p className="text-lg font-bold text-purple-600">156</p>
+                    <p className="text-sm font-medium text-muted-foreground">Platform</p>
+                    <p className="text-lg font-bold text-blue-600">VBTicket</p>
                   </div>
                 </div>
               </div>

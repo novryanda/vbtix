@@ -46,20 +46,22 @@ export function BuyerTopNavbar() {
   const mobileNavLinkClasses =
     "py-2 text-lg font-medium text-white hover:text-white/80 transition-colors duration-200";
 
-  return (    <header className="sticky top-0 z-50 bg-gradient-brand text-white shadow-2xl backdrop-blur-xl border-b border-white/10">
-      <div className="container mx-auto px-4">{/* Desktop Header */}
-        <div className="hidden items-center justify-between md:flex">
+  return (
+    <header className="sticky top-0 z-50 bg-gradient-brand text-white shadow-2xl backdrop-blur-xl border-b border-white/10">
+      <div className="container-responsive">
+        {/* Desktop Header */}
+        <div className="hidden items-center justify-between md:flex py-2 lg:py-3">
           <Link href="/buyer" className="flex items-center transition-opacity hover:opacity-80">
-            <img 
-              src="/desain_logo.png" 
-              alt="VBTix Logo" 
-              className="h-24 w-auto object-contain scale-175"
+            <img
+              src="/desain_logo.png"
+              alt="VBTix Logo"
+              className="h-16 lg:h-20 xl:h-24 w-auto object-contain scale-125 lg:scale-150 xl:scale-175"
             />
           </Link>
 
           {/* Navigation */}
-          <NavigationMenu className="hidden md:block">
-            <NavigationMenuList className="flex space-x-8">
+          <NavigationMenu className="hidden md:block lg:flex-1 lg:justify-center">
+            <NavigationMenuList className="flex space-x-6 lg:space-x-8 xl:space-x-10">
               <NavigationMenuItem>
                 <Link href="/events" className={navLinkClasses}>
                   Jelajah Event
@@ -74,25 +76,27 @@ export function BuyerTopNavbar() {
           </NavigationMenu>
 
           {/* Right side: Theme selector, cart, notifications, user */}
-          <div className="flex items-center space-x-4">
-            <ThemeSelector variant="ghost" size="sm" />
+          <div className="flex items-center space-x-2 lg:space-x-3 xl:space-x-4">
+            <div className="hidden lg:block">
+              <ThemeSelector variant="ghost" size="sm" />
+            </div>
 
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 rounded-full text-white hover:bg-white/20 transition-all duration-300 interactive-scale"
+              className="h-9 w-9 lg:h-10 lg:w-10 rounded-full text-white hover:bg-white/20 transition-all duration-300 interactive-scale touch-target"
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-4 w-4 lg:h-5 lg:w-5" />
               <span className="sr-only">Cart</span>
             </Button>
 
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 rounded-full text-white hover:bg-white/20 transition-all duration-300 interactive-scale relative"
+              className="h-9 w-9 lg:h-10 lg:w-10 rounded-full text-white hover:bg-white/20 transition-all duration-300 interactive-scale relative touch-target"
             >
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse"></span>
+              <Bell className="h-4 w-4 lg:h-5 lg:w-5" />
+              <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 lg:h-3 lg:w-3 bg-red-500 rounded-full animate-pulse"></span>
               <span className="sr-only">Notifications</span>
             </Button>            {/* User Dropdown or Login Button */}
             {mounted && session?.user ? (
@@ -151,40 +155,40 @@ export function BuyerTopNavbar() {
             )}
           </div>
         </div>        {/* Mobile Header */}
-        <div className="flex items-center justify-between md:hidden">
+        <div className="flex items-center justify-between md:hidden py-2 sm:py-3">
           <Link href="/buyer" className="flex items-center transition-opacity hover:opacity-80">
-            <img 
-              src="/desain_logo.png" 
-              alt="VBTix Logo" 
-              className="h-18 w-auto object-contain scale-175"
+            <img
+              src="/desain_logo.png"
+              alt="VBTix Logo"
+              className="h-12 sm:h-14 w-auto object-contain scale-110 sm:scale-125"
             />
           </Link>
 
           {/* Mobile Menu and Search */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 sm:space-x-2">
             <Button
               variant="ghost"
-              className={searchBtnClasses}
+              className={`${searchBtnClasses} touch-target`}
               onClick={toggleSearch}
               size="icon"
             >
-              <Search size={18} />
+              <Search size={18} className="sm:w-[20px] sm:h-[20px]" />
             </Button>
 
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" className={searchBtnClasses} size="icon">
-                  <Menu size={18} />
+                <Button variant="ghost" className={`${searchBtnClasses} touch-target`} size="icon">
+                  <Menu size={18} className="sm:w-[20px] sm:h-[20px]" />
                 </Button>
               </SheetTrigger>
-              <SheetContent className="bg-gradient-brand text-white border-none">
+              <SheetContent className="bg-gradient-brand text-white border-none w-[280px] sm:w-[320px]">
                 <SheetHeader className="sr-only">
                   <SheetTitle>Navigation Menu</SheetTitle>
                   <SheetDescription>
                     Mobile navigation menu for VBTicket
                   </SheetDescription>
                 </SheetHeader>
-                <div className="mt-8 space-y-6">
+                <div className="mt-6 space-y-6 sm:mt-8">
                   <nav className="flex flex-col gap-4">
                     <Link href="/events" className={mobileNavLinkClasses}>
                       Jelajah Event

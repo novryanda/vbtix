@@ -26,6 +26,8 @@ const config = {
   },
   // Optimize for Vercel deployment
   serverExternalPackages: ["@prisma/client", "prisma"],
+  // Disable source maps in development to prevent 404 errors for source files
+  productionBrowserSourceMaps: false,
 };
 
 export default config;

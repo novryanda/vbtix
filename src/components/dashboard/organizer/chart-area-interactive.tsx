@@ -6,6 +6,8 @@ import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import { useIsMobile } from "~/lib/hooks/use-mobile";
 import { MagicCard } from "~/components/ui/magic-card";
+import { useOrganizerSalesAnalytics } from "~/lib/api/hooks/organizer";
+import { useParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -50,6 +52,11 @@ export function ChartAreaInteractive() {
   const [timeRange, setTimeRange] = useState("30d");
   const [chartType, setChartType] = useState("tickets");
   const isMobile = useIsMobile();
+  const params = useParams();
+  const organizerId = params.id as string;
+
+  // Fetch real sales analytics data
+  const { salesData, isLoading, error } = useOrganizerSalesAnalytics(organizerId, timeRange);
 
   React.useEffect(() => {
     if (isMobile) {
@@ -57,17 +64,20 @@ export function ChartAreaInteractive() {
     }
   }, [isMobile]);
 
-  // Filter data based on time range
+  // Use real data if available, otherwise fallback to mock data
   const filteredData = React.useMemo(() => {
-    const now = new Date();
-    const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
-    const startDate = new Date(now);
-    startDate.setDate(now.getDate() - days);
+    if (error || salesData.length === 0) {
+      // Fallback to mock data if there's an error or no data
+      return chartData;
+    }
 
-    // For demo purposes, we're just returning all data
-    // In a real app, you would filter based on the date
-    return chartData;
-  }, [timeRange]);
+    // Transform real data to match chart format
+    return salesData.map(item => ({
+      date: item.date,
+      tickets: item.tickets,
+      revenue: item.revenue,
+    }));
+  }, [salesData, error]);
 
   // Configure chart based on selected type
   const chartConfig: ChartConfig = {
@@ -88,19 +98,26 @@ export function ChartAreaInteractive() {
       <CardHeader className="relative pb-6">
         <div className="space-y-2">
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
-            Ringkasan Penjualan
+            {isLoading ? (
+              <div className="h-8 w-48 bg-muted animate-pulse rounded-lg"></div>
+            ) : (
+              "Ringkasan Penjualan"
+            )}
           </CardTitle>
           <CardDescription className="text-base">
-            <span className="hidden @[540px]/card:block">
-              {timeRange === "7d"
-                ? "7 hari terakhir"
-                : timeRange === "30d"
-                  ? "30 hari terakhir"
-                  : "3 bulan terakhir"}
-            </span>
-            <span className="@[540px]/card:hidden">
-              {timeRange === "7d" ? "7h" : timeRange === "30d" ? "30h" : "3bl"}
-            </span>
+            {isLoading ? (
+              <div className="h-5 w-64 bg-muted animate-pulse rounded-lg"></div>
+            ) : (
+              <>
+                <span className="hidden @[540px]/card:block">
+                  {error ? "Data tidak tersedia - menampilkan data contoh" :
+                   `Penjualan untuk ${timeRange === "7d" ? "7 hari" : timeRange === "30d" ? "30 hari" : "3 bulan"} terakhir`}
+                </span>
+                <span className="@[540px]/card:hidden">
+                  {timeRange === "7d" ? "7h" : timeRange === "30d" ? "30h" : "3bl"}
+                </span>
+              </>
+            )}
           </CardDescription>
         </div>
         <div className="absolute top-4 right-4">

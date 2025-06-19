@@ -26,10 +26,10 @@ const buttonVariants = cva(
         shimmer: "bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.98] border border-primary/20 shimmer",
       },
       size: {
-        default: "h-11 px-6 py-2 has-[>svg]:px-4",
-        sm: "h-9 rounded-lg gap-1.5 px-4 has-[>svg]:px-3 text-xs",
-        lg: "h-14 rounded-xl px-8 has-[>svg]:px-6 text-base",
-        icon: "size-11",
+        default: "h-11 px-6 py-2 has-[>svg]:px-4 min-h-[44px]",
+        sm: "h-9 rounded-lg gap-1.5 px-4 has-[>svg]:px-3 text-xs min-h-[36px] sm:min-h-[40px]",
+        lg: "h-14 rounded-xl px-8 has-[>svg]:px-6 text-base min-h-[48px]",
+        icon: "size-11 min-h-[44px] min-w-[44px]",
       },
     },
     defaultVariants: {
