@@ -11,6 +11,7 @@ import {
   UsersIcon,
   PartyPopperIcon,
   CheckCircle2,
+  ImageIcon,
 } from "lucide-react";
 
 import { NavMain } from "~/components/dashboard/admin/nav-main";
@@ -44,6 +45,11 @@ const data = {
       title: "Event Management",
       url: "/admin/events",
       icon: PartyPopperIcon,
+    },
+    {
+      title: "Banner Management",
+      url: "/admin/banners",
+      icon: ImageIcon,
     },
     {
       title: "Dashboard",

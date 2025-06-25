@@ -120,6 +120,54 @@ export async function handleInitiateCheckout(params: {
     };
   }
 
+  // Handle QRIS By Wonders payment (same as manual but with QRIS identifier)
+  if (paymentMethod === "QRIS_BY_WONDERS") {
+    // Update order status to PENDING for manual approval
+    // We'll use the details field to mark this as awaiting manual verification
+    const updatedOrder = await prisma.transaction.update({
+      where: { id: orderId },
+      data: {
+        paymentMethod: "QRIS_BY_WONDERS",
+        status: "PENDING",
+        details: {
+          type: "qris_by_wonders",
+          awaitingVerification: true,
+          submittedAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    // Create payment record for QRIS By Wonders payment
+    const payment = await prisma.payment.create({
+      data: {
+        orderId,
+        gateway: "QRIS_WONDERS",
+        amount: order.amount,
+        status: "PENDING",
+        paymentId: `QRIS_WONDERS_${orderId}_${Date.now()}`,
+        callbackPayload: {
+          type: "qris_by_wonders",
+          orderId: orderId,
+          createdAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    return {
+      order: updatedOrder,
+      payment,
+      checkoutUrl: undefined,
+      paymentToken: payment.paymentId,
+      paymentInstructions: {
+        type: "qris_by_wonders",
+        message:
+          "Silakan scan QR code yang telah ditampilkan untuk melakukan pembayaran. Pesanan Anda akan dikonfirmasi secara manual oleh admin setelah pembayaran berhasil.",
+      },
+      isTestMode: false,
+      gateway: "QRIS_WONDERS",
+    };
+  }
+
   // Check if Xendit is enabled (has secret key)
   const isXenditEnabled = !!env.XENDIT_SECRET_KEY;
 
@@ -468,21 +516,10 @@ function parsePaymentMethodDetails(paymentMethod: string, details: any = {}) {
  */
 function mapPaymentMethodToMock(paymentMethod: string): MockPaymentMethod {
   switch (paymentMethod.toUpperCase()) {
-    case "VIRTUAL_ACCOUNT":
-    case "VA":
-      return MockPaymentMethod.TEST_BANK_TRANSFER;
-    case "EWALLET":
-    case "E_WALLET":
-      return MockPaymentMethod.TEST_EWALLET;
-    case "QR_CODE":
-    case "QRIS":
-    case "RETAIL_OUTLET":
-    case "OVER_THE_COUNTER":
-    case "CREDIT_CARD":
-    case "CARD":
-      return MockPaymentMethod.TEST_CASH;
+    case "QRIS_BY_WONDERS":
+      return MockPaymentMethod.QRIS_BY_WONDERS;
     default:
-      return MockPaymentMethod.TEST_BANK_TRANSFER; // Default to bank transfer
+      return MockPaymentMethod.QRIS_BY_WONDERS; // Default to QRIS By Wonders
   }
 }
 

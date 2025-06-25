@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
+import { Button } from "~/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -11,7 +12,9 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { MagicCard, MagicButton } from "~/components/ui/magic-card";
-import { CreditCard, Smartphone, QrCode, Store, HandCoins, Check } from "lucide-react";
+import { CreditCard, Smartphone, QrCode, Store, HandCoins, Check, Download, Upload, CheckCircle, X, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { toast } from "sonner";
 
 export interface PaymentMethodDetails {
   bankCode?: string;
@@ -23,8 +26,10 @@ export interface PaymentMethodSelectorProps {
   onPaymentMethodSelect: (
     method: string,
     details: PaymentMethodDetails,
+    paymentProofFile?: File | null,
   ) => void;
   isLoading?: boolean;
+  orderId?: string; // Add orderId for payment proof upload
 }
 
 // Check if we're in test mode (Xendit not enabled)
@@ -39,34 +44,11 @@ const paymentMethods = isTestMode
         icon: HandCoins,
       },
       {
-        id: "TEST_BANK_TRANSFER",
-        name: "Test Bank Transfer",
-        description: "Simulasi transfer bank (tidak ada uang yang dipotong)",
-        icon: CreditCard,
-        banks: [
-          { code: "TEST_BCA", name: "Test BCA" },
-          { code: "TEST_BNI", name: "Test BNI" },
-          { code: "TEST_BRI", name: "Test BRI" },
-          { code: "TEST_MANDIRI", name: "Test Mandiri" },
-        ],
-      },
-      {
-        id: "TEST_EWALLET",
-        name: "Test E-Wallet",
-        description:
-          "Simulasi pembayaran e-wallet (tidak ada uang yang dipotong)",
-        icon: Smartphone,
-        types: [
-          { code: "TEST_OVO", name: "Test OVO" },
-          { code: "TEST_DANA", name: "Test DANA" },
-          { code: "TEST_GOPAY", name: "Test GoPay" },
-        ],
-      },
-      {
-        id: "TEST_CASH",
-        name: "Test Cash Payment",
-        description: "Simulasi pembayaran tunai (tidak ada uang yang dipotong)",
+        id: "QRIS_BY_WONDERS",
+        name: "QRIS By Wonders",
+        description: "Scan QR code untuk pembayaran dengan QRIS",
         icon: QrCode,
+        showQRCode: true,
       },
     ]
   : [
@@ -124,17 +106,66 @@ const paymentMethods = isTestMode
 export function PaymentMethodSelector({
   onPaymentMethodSelect,
   isLoading,
+  orderId,
 }: PaymentMethodSelectorProps) {
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [selectedBank, setSelectedBank] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedOutlet, setSelectedOutlet] = useState<string>("");
 
+  // Payment proof file selection state
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleMethodChange = (method: string) => {
     setSelectedMethod(method);
     setSelectedBank("");
     setSelectedType("");
     setSelectedOutlet("");
+    // Reset payment proof when changing methods
+    setPaymentProofFile(null);
+  };
+
+  // Handle QR code download
+  const handleDownloadQR = () => {
+    const link = document.createElement('a');
+    link.href = '/qrcode.jpg';
+    link.download = 'qris-payment-code.jpg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("QR Code berhasil diunduh");
+  };
+
+  // Handle payment proof file selection
+  const handlePaymentProofSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Format file tidak valid. Hanya JPEG, PNG, dan WebP yang diperbolehkan.");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error("Ukuran file terlalu besar. Maksimal 5MB.");
+      return;
+    }
+
+    setPaymentProofFile(file);
+    toast.success("File bukti pembayaran berhasil dipilih");
+  };
+
+  // Remove payment proof
+  const removePaymentProof = () => {
+    setPaymentProofFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleProceed = () => {
@@ -160,24 +191,17 @@ export function PaymentMethodSelector({
       case "QR_CODE":
         details.type = "QRIS";
         break;
-      // Test payment methods
-      case "TEST_BANK_TRANSFER":
-        if (!selectedBank) return;
-        details.bankCode = selectedBank;
-        break;
-      case "TEST_EWALLET":
-        if (!selectedType) return;
-        details.type = selectedType;
-        break;
-      case "TEST_CASH":
-        // No additional details needed for test cash
+      case "QRIS_BY_WONDERS":
+        // No additional details needed for QRIS By Wonders
         break;
       case "MANUAL_PAYMENT":
         // No additional details needed for manual payment
         break;
     }
 
-    onPaymentMethodSelect(selectedMethod, details);
+    // For QRIS_BY_WONDERS, pass the payment proof file
+    const paymentProofFileToPass = selectedMethod === "QRIS_BY_WONDERS" ? paymentProofFile : null;
+    onPaymentMethodSelect(selectedMethod, details, paymentProofFileToPass);
   };
 
   const isFormValid = () => {
@@ -192,13 +216,9 @@ export function PaymentMethodSelector({
         return !!selectedOutlet;
       case "QR_CODE":
         return true;
-      // Test payment methods
-      case "TEST_BANK_TRANSFER":
-        return !!selectedBank;
-      case "TEST_EWALLET":
-        return !!selectedType;
-      case "TEST_CASH":
-        return true;
+      case "QRIS_BY_WONDERS":
+        // For QRIS By Wonders, require payment proof file to be selected (upload happens after order creation)
+        return !!paymentProofFile;
       case "MANUAL_PAYMENT":
         return true;
       default:
@@ -320,6 +340,96 @@ export function PaymentMethodSelector({
                         </Select>
                       </div>
                     )}
+
+                    {method.showQRCode && (
+                      <div className="space-y-4">
+                        <Label>QR Code Pembayaran</Label>
+                        <MagicCard className="p-6 text-center bg-white">
+                          <div className="space-y-4">
+                            <p className="text-sm text-muted-foreground">
+                              Scan QR code di bawah ini untuk melakukan pembayaran
+                            </p>
+                            <div className="flex justify-center">
+                              <Image
+                                src="/qrcode.jpg"
+                                alt="QRIS Payment QR Code"
+                                width={200}
+                                height={200}
+                                className="border rounded-lg shadow-sm"
+                                priority
+                              />
+                            </div>
+                            <Button
+                              onClick={handleDownloadQR}
+                              variant="outline"
+                              size="sm"
+                              className="mx-auto flex items-center gap-2"
+                            >
+                              <Download className="h-4 w-4" />
+                              Unduh QR Code
+                            </Button>
+                            <p className="text-xs text-muted-foreground">
+                              Setelah pembayaran berhasil, unggah bukti pembayaran di bawah ini
+                            </p>
+                          </div>
+                        </MagicCard>
+
+                        {/* Payment Proof File Selection */}
+                        <div className="space-y-3">
+                          <Label>Bukti Pembayaran *</Label>
+                          <MagicCard className="p-4 bg-white">
+                            {!paymentProofFile ? (
+                              <div className="text-center space-y-3">
+                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                                  <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                                  <p className="text-sm text-muted-foreground mb-2">
+                                    Pilih bukti pembayaran (JPEG, PNG, WebP)
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mb-3">
+                                    Maksimal 5MB - File akan diunggah setelah konfirmasi pembayaran
+                                  </p>
+                                  <Button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    variant="outline"
+                                    size="sm"
+                                  >
+                                    Pilih File
+                                  </Button>
+                                  <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                                    onChange={handlePaymentProofSelect}
+                                    className="hidden"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                    <span className="text-sm font-medium text-green-700">
+                                      {paymentProofFile.name}
+                                    </span>
+                                  </div>
+                                  <Button
+                                    onClick={removePaymentProof}
+                                    variant="ghost"
+                                    size="sm"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground text-center">
+                                  File siap untuk diunggah setelah konfirmasi pembayaran
+                                </p>
+                              </div>
+                            )}
+                          </MagicCard>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -334,7 +444,10 @@ export function PaymentMethodSelector({
           variant="magic"
           size="lg"
         >
-          {isLoading ? "Memproses..." : "Lanjutkan Pembayaran"}
+          {isLoading ? "Memproses..." :
+           selectedMethod === "QRIS_BY_WONDERS" && !paymentProofFile ?
+           "Pilih Bukti Pembayaran Dulu" :
+           "Lanjutkan Pembayaran"}
         </MagicButton>
       </CardContent>
     </MagicCard>

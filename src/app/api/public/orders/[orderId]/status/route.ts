@@ -128,10 +128,10 @@ export async function GET(
     // Determine overall status
     let overallStatus: string = order.status;
 
-    // For manual payments, check if awaiting verification
+    // For manual payments and QRIS By Wonders, check if awaiting verification
     if (
       order.status === "PENDING" &&
-      order.paymentMethod === "MANUAL_PAYMENT" &&
+      (order.paymentMethod === "MANUAL_PAYMENT" || order.paymentMethod === "QRIS_BY_WONDERS") &&
       !latestPaymentStatus
     ) {
       overallStatus = "AWAITING_VERIFICATION";

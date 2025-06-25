@@ -3,7 +3,7 @@
 import { MagicCard } from "~/components/ui/magic-card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { Clock, CheckCircle2, XCircle, TrendingUp, ArrowRight } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 interface ApprovalSummaryProps {
@@ -12,41 +12,9 @@ interface ApprovalSummaryProps {
   totalRejected: number;
   totalEvents: number;
   approvalRate: number;
-  averageApprovalTime: string;
   isDataConsistent: boolean;
   isLoading?: boolean;
   error?: Error | null;
-}
-
-// Helper function to format approval time
-function formatApprovalTime(timeString: string): { display: string; tooltip: string } {
-  const hours = parseInt(timeString.replace('h', ''));
-
-  if (hours === 0) {
-    return {
-      display: "< 1h",
-      tooltip: "Kurang dari 1 jam rata-rata waktu review"
-    };
-  } else if (hours < 24) {
-    return {
-      display: `${hours}h`,
-      tooltip: `${hours} jam rata-rata waktu review`
-    };
-  } else {
-    const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-    if (remainingHours === 0) {
-      return {
-        display: `${days}d`,
-        tooltip: `${days} hari rata-rata waktu review`
-      };
-    } else {
-      return {
-        display: `${days}d ${remainingHours}h`,
-        tooltip: `${days} hari ${remainingHours} jam rata-rata waktu review`
-      };
-    }
-  }
 }
 
 export function ApprovalSummaryCard({
@@ -55,12 +23,10 @@ export function ApprovalSummaryCard({
   totalRejected,
   totalEvents,
   approvalRate,
-  averageApprovalTime,
   isDataConsistent,
   isLoading = false,
   error = null,
 }: ApprovalSummaryProps) {
-  const formattedApprovalTime = formatApprovalTime(averageApprovalTime);
 
   // Error state
   if (error) {
@@ -168,7 +134,7 @@ export function ApprovalSummaryCard({
         )}
 
         {/* Reliable Statistics */}
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="grid grid-cols-2 gap-3 text-center">
           <div className="space-y-1 p-3 rounded-lg bg-green-50 border border-green-100 hover:bg-green-100 transition-colors">
             <div className="flex items-center justify-center gap-1">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -194,19 +160,6 @@ export function ApprovalSummaryCard({
                 ⚠ {Math.round((totalRejected / Math.max(totalEvents, 1)) * 100)}% dari total
               </div>
             )}
-          </div>
-          <div className="space-y-1 p-3 rounded-lg bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors">
-            <div className="flex items-center justify-center gap-1">
-              <TrendingUp className="h-4 w-4 text-blue-600" />
-              <span className="text-xs text-muted-foreground font-medium">Rata-rata</span>
-            </div>
-            <div
-              className="text-2xl font-bold text-blue-600 cursor-help"
-              title={formattedApprovalTime.tooltip}
-            >
-              {formattedApprovalTime.display}
-            </div>
-            <div className="text-xs text-blue-600 font-medium">Waktu Review</div>
           </div>
         </div>
 

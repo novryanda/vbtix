@@ -69,9 +69,14 @@ const getAdminNavigationData = (): AdminNavigationData => ({
       icon: LayoutDashboardIcon,
     },
     {
-      title: "Events",
+      title: "Event ",
       url: "/admin/events",
       icon: PartyPopperIcon,
+    },
+    {
+      title: "Banner ",
+      url: "/admin/banners",
+      icon: SparklesIcon,
     },
     {
       title: "Organizers",

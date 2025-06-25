@@ -30,23 +30,7 @@ import {
 } from "~/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 
-// Sample chart data - replace with actual data from API
-const chartData = [
-  { date: "2024-04-01", tickets: 222, revenue: 15000000 },
-  { date: "2024-04-02", tickets: 97, revenue: 8000000 },
-  { date: "2024-04-03", tickets: 167, revenue: 12000000 },
-  { date: "2024-04-04", tickets: 242, revenue: 18000000 },
-  { date: "2024-04-05", tickets: 373, revenue: 25000000 },
-  { date: "2024-04-06", tickets: 301, revenue: 20000000 },
-  { date: "2024-04-07", tickets: 217, revenue: 16000000 },
-  { date: "2024-04-08", tickets: 146, revenue: 10000000 },
-  { date: "2024-04-09", tickets: 189, revenue: 14000000 },
-  { date: "2024-04-10", tickets: 251, revenue: 19000000 },
-  { date: "2024-04-11", tickets: 322, revenue: 22000000 },
-  { date: "2024-04-12", tickets: 298, revenue: 21000000 },
-  { date: "2024-04-13", tickets: 275, revenue: 20000000 },
-  { date: "2024-04-14", tickets: 201, revenue: 15000000 },
-];
+
 
 export function ChartAreaInteractive() {
   const [timeRange, setTimeRange] = useState("30d");
@@ -63,12 +47,11 @@ export function ChartAreaInteractive() {
       setTimeRange("7d");
     }
   }, [isMobile]);
-
-  // Use real data if available, otherwise fallback to mock data
+  // Use only real data
   const filteredData = React.useMemo(() => {
-    if (error || salesData.length === 0) {
-      // Fallback to mock data if there's an error or no data
-      return chartData;
+    if (error || !salesData || salesData.length === 0) {
+      // Return empty array if no real data is available
+      return [];
     }
 
     // Transform real data to match chart format
@@ -78,15 +61,14 @@ export function ChartAreaInteractive() {
       revenue: item.revenue,
     }));
   }, [salesData, error]);
-
   // Configure chart based on selected type
   const chartConfig: ChartConfig = {
     tickets: {
-      color: "indigo",
+      color: "blue",
       label: "Tickets",
     },
     revenue: {
-      color: "emerald",
+      color: "blue",
       label: "Revenue",
     },
   };
@@ -107,10 +89,9 @@ export function ChartAreaInteractive() {
           <CardDescription className="text-base">
             {isLoading ? (
               <div className="h-5 w-64 bg-muted animate-pulse rounded-lg"></div>
-            ) : (
-              <>
+            ) : (              <>
                 <span className="hidden @[540px]/card:block">
-                  {error ? "Data tidak tersedia - menampilkan data contoh" :
+                  {error || !salesData || salesData.length === 0 ? "Data tidak tersedia" :
                    `Penjualan untuk ${timeRange === "7d" ? "7 hari" : timeRange === "30d" ? "30 hari" : "3 bulan"} terakhir`}
                 </span>
                 <span className="@[540px]/card:hidden">
@@ -164,41 +145,47 @@ export function ChartAreaInteractive() {
               <ToggleGroupItem value="revenue">Revenue</ToggleGroupItem>
             </ToggleGroup>
           </div>
-        </div>
-        <div className="h-[240px]">
-          <ChartContainer
-            config={chartConfig}
-            className="aspect-auto h-full w-full"
-          >
-            <AreaChart data={filteredData}>
-              <defs>
-                <linearGradient id="fillTickets" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="5%"
-                    stopColor="var(--color-tickets)"
-                    stopOpacity={1.0}
-                  />
-                  <stop
-                    offset="95%"
-                    stopColor="var(--color-tickets)"
-                    stopOpacity={0.1}
-                  />
-                </linearGradient>
-                <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="5%"
-                    stopColor="var(--color-revenue)"
-                    stopOpacity={0.8}
-                  />
-                  <stop
-                    offset="95%"
-                    stopColor="var(--color-revenue)"
-                    stopOpacity={0.1}
-                  />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} />
-              <XAxis
+        </div>        <div className="h-[240px]">
+          {filteredData.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-muted-foreground">
+                <p className="text-lg font-medium">Tidak ada data tersedia</p>
+                <p className="text-sm">Data penjualan akan muncul setelah ada transaksi</p>
+              </div>
+            </div>
+          ) : (
+            <ChartContainer
+              config={chartConfig}
+              className="aspect-auto h-full w-full"
+            >
+              <AreaChart data={filteredData}>
+                <defs>
+                  <linearGradient id="fillTickets" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor="var(--color-tickets)"
+                      stopOpacity={1.0}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="var(--color-tickets)"
+                      stopOpacity={0.1}
+                    />
+                  </linearGradient>
+                  <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor="var(--color-revenue)"
+                      stopOpacity={0.8}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="var(--color-revenue)"
+                      stopOpacity={0.1}
+                    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} />              <XAxis
                 dataKey="date"
                 tickLine={false}
                 axisLine={false}
@@ -206,19 +193,20 @@ export function ChartAreaInteractive() {
                 minTickGap={32}
                 tickFormatter={(value) => {
                   const date = new Date(value);
-                  return date.toLocaleDateString("en-US", {
+                  return date.toLocaleDateString("id-ID", {
                     month: "short",
                     day: "numeric",
                   });
                 }}
-              />
-              <ChartTooltip
+              />              <ChartTooltip
                 cursor={false}
                 content={
                   <ChartTooltipContent
                     labelFormatter={(value) => {
-                      return new Date(value).toLocaleDateString("en-US", {
-                        month: "short",
+                      return new Date(value).toLocaleDateString("id-ID", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
                         day: "numeric",
                       });
                     }}
@@ -226,22 +214,23 @@ export function ChartAreaInteractive() {
                   />
                 }
               />
-              {chartType === "tickets" ? (
-                <Area
-                  dataKey="tickets"
-                  type="natural"
-                  fill="url(#fillTickets)"
-                  stroke="var(--color-tickets)"
-                />
-              ) : (
-                <Area
-                  dataKey="revenue"
-                  type="natural"
-                  fill="url(#fillRevenue)"
-                  stroke="var(--color-revenue)"                />
-              )}
-            </AreaChart>
-          </ChartContainer>
+                {chartType === "tickets" ? (
+                  <Area
+                    dataKey="tickets"
+                    type="natural"
+                    fill="url(#fillTickets)"
+                    stroke="var(--color-tickets)"
+                  />
+                ) : (
+                  <Area
+                    dataKey="revenue"
+                    type="natural"
+                    fill="url(#fillRevenue)"
+                    stroke="var(--color-revenue)"                />
+                )}
+              </AreaChart>
+            </ChartContainer>
+          )}
         </div>
       </CardContent>
     </MagicCard>

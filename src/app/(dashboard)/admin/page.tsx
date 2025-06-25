@@ -10,13 +10,13 @@ export default function Page() {
 
   useEffect(() => {
     // Redirect to the simplified admin approval dashboard
-    router.replace("/admin/approval");
+    router.replace("/admin/dashboard");
   }, [router]);
 
   // Show loading state while redirecting
   return (
     <AdminRoute>
-      <RedirectLoading message="Redirecting to admin approval dashboard..." />
+      <RedirectLoading message="Redirecting to admin dashboard..." />
     </AdminRoute>
   );
 }

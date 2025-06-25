@@ -16,6 +16,7 @@ export enum UploadEndpoint {
   TICKET = "/api/upload/ticket-image",
   EVENT = "/api/upload/event-image",
   PROFILE = "/api/upload/profile-image",
+  BANNER = "/api/upload/banner-image",
 }
 
 /**

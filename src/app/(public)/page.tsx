@@ -12,44 +12,155 @@ import { formatPrice, formatDate } from "~/lib/utils";
 import { generateBannerUrl, defaultBanners } from "~/lib/banner-helpers";
 import { MagicCard, GradientText, FloatingElement, Shimmer } from "~/components/ui/magic-card";
 import { AnimatedBackground, Particles } from "~/components/ui/animated-background";
+import { PUBLIC_ENDPOINTS } from "~/lib/api/endpoints";
 
 // Banner carousel component
 const BannerCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [banners, setBanners] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Generate banner URLs using Cloudinary
-  const banners = defaultBanners.map((banner) => ({
-    ...banner,
-    imageUrl: generateBannerUrl(`VBTicket ${banner.title}`, {
-      backgroundColor: banner.backgroundColor,
-      textColor: "white",
-    }),
-  }));
+  // Fetch banners from API
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        setIsLoading(true);
+        const bannerUrl = `${PUBLIC_ENDPOINTS.BANNERS}?t=${Date.now()}`;
+        console.log("Fetching banners from:", bannerUrl);
+        const response = await fetch(bannerUrl, {
+          cache: 'no-store', // Ensure we get fresh data
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
+        const data = await response.json();
+        console.log("Banner API response:", data);
+        console.log("Response status:", response.status);
+        console.log("Response headers:", Object.fromEntries(response.headers.entries()));
+
+        if (data.success && data.data && Array.isArray(data.data) && data.data.length > 0) {
+          console.log("✅ Setting banners from API:", data.data);
+          console.log("Number of banners:", data.data.length);
+          setBanners(data.data);
+        } else {
+          console.log("❌ No banners from API, using fallback banners. API response:", data);
+          console.log("Conditions check:", {
+            success: data.success,
+            hasData: !!data.data,
+            isArray: Array.isArray(data.data),
+            length: data.data?.length
+          });
+          // Fallback to default banners if no active banners
+          const fallbackBanners = defaultBanners.map((banner) => ({
+            ...banner,
+            imageUrl: generateBannerUrl(`VBTicket ${banner.title}`, {
+              backgroundColor: banner.backgroundColor,
+              textColor: "white",
+            }),
+          }));
+          console.log("Fallback banners:", fallbackBanners);
+          setBanners(fallbackBanners);
+        }
+      } catch (error) {
+        console.error("Error fetching banners:", error);
+        // Fallback to default banners on error
+        const fallbackBanners = defaultBanners.map((banner) => ({
+          ...banner,
+          imageUrl: generateBannerUrl(`VBTicket ${banner.title}`, {
+            backgroundColor: banner.backgroundColor,
+            textColor: "white",
+          }),
+        }));
+        console.log("Error fallback banners:", fallbackBanners);
+        setBanners(fallbackBanners);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBanners();
+  }, []);
 
   // Auto-change banner every 5 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % banners.length);
-    }, 5000);
-    return () => clearInterval(interval);
+    if (banners.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % banners.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
   }, [banners.length]);
+
+  // Show loading state
+  if (isLoading) {
+    console.log("Banner carousel is loading...");
+    return (
+      <div className="relative mb-4 overflow-hidden rounded-lg sm:mb-6 sm:rounded-xl lg:mb-8 xl:mb-10">
+        <div className="relative h-[180px] w-full xs:h-[200px] sm:h-[250px] md:h-[300px] lg:h-[350px] xl:h-[400px] 2xl:h-[450px] bg-muted animate-pulse">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+          <div className="absolute right-0 bottom-0 left-0 p-3 text-white sm:p-4 md:p-6 lg:p-8">
+            <div className="mx-auto max-w-7xl">
+              <div className="mb-1.5 h-6 w-48 bg-white/20 rounded sm:mb-2 sm:h-7 md:h-8 lg:h-9 xl:h-10 2xl:h-12"></div>
+              <div className="mb-3 h-4 w-64 bg-white/20 rounded sm:mb-4 sm:h-5 md:h-6"></div>
+              <div className="h-8 w-32 bg-white/20 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show fallback if no banners (this should rarely happen now)
+  if (banners.length === 0) {
+    console.log("No banners to display, showing fallback");
+    // Generate fallback banners as last resort
+    const emergencyFallback = defaultBanners.map((banner) => ({
+      ...banner,
+      imageUrl: generateBannerUrl(`VBTicket ${banner.title}`, {
+        backgroundColor: banner.backgroundColor,
+        textColor: "white",
+      }),
+    }));
+
+    return (
+      <div className="relative mb-4 overflow-hidden rounded-lg sm:mb-6 sm:rounded-xl lg:mb-8 xl:mb-10">
+        <div className="relative h-[180px] w-full xs:h-[200px] sm:h-[250px] md:h-[300px] lg:h-[350px] xl:h-[400px] 2xl:h-[450px]">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+            <div className="absolute right-0 bottom-0 left-0 p-3 text-white sm:p-4 md:p-6 lg:p-8">
+              <div className="mx-auto max-w-7xl">
+                <h2 className="mb-1.5 text-base font-bold sm:mb-2 sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl leading-tight">
+                  {emergencyFallback[0]?.title || "Selamat Datang di VBTicket"}
+                </h2>
+                <p className="mb-3 max-w-xs text-xs sm:mb-4 sm:max-w-sm sm:text-sm md:max-w-md md:text-base lg:max-w-lg xl:max-w-xl opacity-90">
+                  {emergencyFallback[0]?.description || "Platform tiket event terpercaya di Indonesia"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("Rendering banner carousel with banners:", banners);
 
   return (
     <div className="relative mb-4 overflow-hidden rounded-lg sm:mb-6 sm:rounded-xl lg:mb-8 xl:mb-10">
       <div className="relative h-[180px] w-full xs:h-[200px] sm:h-[250px] md:h-[300px] lg:h-[350px] xl:h-[400px] 2xl:h-[450px]">
         {banners.map((banner, index) => (
           <div
-            key={banner.id}
+            key={banner.id || index}
             className={`absolute inset-0 transition-opacity duration-1000 ${
               index === currentSlide ? "opacity-100" : "opacity-0"
             }`}
           >
-            <Image
+            <img
               src={banner.imageUrl}
               alt={banner.title}
-              fill
-              className="object-cover"
-              priority={index === 0}
+              className="absolute inset-0 w-full h-full object-cover"
+              onLoad={() => console.log("Banner image loaded:", banner.imageUrl)}
+              onError={(e) => console.error("Banner image failed to load:", banner.imageUrl, e)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
             <div className="absolute right-0 bottom-0 left-0 p-3 text-white sm:p-4 md:p-6 lg:p-8">
@@ -57,17 +168,31 @@ const BannerCarousel = () => {
                 <h2 className="mb-1.5 text-base font-bold sm:mb-2 sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl leading-tight">
                   {banner.title}
                 </h2>
-                <p className="mb-3 max-w-xs text-xs sm:mb-4 sm:max-w-sm sm:text-sm md:max-w-md md:text-base lg:max-w-lg xl:max-w-xl opacity-90">
-                  {banner.description}
-                </p>
-                <Button
-                  asChild
-                  variant="default"
-                  size="sm"
-                  className="text-xs sm:text-sm md:size-default font-semibold"
-                >
-                  <Link href={banner.link}>Jelajahi Sekarang</Link>
-                </Button>
+                {banner.description && (
+                  <p className="mb-3 max-w-xs text-xs sm:mb-4 sm:max-w-sm sm:text-sm md:max-w-md md:text-base lg:max-w-lg xl:max-w-xl opacity-90">
+                    {banner.description}
+                  </p>
+                )}
+                {banner.linkUrl && (
+                  <Button
+                    asChild
+                    variant="default"
+                    size="sm"
+                    className="text-xs sm:text-sm md:size-default font-semibold"
+                  >
+                    <Link href={banner.linkUrl}>Jelajahi Sekarang</Link>
+                  </Button>
+                )}
+                {!banner.linkUrl && (banner.link || banner.linkUrl) && (
+                  <Button
+                    asChild
+                    variant="default"
+                    size="sm"
+                    className="text-xs sm:text-sm md:size-default font-semibold"
+                  >
+                    <Link href={banner.link || banner.linkUrl}>Jelajahi Sekarang</Link>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -294,6 +419,11 @@ export default function BuyerHomePage() {
           <div className="relative">
             <BannerCarousel />
             <div className="absolute inset-0 bg-gradient-to-t from-background/15 via-transparent to-transparent pointer-events-none" />
+          </div>
+
+          {/* Debug Banner Info */}
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+            <strong>Debug Info:</strong> Check browser console for banner loading details.
           </div>
 
           {/* Recommended Events Section */}

@@ -100,13 +100,6 @@ export function QuickActionsCard({
             </Link>
           </Button>
 
-          <Button asChild variant="outline" className="w-full justify-start hover:bg-green-50 hover:border-green-200 transition-colors">
-            <Link href="/admin/events?status=PUBLISHED">
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              View Published Events
-            </Link>
-          </Button>
-
           <Button asChild variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-200 transition-colors">
             <Link href="/admin/organizers">
               <Users className="mr-2 h-4 w-4" />

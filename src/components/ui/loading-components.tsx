@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Loader2, Ticket, Calendar, Users, CreditCard, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { MagicCard } from "~/components/ui/magic-card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Badge } from "~/components/ui/badge";
+import { AnimatedCircularProgressBar } from "~/components/magicui/animated-circular-progress-bar";
 import { cn } from "~/lib/utils";
 
 // Basic Loading Spinner
@@ -182,30 +183,84 @@ export function FormLoading({ className }: { className?: string }) {
   );
 }
 
-// Page Loading with Context
+// Enhanced Page Loading with Context and Animated Progress
 interface PageLoadingProps {
   title?: string;
   description?: string;
   icon?: React.ComponentType<{ className?: string }>;
   className?: string;
+  showProgress?: boolean;
+  progressStages?: Array<{ progress: number; message: string }>;
 }
 
-export function PageLoading({ 
-  title = "Memuat Halaman", 
+export function PageLoading({
+  title = "Memuat Halaman",
   description = "Mohon tunggu sebentar...",
   icon: Icon = Loader2,
-  className 
+  className,
+  showProgress = true,
+  progressStages = [
+    { progress: 25, message: "Memuat komponen..." },
+    { progress: 50, message: "Menyiapkan data..." },
+    { progress: 75, message: "Menyelesaikan..." },
+    { progress: 100, message: "Siap!" }
+  ]
 }: PageLoadingProps) {
+  const [progress, setProgress] = useState(0);
+  const [currentStage, setCurrentStage] = useState(description);
+
+  useEffect(() => {
+    if (!showProgress) return;
+
+    let stageIndex = 0;
+    const interval = setInterval(() => {
+      if (stageIndex < progressStages.length) {
+        const stage = progressStages[stageIndex];
+        if (stage) {
+          setProgress(stage.progress);
+          setCurrentStage(stage.message);
+        }
+        stageIndex++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 800);
+
+    return () => clearInterval(interval);
+  }, [showProgress, progressStages]);
   return (
     <div className={cn("min-h-[400px] flex items-center justify-center", className)}>
-      <div className="text-center space-y-4 max-w-md mx-auto">
-        <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-          <Icon className="h-8 w-8 text-primary animate-spin" />
-        </div>
+      <div className="text-center space-y-6 max-w-md mx-auto">
+        {showProgress ? (
+          <div className="flex justify-center">
+            <AnimatedCircularProgressBar
+              max={100}
+              min={0}
+              value={progress}
+              gaugePrimaryColor="hsl(var(--primary))"
+              gaugeSecondaryColor="hsl(var(--muted))"
+              className="size-24 text-lg font-bold text-primary"
+            />
+          </div>
+        ) : (
+          <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+            <Icon className="h-8 w-8 text-primary animate-spin" />
+          </div>
+        )}
+
         <div className="space-y-2">
           <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm text-muted-foreground">
+            {showProgress ? currentStage : description}
+          </p>
+          {showProgress && (
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span>Progress:</span>
+              <span className="font-mono font-semibold text-primary">{progress}%</span>
+            </div>
+          )}
         </div>
+
         <div className="flex items-center justify-center gap-1">
           <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
           <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>

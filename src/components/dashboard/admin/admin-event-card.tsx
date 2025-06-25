@@ -114,13 +114,11 @@ export function AdminEventCard({ event, currentUserId }: EventCardProps) {
 
   // Determine what actions are available
   const canEdit = !isOrganizerSubmitted || !isPendingApproval;
-  const needsApproval = isOrganizerSubmitted && isPendingApproval;
-  return (
-    <MagicCard 
-      className="p-6 bg-gradient-to-br from-white/90 to-gray-50/90 backdrop-blur-sm border-gray-200/50 transition-all hover:shadow-md"
+  const needsApproval = isOrganizerSubmitted && isPendingApproval;  return (    <MagicCard 
+      className="p-4 bg-gradient-to-br from-white/90 to-gray-50/90 backdrop-blur-sm border-gray-200/50 transition-all hover:shadow-md h-full"
       gradientColor="rgba(59, 130, 246, 0.05)"
     >
-      <div className="space-y-4">
+      <div className="flex flex-col h-full space-y-4">
         {/* Header with status and origin badges */}
         <div className="relative">
           <div className="absolute top-0 right-0 flex flex-col gap-1">
@@ -163,16 +161,8 @@ export function AdminEventCard({ event, currentUserId }: EventCardProps) {
               )}
             </div>
           )}
-        </div>
-
-        {/* Content */}
-        <div className="space-y-3">
-          {event.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {event.description}
-            </p>
-          )}
-
+        </div>        {/* Content */}
+        <div className="flex-1 space-y-3">
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -191,17 +181,8 @@ export function AdminEventCard({ event, currentUserId }: EventCardProps) {
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-muted-foreground" />
                 <span>{event.category}</span>
-              </div>
-            )}
+              </div>            )}
           </div>
-
-          {/* Statistics */}
-          {event._count && (
-            <div className="flex justify-between text-xs text-muted-foreground border-t pt-3">
-              <span>{event._count.ticketTypes} tipe tiket</span>
-              <span>{event._count.transactions} transaksi</span>
-            </div>
-          )}
 
           {/* Special indicators for pending events */}
           {needsApproval && (
@@ -221,11 +202,8 @@ export function AdminEventCard({ event, currentUserId }: EventCardProps) {
                 <span className="font-medium">Event dibuat oleh admin</span>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Footer actions */}
-        <div className="flex gap-2 pt-2">
+          )}        </div>        {/* Footer actions */}
+        <div className="flex gap-2 mt-auto pt-20">
           {needsApproval ? (
             <Button variant="outline" className="flex-1 hover:bg-green-50 hover:border-green-200 transition-colors" asChild>
               <Link href={`/admin/approval`}>

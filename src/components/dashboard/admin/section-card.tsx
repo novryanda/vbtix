@@ -63,11 +63,6 @@ export function SectionCards() {
             </div>
           </CardHeader>
           <CardFooter className="flex-col items-start gap-2 sm:gap-3 text-xs sm:text-sm pt-0 flex-grow">
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <ArrowUpIcon className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
-              <span className="font-semibold text-green-600">+8.2%</span>
-              <span className="text-muted-foreground">dari bulan lalu</span>
-            </div>
             <div className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
               Organizer yang terdaftar di platform
             </div>
@@ -102,11 +97,7 @@ export function SectionCards() {
             </div>
           </CardHeader>
           <CardFooter className="flex-col items-start gap-2 sm:gap-3 text-xs sm:text-sm pt-0 flex-grow">
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <ArrowUpIcon className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
-              <span className="font-semibold text-green-600">+15.3%</span>
-              <span className="text-muted-foreground">dari bulan lalu</span>
-            </div>
+            
             <div className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
               Event aktif yang tersedia di platform
             </div>
@@ -126,12 +117,11 @@ export function SectionCards() {
                 <CardDescription className="text-muted-foreground/80 font-medium flex items-center gap-2 text-xs sm:text-sm">
                   <SparklesIcon className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
                   <span className="truncate">Total Sales</span>
-                </CardDescription>
-                <CardTitle className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent leading-tight">
+                </CardDescription>                <CardTitle className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent leading-tight">
                   {isLoading ? (
                     <div className="h-8 sm:h-10 w-24 sm:w-32 bg-muted animate-pulse rounded-lg"></div>
                   ) : (
-                    <span className="break-all">{formatPrice(totalSales)}</span>
+                    <span className="break-words">{formatPrice(totalSales)}</span>
                   )}
                 </CardTitle>
               </div>
@@ -141,11 +131,6 @@ export function SectionCards() {
             </div>
           </CardHeader>
           <CardFooter className="flex-col items-start gap-2 sm:gap-3 text-xs sm:text-sm pt-0 flex-grow">
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <ArrowUpIcon className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
-              <span className="font-semibold text-green-600">+12.5%</span>
-              <span className="text-muted-foreground">dari bulan lalu</span>
-            </div>
             <div className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
               Total pendapatan dari semua event
             </div>

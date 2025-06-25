@@ -39,9 +39,8 @@ To enable production mode (enable Xendit):
 ### Payment Methods
 
 In test mode, the following payment methods are available:
-- **Test Bank Transfer**: Simulates bank transfer payments
-- **Test E-Wallet**: Simulates e-wallet payments (OVO, DANA, GoPay)
-- **Test Cash Payment**: Simulates cash payments
+- **Manual Payment**: Manual payment verification by admin
+- **QRIS By Wonders**: QR code payment with manual verification
 
 ### Payment Flow
 

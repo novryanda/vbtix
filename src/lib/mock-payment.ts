@@ -7,9 +7,7 @@ import { PaymentStatus } from "@prisma/client";
 
 // Mock payment method types
 export enum MockPaymentMethod {
-  TEST_BANK_TRANSFER = "TEST_BANK_TRANSFER",
-  TEST_EWALLET = "TEST_EWALLET",
-  TEST_CASH = "TEST_CASH",
+  QRIS_BY_WONDERS = "QRIS_BY_WONDERS",
 }
 
 // Mock payment status mapping
@@ -67,46 +65,17 @@ export async function createMockPayment(
 
   // Generate different responses based on payment method
   switch (params.paymentMethod) {
-    case MockPaymentMethod.TEST_BANK_TRANSFER:
+    case MockPaymentMethod.QRIS_BY_WONDERS:
       paymentInstructions = `
-        INSTRUKSI PEMBAYARAN TEST - BANK TRANSFER
-
-        Bank: ${params.paymentMethodDetails?.bankCode || "TEST BANK"}
-        No. Rekening: 1234567890123456
-        Atas Nama: VBTicket Test Account
-        Jumlah: ${params.currency} ${params.amount.toLocaleString("id-ID")}
-
-        Kode Referensi: ${params.orderId}
-
-        CATATAN: Ini adalah transaksi test. Tidak ada uang yang akan dipotong.
-        Untuk melanjutkan, klik tombol "Simulasi Pembayaran Berhasil" di halaman pembayaran.
-      `;
-      break;
-
-    case MockPaymentMethod.TEST_EWALLET:
-      paymentInstructions = `
-        INSTRUKSI PEMBAYARAN TEST - E-WALLET
-
-        E-Wallet: ${params.paymentMethodDetails?.type || "TEST WALLET"}
-        Jumlah: ${params.currency} ${params.amount.toLocaleString("id-ID")}
-
-        Kode Referensi: ${params.orderId}
-
-        CATATAN: Ini adalah transaksi test. Tidak ada uang yang akan dipotong.
-        Untuk melanjutkan, klik tombol "Simulasi Pembayaran Berhasil" di halaman pembayaran.
-      `;
-      break;
-
-    case MockPaymentMethod.TEST_CASH:
-      paymentInstructions = `
-        INSTRUKSI PEMBAYARAN TEST - CASH
+        INSTRUKSI PEMBAYARAN - QRIS BY WONDERS
 
         Jumlah: ${params.currency} ${params.amount.toLocaleString("id-ID")}
-
         Kode Referensi: ${params.orderId}
 
-        CATATAN: Ini adalah transaksi test. Tidak ada uang yang akan dipotong.
-        Untuk melanjutkan, klik tombol "Simulasi Pembayaran Berhasil" di halaman pembayaran.
+        Silakan scan QR code yang telah ditampilkan untuk melakukan pembayaran.
+        Pembayaran akan dikonfirmasi secara manual oleh admin setelah berhasil.
+
+        CATATAN: Ini adalah mode test. QR code yang ditampilkan hanya untuk demonstrasi.
       `;
       break;
   }

@@ -146,6 +146,7 @@ export default function OrderDetailPage({
   const handlePaymentMethodSelect = async (
     method: string,
     details: PaymentMethodDetails,
+    paymentProofFile?: File | null,
   ) => {
     setIsProcessing(true);
     setError("");
@@ -180,12 +181,56 @@ export default function OrderDetailPage({
         throw new Error(result.error || "Failed to initiate payment");
       }
 
+      // Upload payment proof for QRIS payments after order is created
+      if (method === "QRIS_BY_WONDERS" && paymentProofFile) {
+        try {
+          const formData = new FormData();
+          formData.append('file', paymentProofFile);
+          formData.append('orderId', orderId);
+
+          // Get session ID for guest access
+          const sessionId = localStorage.getItem("vbticket_session_id");
+
+          const headers: HeadersInit = {};
+          if (sessionId) {
+            headers['x-session-id'] = sessionId;
+          }
+
+          const uploadResponse = await fetch('/api/upload/payment-proof', {
+            method: 'POST',
+            headers,
+            body: formData,
+          });
+
+          const uploadResult = await uploadResponse.json();
+
+          if (!uploadResponse.ok) {
+            console.error("Payment proof upload error:", uploadResult);
+            // Don't throw error here, just log it - the order was already created
+            toast.error("Pesanan berhasil dibuat, tetapi gagal mengunggah bukti pembayaran. Silakan hubungi organizer.");
+          } else {
+            console.log("Payment proof uploaded successfully:", uploadResult);
+          }
+        } catch (uploadError) {
+          console.error("Payment proof upload error:", uploadError);
+          // Don't throw error here - the order was already created
+          toast.error("Pesanan berhasil dibuat, tetapi gagal mengunggah bukti pembayaran. Silakan hubungi organizer.");
+        }
+      }
+
       // Handle different payment responses
       if (result.data.gateway === "MANUAL") {
         // For manual payment, show success message and redirect to pending page
         toast.success("Pesanan berhasil dibuat!", {
           description:
             "Pesanan Anda sedang menunggu konfirmasi pembayaran dari admin.",
+        });
+        router.push(`/orders/${orderId}/pending-payment`);
+      } else if (result.data.gateway === "QRIS_WONDERS") {
+        // For QRIS By Wonders payment, show success message and redirect to pending page
+        toast.success("Pesanan berhasil dibuat!", {
+          description:
+            "Bukti pembayaran Anda telah diterima. Pesanan sedang menunggu konfirmasi dari organizer.",
         });
         router.push(`/orders/${orderId}/pending-payment`);
       } else if (result.data.checkoutUrl) {
@@ -394,6 +439,7 @@ export default function OrderDetailPage({
           <PaymentMethodSelector
             onPaymentMethodSelect={handlePaymentMethodSelect}
             isLoading={isProcessing}
+            orderId={orderId}
           />
 
           {/* Cancel Order */}

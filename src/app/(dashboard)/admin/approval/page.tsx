@@ -39,7 +39,6 @@ import {
   AlertCircle,
   Calendar,
   Users,
-  Timer,
 } from "lucide-react";
 
 export default function AdminApprovalDashboard() {
@@ -158,11 +157,9 @@ export default function AdminApprovalDashboard() {
               </Badge>
             </div>
           )}
-        </div>
-
-        {/* Statistics Cards */}
+        </div>        {/* Statistics Cards */}
         {statistics && (
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <MagicCard className="p-4 bg-gradient-to-br from-card/90 to-muted/20 backdrop-blur-sm border-border/50">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <h3 className="text-sm font-medium">Pending Review</h3>
@@ -202,21 +199,6 @@ export default function AdminApprovalDashboard() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Total event yang ditolak
-                </p>
-              </div>
-            </MagicCard>
-
-            <MagicCard className="p-4 bg-gradient-to-br from-blue-50/90 to-blue-100/20 backdrop-blur-sm border-blue-200/50">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Avg. Review Time</h3>
-                <Timer className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="space-y-1">
-                <div className="text-2xl font-bold">
-                  {statistics.averageApprovalTimeHours}h
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Rata-rata waktu review
                 </p>
               </div>
             </MagicCard>

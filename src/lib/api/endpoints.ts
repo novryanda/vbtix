@@ -38,6 +38,12 @@ export const ADMIN_ENDPOINTS = {
   // QR Code Management
   GENERATE_TRANSACTION_QR: (transactionId: string) => `${API_BASE}/admin/transactions/${transactionId}/generate-qr`,
 
+  // Banner Management
+  BANNERS: `${API_BASE}/admin/banners`,
+  BANNER_DETAIL: (id: string) => `${API_BASE}/admin/banners/${id}`,
+  BANNER_STATUS: (id: string) => `${API_BASE}/admin/banners/${id}/status`,
+  BANNER_REORDER: `${API_BASE}/admin/banners/reorder`,
+
   // Analytics
   ANALYTICS_SALES: `${API_BASE}/admin/analytics/sales`,
   ANALYTICS_VISITORS: `${API_BASE}/admin/analytics/visitors`,
@@ -140,6 +146,7 @@ export const PUBLIC_ENDPOINTS = {
   PURCHASE_TICKET: `${API_BASE}/public/tickets/purchase`,
   CANCEL_TICKET: (id: string) => `${API_BASE}/public/tickets/${id}/cancel`,
   TICKET_QR_CODE: (ticketId: string) => `${API_BASE}/public/tickets/${ticketId}/qr-code`,
+  BANNERS: `${API_BASE}/public/banners`,
 };
 
 // Buyer endpoints (deprecated - use PUBLIC_ENDPOINTS instead)

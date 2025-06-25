@@ -156,6 +156,8 @@ model Transaction {
   invoiceNumber    String        @unique
   status           PaymentStatus @default(PENDING)
   details          Json?
+  paymentProofUrl  String?       // URL of uploaded payment proof for QRIS payments
+  paymentProofPublicId String?   // Cloudinary public ID for payment proof
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   buyerInfo        BuyerInfo?
@@ -383,6 +385,27 @@ model TicketReservation {
   @@index([expiresAt])
   @@index([sessionId])
   @@index([status])
+}
+
+model Banner {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String
+  imagePublicId String
+  linkUrl     String?
+  isActive    Boolean     @default(false)
+  displayOrder Int        @default(0)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  createdBy   String
+  updatedBy   String?
+
+  @@index([isActive])
+  @@index([displayOrder])
+  @@index([startDate, endDate])
 }
 
 enum UserRole {

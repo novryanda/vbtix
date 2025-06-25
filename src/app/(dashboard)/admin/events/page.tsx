@@ -27,6 +27,7 @@ import { AdminRoute } from "~/components/auth/admin-route";
 import { AdminEventCard } from "~/components/dashboard/admin/admin-event-card";
 import { ApprovalSummaryCard } from "~/components/dashboard/admin/approval-summary-card";
 import { QuickActionsCard } from "~/components/dashboard/admin/quick-actions-card";
+import { useAdminOrganizerDashboard } from "~/lib/api/hooks/admin";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 
 // Interface untuk event yang sesuai dengan data API
@@ -108,15 +109,11 @@ export default function AdminEventsPage() {
     totalRejected: 0,
     totalEvents: 0,
     approvalRate: 0,
-    averageApprovalTime: "0h",
-    isDataConsistent: true,
+    averageApprovalTime: "0h",    isDataConsistent: true,
   });
 
-  // State for quick actions data
-  const [quickActionsData, setQuickActionsData] = useState({
-    totalEvents: 0,
-    totalOrganizers: 0,
-  });
+  // Fetch organizer data
+  const { organizerData, isLoading: isOrganizerLoading } = useAdminOrganizerDashboard(5);
   // Function to fetch approval statistics
   const fetchApprovalStats = useCallback(async () => {
     try {
@@ -259,25 +256,22 @@ export default function AdminEventsPage() {
 
             {/* Dashboard Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              <div className="lg:col-span-2">
-                <ApprovalSummaryCard
+              <div className="lg:col-span-2">                <ApprovalSummaryCard
                   pendingCount={approvalStats.pendingCount}
                   totalApproved={approvalStats.totalApproved}
                   totalRejected={approvalStats.totalRejected}
                   totalEvents={approvalStats.totalEvents}
                   approvalRate={approvalStats.approvalRate}
-                  averageApprovalTime={approvalStats.averageApprovalTime}
                   isDataConsistent={approvalStats.isDataConsistent}
                   isLoading={isLoading}
                   error={error}
                 />
               </div>
-              <div>
-                <QuickActionsCard
+              <div>                <QuickActionsCard
                   pendingCount={approvalStats.pendingCount}
                   totalEvents={meta?.total || 0}
-                  totalOrganizers={quickActionsData.totalOrganizers}
-                  isLoading={isLoading}
+                  totalOrganizers={organizerData?.stats?.totalOrganizers || 0}
+                  isLoading={isLoading || isOrganizerLoading}
                 />
               </div>
             </div>

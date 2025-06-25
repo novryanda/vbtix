@@ -74,12 +74,12 @@ export class OrderExpirationService {
           return null;
         }
 
-        // Skip manual payments awaiting verification
-        if (order.paymentMethod === "MANUAL_PAYMENT" &&
+        // Skip manual payments and QRIS By Wonders payments awaiting verification
+        if ((order.paymentMethod === "MANUAL_PAYMENT" || order.paymentMethod === "QRIS_BY_WONDERS") &&
             order.details &&
             typeof order.details === 'object' &&
             (order.details as any).awaitingVerification) {
-          console.log(`Order ${orderId} is manual payment awaiting verification, skipping expiration`);
+          console.log(`Order ${orderId} is ${order.paymentMethod} awaiting verification, skipping expiration`);
           return null;
         }
 
