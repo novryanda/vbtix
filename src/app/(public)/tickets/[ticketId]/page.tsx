@@ -490,10 +490,29 @@ export default function EventDetailPage() {
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium">{ticket.name}</div>
-                            <div className="text-sm text-gray-500">
-                              {ticket.remaining} dari {ticket.quota} tersedia
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                              {ticket.logoUrl ? (
+                                <img
+                                  src={ticket.logoUrl}
+                                  alt={`Logo ${ticket.name}`}
+                                  className="object-contain w-full h-full"
+                                />
+                              ) : event.image ? (
+                                <img
+                                  src={event.image}
+                                  alt={event.title}
+                                  className="object-cover w-full h-full"
+                                />
+                              ) : (
+                                <Ticket className="h-6 w-6 text-gray-400" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium">{ticket.name}</div>
+                              <div className="text-sm text-gray-500">
+                                {ticket.remaining} dari {ticket.quota} tersedia
+                              </div>
                             </div>
                           </div>
                           <div className="text-right">

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Calendar,
   MapPin,
@@ -58,6 +59,8 @@ interface TicketType {
   name: string;
   price: number;
   description?: string;
+  logoUrl?: string;
+  logoPublicId?: string;
 }
 
 interface SelectedTicket {
@@ -1375,12 +1378,35 @@ export default function TicketPurchasePage() {
                       key={index}
                       className="flex items-start justify-between"
                     >
-                      <div className="flex-1">
-                        <p className="font-medium">{ticket.ticketType.name}</p>
-                        <p className="text-sm text-gray-600">
-                          {formatPrice(ticket.ticketType.price)} x{" "}
-                          {ticket.quantity}
-                        </p>
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                          {ticket.ticketType.logoUrl ? (
+                            <Image
+                              src={ticket.ticketType.logoUrl}
+                              alt={`Logo ${ticket.ticketType.name}`}
+                              width={40}
+                              height={40}
+                              className="object-contain w-full h-full"
+                            />
+                          ) : event?.image ? (
+                            <Image
+                              src={event.image}
+                              alt={event.title}
+                              width={40}
+                              height={40}
+                              className="object-cover w-full h-full"
+                            />
+                          ) : (
+                            <Ticket className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{ticket.ticketType.name}</p>
+                          <p className="text-sm text-gray-600">
+                            {formatPrice(ticket.ticketType.price)} x{" "}
+                            {ticket.quantity}
+                          </p>
+                        </div>
                       </div>
                       <p className="font-medium">
                         {formatPrice(ticket.subtotal)}

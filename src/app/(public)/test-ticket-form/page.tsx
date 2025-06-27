@@ -101,6 +101,7 @@ export default function TestTicketFormPage() {
         ticketTypes={mockTicketTypes}
         onSubmit={handleSubmit}
         isLoading={false}
+        eventImage="https://placehold.co/400x200?text=Event+Image"
       />
     </div>
   );

@@ -14,7 +14,8 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { Alert, AlertDescription } from "~/components/ui/alert";
-import { AlertCircle, User, Users } from "lucide-react";
+import { AlertCircle, User, Users, Ticket } from "lucide-react";
+import Image from "next/image";
 import {
   MagicInput,
   MagicCard,
@@ -34,12 +35,15 @@ interface TicketType {
   quantity: number;
   sold: number;
   maxPerPurchase: number;
+  logoUrl?: string;
+  logoPublicId?: string;
 }
 
 interface TicketPurchaseFormProps {
   ticketTypes: TicketType[];
   onSubmit: (data: BulkTicketPurchaseSchema) => Promise<void>;
   isLoading?: boolean;
+  eventImage?: string; // Optional event image for fallback
 }
 
 type IdentityType = "KTP" | "SIM" | "PASSPORT" | "KITAS" | "KITAP";
@@ -48,6 +52,7 @@ export function TicketPurchaseForm({
   ticketTypes,
   onSubmit,
   isLoading = false,
+  eventImage,
 }: TicketPurchaseFormProps) {
   const [totalTickets, setTotalTickets] = useState(0);
 
@@ -259,8 +264,35 @@ export function TicketPurchaseForm({
                   <SelectContent>
                     {ticketTypes.map((ticketType) => (
                       <SelectItem key={ticketType.id} value={ticketType.id}>
-                        {ticketType.name} - Rp{" "}
-                        {ticketType.price.toLocaleString("id-ID")}
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="w-8 h-8 rounded-md overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                            {ticketType.logoUrl ? (
+                              <Image
+                                src={ticketType.logoUrl}
+                                alt={`Logo ${ticketType.name}`}
+                                width={32}
+                                height={32}
+                                className="object-contain w-full h-full"
+                              />
+                            ) : eventImage ? (
+                              <Image
+                                src={eventImage}
+                                alt="Event image"
+                                width={32}
+                                height={32}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              <Ticket className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <span className="font-medium">{ticketType.name}</span>
+                            <span className="text-muted-foreground"> - Rp{" "}
+                              {ticketType.price.toLocaleString("id-ID")}
+                            </span>
+                          </div>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>

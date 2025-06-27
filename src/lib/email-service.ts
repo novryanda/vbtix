@@ -511,6 +511,9 @@ Jika Anda memiliki pertanyaan, hubungi kami di ${this.config.replyTo}
               ticketType: ticket.ticketType,
               holderName: ticket.holderName,
               qrData,
+              logoUrl: (ticket as any).logoUrl, // Individual ticket logo
+              ticketTypeLogoUrl: (ticket as any).ticketTypeLogoUrl, // Ticket type logo
+              eventImageUrl: (event as any).imageUrl, // Event image as fallback
               event: {
                 title: event.title,
                 date: event.date,

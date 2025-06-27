@@ -199,11 +199,38 @@ function TicketCard({
       <div className="p-6 space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h3 className="font-semibold text-lg line-clamp-2">
-              {ticket.eventTitle}
-            </h3>
-            <p className="text-sm text-gray-600 mt-1">{ticket.ticketType}</p>
+          <div className="flex items-start gap-3 flex-1">
+            {/* Logo with fallback hierarchy */}
+            <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+              {ticket.logoUrl ? (
+                <img
+                  src={ticket.logoUrl}
+                  alt={`Logo tiket ${ticket.id}`}
+                  className="object-contain w-full h-full"
+                />
+              ) : ticket.ticketTypeLogoUrl ? (
+                <img
+                  src={ticket.ticketTypeLogoUrl}
+                  alt={`Logo ${ticket.ticketType}`}
+                  className="object-contain w-full h-full"
+                />
+              ) : ticket.eventImage ? (
+                <img
+                  src={ticket.eventImage}
+                  alt={ticket.eventTitle}
+                  className="object-cover w-full h-full"
+                />
+              ) : (
+                <Ticket className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg line-clamp-2">
+                {ticket.eventTitle}
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">{ticket.ticketType}</p>
+            </div>
           </div>
           <Badge variant="secondary" className={status.color}>
             <status.icon className="w-3 h-3 mr-1" />

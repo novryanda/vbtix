@@ -155,7 +155,20 @@ export default function TicketsPage() {
   const TicketCard = ({ ticket }: { ticket: Ticket }) => (
     <Card className="overflow-hidden transition-all hover:shadow-md">
       <div className="relative h-32 w-full overflow-hidden bg-blue-600">
-        {ticket.imageUrl ? (
+        {/* Use individual ticket logo first, then ticket type logo, then event image */}
+        {ticket.logoUrl ? (
+          <img
+            src={ticket.logoUrl}
+            alt={`Logo tiket ${ticket.id}`}
+            className="h-full w-full object-contain bg-white"
+          />
+        ) : ticket.ticketType?.logoUrl ? (
+          <img
+            src={ticket.ticketType.logoUrl}
+            alt={`Logo ${ticket.ticketType.name}`}
+            className="h-full w-full object-contain bg-white"
+          />
+        ) : ticket.imageUrl ? (
           <img
             src={ticket.imageUrl}
             alt={`Ticket for ${ticket.event.title}`}

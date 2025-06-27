@@ -145,6 +145,8 @@ export async function handleCreateTicketType(params: {
     allowTransfer: ticketTypeData.allowTransfer ?? false,
     ticketFeatures: ticketTypeData.ticketFeatures || null,
     perks: ticketTypeData.perks || null,
+    logoUrl: ticketTypeData.logoUrl || null,
+    logoPublicId: ticketTypeData.logoPublicId || null,
     // Convert datetime strings to Date objects for Prisma
     earlyBirdDeadline: ticketTypeData.earlyBirdDeadline ? new Date(ticketTypeData.earlyBirdDeadline) : null,
     saleStartDate: ticketTypeData.saleStartDate ? new Date(ticketTypeData.saleStartDate) : null,

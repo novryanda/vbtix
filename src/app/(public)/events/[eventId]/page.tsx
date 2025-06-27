@@ -43,6 +43,8 @@ interface TicketType {
   allowTransfer: boolean;
   ticketFeatures?: string;
   perks?: string;
+  logoUrl?: string;
+  logoPublicId?: string;
   earlyBirdDeadline?: string;
   saleStartDate?: string;
   saleEndDate?: string;
@@ -467,20 +469,46 @@ export default function EventDetailPage() {
                           <div className="flex flex-col space-y-4">
                             {/* Ticket Header */}
                             <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <h3 className="text-xl font-bold text-gray-900">
-                                  {ticket.name}
-                                </h3>
-                                <div className="mt-1">
-                                  {ticket.available > 0 ? (
-                                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                                      On Sale
-                                    </Badge>
+                              <div className="flex items-start gap-3 sm:gap-4 flex-1">
+                                {/* Logo */}
+                                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                  {ticket.logoUrl ? (
+                                    <Image
+                                      src={ticket.logoUrl}
+                                      alt={`Logo ${ticket.name}`}
+                                      width={64}
+                                      height={64}
+                                      className="object-contain w-full h-full"
+                                    />
+                                  ) : event.image ? (
+                                    <Image
+                                      src={event.image}
+                                      alt={event.title}
+                                      width={64}
+                                      height={64}
+                                      className="object-cover w-full h-full"
+                                    />
                                   ) : (
-                                    <Badge variant="destructive">
-                                      Sold Out
-                                    </Badge>
+                                    <Ticket className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
                                   )}
+                                </div>
+
+                                {/* Ticket Info */}
+                                <div className="flex-1">
+                                  <h3 className="text-xl font-bold text-gray-900">
+                                    {ticket.name}
+                                  </h3>
+                                  <div className="mt-1">
+                                    {ticket.available > 0 ? (
+                                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                                        On Sale
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="destructive">
+                                        Sold Out
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>

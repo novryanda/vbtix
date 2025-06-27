@@ -8,6 +8,9 @@ export interface TicketPDFData {
   ticketType: string;
   holderName: string;
   qrData: TicketQRData;
+  logoUrl?: string; // Individual ticket logo
+  ticketTypeLogoUrl?: string; // Ticket type logo
+  eventImageUrl?: string; // Event image as fallback
   event: {
     title: string;
     date: string;
@@ -130,12 +133,33 @@ async function buildPDFContent(
     }
   };
 
-  // Header with VBTicket branding
+  // Header with VBTicket branding and logo
   addText('VBTicket', 105, currentY, fontSize.title, colors.primary, 'center');
   currentY += 15;
 
   addText('E-TICKET', 105, currentY, fontSize.subtitle, colors.text, 'center');
   currentY += 20;
+
+  // Add ticket logo with fallback hierarchy
+  try {
+    let logoUrl = ticketData.logoUrl || ticketData.ticketTypeLogoUrl || ticketData.eventImageUrl;
+    if (logoUrl) {
+      // Add logo to PDF (centered, above event title)
+      const logoSize = 30; // 30mm width/height
+      const logoX = (210 - logoSize) / 2; // Center horizontally
+
+      // Create a white background for the logo
+      doc.setFillColor(255, 255, 255);
+      doc.rect(logoX - 2, currentY - 2, logoSize + 4, logoSize + 4, 'F');
+
+      // Add the logo image
+      doc.addImage(logoUrl, 'JPEG', logoX, currentY, logoSize, logoSize);
+      currentY += logoSize + 10;
+    }
+  } catch (error) {
+    console.warn('Failed to add logo to PDF:', error);
+    // Continue without logo if there's an error
+  }
 
   // Event title
   addText(ticketData.event.title, 105, currentY, fontSize.title, colors.text, 'center');

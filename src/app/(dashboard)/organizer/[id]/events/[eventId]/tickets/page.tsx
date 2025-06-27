@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   useOrganizerEventDetail,
   useEventTickets,
@@ -46,6 +47,7 @@ import {
 } from "lucide-react";
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { formatPrice } from "~/lib/utils";
+import { TicketLogoUpload } from "~/components/ui/ticket-logo-upload";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,6 +91,8 @@ export default function EventTicketsPage({
     earlyBirdDeadline: "",
     saleStartDate: "",
     saleEndDate: "",
+    logoUrl: "",
+    logoPublicId: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -124,6 +128,15 @@ export default function EventTicketsPage({
     setTicketFormData((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  // Handle logo upload change
+  const handleLogoChange = (logoData: { url: string; publicId: string } | null) => {
+    setTicketFormData((prev) => ({
+      ...prev,
+      logoUrl: logoData?.url || "",
+      logoPublicId: logoData?.publicId || "",
     }));
   };
 
@@ -180,6 +193,8 @@ export default function EventTicketsPage({
         allowTransfer: ticketFormData.allowTransfer,
         ticketFeatures: ticketFormData.ticketFeatures.trim() || undefined,
         perks: ticketFormData.perks.trim() || undefined,
+        logoUrl: ticketFormData.logoUrl.trim() || undefined,
+        logoPublicId: ticketFormData.logoPublicId.trim() || undefined,
         earlyBirdDeadline: ticketFormData.earlyBirdDeadline.trim() || undefined,
         saleStartDate: ticketFormData.saleStartDate.trim() || undefined,
         saleEndDate: ticketFormData.saleEndDate.trim() || undefined,
@@ -224,6 +239,8 @@ export default function EventTicketsPage({
         earlyBirdDeadline: "",
         saleStartDate: "",
         saleEndDate: "",
+        logoUrl: "",
+        logoPublicId: "",
       });
 
       setIsTicketDialogOpen(false);
@@ -543,6 +560,23 @@ export default function EventTicketsPage({
                               included with this ticket type
                             </p>
                           </div>
+
+                          {/* Logo Upload Section */}
+                          <div className="grid gap-2">
+                            <TicketLogoUpload
+                              label="Logo Tiket (Opsional)"
+                              value={
+                                ticketFormData.logoUrl && ticketFormData.logoPublicId
+                                  ? {
+                                      url: ticketFormData.logoUrl,
+                                      publicId: ticketFormData.logoPublicId,
+                                    }
+                                  : null
+                              }
+                              onChange={handleLogoChange}
+                              disabled={isSubmitting}
+                            />
+                          </div>
                         </div>
 
                         <Separator className="my-2" />
@@ -784,6 +818,7 @@ export default function EventTicketsPage({
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            <TableHead>Logo</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Price</TableHead>
                             <TableHead>Quantity</TableHead>
@@ -797,6 +832,21 @@ export default function EventTicketsPage({
                         <TableBody>
                           {tickets.map((ticket: any) => (
                             <TableRow key={ticket.id}>
+                              <TableCell>
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                                  {ticket.logoUrl ? (
+                                    <Image
+                                      src={ticket.logoUrl}
+                                      alt={`Logo ${ticket.name}`}
+                                      width={48}
+                                      height={48}
+                                      className="object-contain w-full h-full"
+                                    />
+                                  ) : (
+                                    <Ticket className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
+                                  )}
+                                </div>
+                              </TableCell>
                               <TableCell className="font-medium">
                                 {ticket.name}
                                 {ticket.description && (

@@ -24,6 +24,8 @@ import {
 import { useOrganizerSoldTickets } from "~/lib/api/hooks/organizer-tickets";
 import { QRCodeDisplayCompact } from "~/components/ui/qr-code-display";
 import { TicketQRModal } from "~/components/ui/ticket-qr-modal";
+import { IndividualTicketLogoUpload } from "~/components/ui/individual-ticket-logo-upload";
+import Image from "next/image";
 import { formatPrice } from "~/lib/utils";
 import {
   MoreHorizontalIcon,
@@ -36,6 +38,7 @@ import {
   TicketIcon,
   AlertCircleIcon,
   QrCode,
+  ImageIcon,
 } from "lucide-react";
 
 interface TicketListProps {
@@ -47,6 +50,7 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [logoUploadStates, setLogoUploadStates] = useState<Record<string, boolean>>({});
 
   // Combine filters with search term directly
   const currentFilters = useMemo(() => ({
@@ -71,6 +75,16 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
   const handleCloseQRModal = () => {
     setIsQRModalOpen(false);
     setSelectedTicket(null);
+  };
+
+  const handleLogoUploadSuccess = (ticketId: string) => {
+    // Refresh the tickets data to show updated logo
+    refetch();
+  };
+
+  const handleLogoUploadError = (ticketId: string, error: string) => {
+    console.error(`Logo upload error for ticket ${ticketId}:`, error);
+    // You could show a toast notification here
   };
 
   const getStatusBadge = (status: string) => {
@@ -190,6 +204,7 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Logo</TableHead>
                   <TableHead>Ticket ID</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Buyer</TableHead>
@@ -205,6 +220,29 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
               <TableBody>
                 {tickets.map((ticket: any) => (
                   <TableRow key={ticket.id}>
+                    <TableCell>
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                        {ticket.logoUrl ? (
+                          <Image
+                            src={ticket.logoUrl}
+                            alt={`Logo tiket ${ticket.id}`}
+                            width={40}
+                            height={40}
+                            className="object-contain w-full h-full"
+                          />
+                        ) : ticket.ticketType?.logoUrl ? (
+                          <Image
+                            src={ticket.ticketType.logoUrl}
+                            alt={`Logo ${ticket.ticketType.name}`}
+                            width={40}
+                            height={40}
+                            className="object-contain w-full h-full"
+                          />
+                        ) : (
+                          <TicketIcon className="h-5 w-5 text-muted-foreground" />
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="font-mono text-sm">
                       {ticket.id.slice(-8)}
                     </TableCell>
@@ -286,6 +324,10 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem>
+                            <ImageIcon className="mr-2 h-4 w-4" />
+                            Upload Logo
+                          </DropdownMenuItem>
                           <DropdownMenuItem>
                             <DownloadIcon className="mr-2 h-4 w-4" />
                             Download E-ticket

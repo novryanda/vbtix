@@ -51,6 +51,8 @@ interface OrderData {
       id: string;
       name: string;
       description?: string;
+      logoUrl?: string;
+      logoPublicId?: string;
     };
     quantity: number;
     price: number;
@@ -404,11 +406,30 @@ export default function OrderDetailPage({
                       key={item.id}
                       className="flex items-center justify-between"
                     >
-                      <div>
-                        <p className="font-medium">{item.ticketType.name}</p>
-                        <p className="text-muted-foreground text-sm">
-                          {formatPrice(Number(item.price))} × {item.quantity}
-                        </p>
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                          {item.ticketType.logoUrl ? (
+                            <img
+                              src={item.ticketType.logoUrl}
+                              alt={`Logo ${item.ticketType.name}`}
+                              className="object-contain w-full h-full"
+                            />
+                          ) : orderData.event.image ? (
+                            <img
+                              src={orderData.event.image}
+                              alt={orderData.event.title}
+                              className="object-cover w-full h-full"
+                            />
+                          ) : (
+                            <div className="h-5 w-5 text-muted-foreground">🎫</div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium">{item.ticketType.name}</p>
+                          <p className="text-muted-foreground text-sm">
+                            {formatPrice(Number(item.price))} × {item.quantity}
+                          </p>
+                        </div>
                       </div>
                       <p className="font-medium">
                         {formatPrice(item.subtotal)}

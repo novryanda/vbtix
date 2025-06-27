@@ -133,6 +133,8 @@ model TicketType {
   allowTransfer     Boolean             @default(false)
   ticketFeatures    String?
   perks             String?
+  logoUrl           String?             // URL to the uploaded logo image
+  logoPublicId      String?             // Cloudinary public ID for logo management
   earlyBirdDeadline DateTime?
   saleStartDate     DateTime?
   saleEndDate       DateTime?
@@ -307,6 +309,8 @@ model Ticket {
   updatedAt        DateTime      @updatedAt
   imagePublicId    String?
   imageUrl         String?
+  logoUrl          String?       // URL to the uploaded logo image for this specific ticket
+  logoPublicId     String?       // Cloudinary public ID for logo management
   delivered        Boolean       @default(false)
   deliveredAt      DateTime?
   filePublicId     String?

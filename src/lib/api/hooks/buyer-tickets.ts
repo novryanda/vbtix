@@ -17,6 +17,8 @@ export interface BuyerTicket {
   holderEmail: string;
   invoiceNumber: string;
   eventImage?: string;
+  logoUrl?: string; // Individual ticket logo
+  ticketTypeLogoUrl?: string; // Ticket type logo
 }
 
 export interface BuyerTicketsResponse {

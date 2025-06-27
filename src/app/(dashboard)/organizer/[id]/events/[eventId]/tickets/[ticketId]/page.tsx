@@ -20,6 +20,7 @@ import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { formatPrice } from "~/lib/utils";
 import { Checkbox } from "~/components/ui/checkbox";
 import { MagicCard, MagicInput, MagicTextarea, MagicButton } from "~/components/ui/magic-card";
+import { TicketLogoUpload } from "~/components/ui/ticket-logo-upload";
 import { toast } from "sonner";
 
 export default function EditTicketPage({
@@ -38,6 +39,8 @@ export default function EditTicketPage({
     maxPerPurchase: "",
     isVisible: true,
     allowTransfer: false,
+    logoUrl: "",
+    logoPublicId: "",
   });
 
   // Unwrap params with React.use()
@@ -132,6 +135,8 @@ export default function EditTicketPage({
         maxPerPurchase: ticket.maxPerPurchase?.toString() || "10",
         isVisible: ticket.isVisible ?? true,
         allowTransfer: ticket.allowTransfer ?? false,
+        logoUrl: ticket.logoUrl || "",
+        logoPublicId: ticket.logoPublicId || "",
       });
     }
   }, [ticket]);
@@ -154,6 +159,15 @@ export default function EditTicketPage({
         [name]: value,
       }));
     }
+  };
+
+  // Handle logo upload change
+  const handleLogoChange = (logoData: { url: string; publicId: string } | null) => {
+    setTicketFormData((prev) => ({
+      ...prev,
+      logoUrl: logoData?.url || "",
+      logoPublicId: logoData?.publicId || "",
+    }));
   };
   // Handle update ticket
   const handleUpdateTicket = async (e: React.FormEvent) => {
@@ -180,6 +194,8 @@ export default function EditTicketPage({
         maxPerPurchase: parseInt(ticketFormData.maxPerPurchase, 10),
         isVisible: ticketFormData.isVisible,
         allowTransfer: ticketFormData.allowTransfer,
+        logoUrl: ticketFormData.logoUrl || null,
+        logoPublicId: ticketFormData.logoPublicId || null,
       };
 
       const response = await fetch(
@@ -442,6 +458,24 @@ export default function EditTicketPage({
                           Maximum tickets per customer purchase
                         </p>
                       </div>
+
+                      {/* Logo Upload Section */}
+                      <div className="grid gap-2">
+                        <TicketLogoUpload
+                          label="Logo Tiket (Opsional)"
+                          value={
+                            ticketFormData.logoUrl && ticketFormData.logoPublicId
+                              ? {
+                                  url: ticketFormData.logoUrl,
+                                  publicId: ticketFormData.logoPublicId,
+                                }
+                              : null
+                          }
+                          onChange={handleLogoChange}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="isVisible"

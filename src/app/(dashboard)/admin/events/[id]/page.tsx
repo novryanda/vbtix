@@ -506,11 +506,24 @@ export default function AdminEventDetailPage({
                             key={ticket.id}
                             className="flex items-center justify-between rounded-md border p-4"
                           >
-                            <div>
-                              <div className="font-medium">{ticket.name}</div>
-                              <div className="text-muted-foreground text-sm">
-                                {ticket.quantity - ticket.sold} of{" "}
-                                {ticket.quantity} remaining
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                                {ticket.logoUrl ? (
+                                  <img
+                                    src={ticket.logoUrl}
+                                    alt={`Logo ${ticket.name}`}
+                                    className="object-contain w-full h-full"
+                                  />
+                                ) : (
+                                  <Ticket className="h-6 w-6 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-medium">{ticket.name}</div>
+                                <div className="text-muted-foreground text-sm">
+                                  {ticket.quantity - ticket.sold} of{" "}
+                                  {ticket.quantity} remaining
+                                </div>
                               </div>
                             </div>
                             <div className="text-right">

@@ -37,6 +37,8 @@ export const ticketSchema = z.object({
   qrCodeStatus: QRCodeStatus,
   imageUrl: z.string().nullable().optional(),
   imagePublicId: z.string().nullable().optional(),
+  logoUrl: z.string().nullable().optional(),
+  logoPublicId: z.string().nullable().optional(),
   status: TicketStatus,
   checkedIn: z.boolean(),
   checkInTime: z.date().nullable().optional(),
@@ -134,6 +136,8 @@ export const ticketTypeSchema = z.object({
   allowTransfer: z.boolean().default(false),
   ticketFeatures: z.string().nullable().optional(),
   perks: z.string().nullable().optional(),
+  logoUrl: z.string().nullable().optional(),
+  logoPublicId: z.string().nullable().optional(),
   earlyBirdDeadline: z.date().nullable().optional(),
   saleStartDate: z.date().nullable().optional(),
   saleEndDate: z.date().nullable().optional(),
@@ -191,6 +195,14 @@ export const createTicketTypeSchema = z.object({
   perks: z
     .string()
     .max(1000, { message: "Perks cannot exceed 1000 characters" })
+    .optional(),
+  logoUrl: z
+    .string()
+    .url({ message: "Logo URL must be a valid URL" })
+    .optional(),
+  logoPublicId: z
+    .string()
+    .min(1, { message: "Logo public ID cannot be empty" })
     .optional(),
   earlyBirdDeadline: z
     .string()
@@ -348,6 +360,16 @@ export const updateTicketTypeSchema = z.object({
       return val;
     })
     .pipe(z.string().datetime().optional()),
+  logoUrl: z
+    .string()
+    .url({ message: "Logo URL must be a valid URL" })
+    .nullable()
+    .optional(),
+  logoPublicId: z
+    .string()
+    .min(1, { message: "Logo public ID cannot be empty" })
+    .nullable()
+    .optional(),
 });
 
 /**
