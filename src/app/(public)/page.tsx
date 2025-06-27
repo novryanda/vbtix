@@ -421,10 +421,6 @@ export default function BuyerHomePage() {
             <div className="absolute inset-0 bg-gradient-to-t from-background/15 via-transparent to-transparent pointer-events-none" />
           </div>
 
-          {/* Debug Banner Info */}
-          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-            <strong>Debug Info:</strong> Check browser console for banner loading details.
-          </div>
 
           {/* Recommended Events Section */}
           <section className="space-y-4 sm:space-y-6">

@@ -2,10 +2,18 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, MapPin, Clock, CheckCircle, ArrowLeft, RefreshCw, Download } from "lucide-react";
+import Image from "next/image";
+import { Calendar, MapPin, Clock, CheckCircle, ArrowLeft, RefreshCw, Download, FileImage, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { formatPrice } from "~/lib/utils";
 import { toast } from "sonner";
@@ -22,6 +30,10 @@ interface OrderData {
   invoiceNumber: string;
   amount: number;
   status: string;
+  paymentMethod?: string;
+  paymentProofUrl?: string;
+  paymentProofPublicId?: string;
+  details?: any;
   event: {
     id: string;
     title: string;
@@ -358,6 +370,129 @@ export default function PendingPaymentPage({
                   ))}
                 </div>
               </div>
+
+              {/* Payment Proof Display for QRIS payments */}
+              {orderData.paymentMethod === "QRIS_BY_WONDERS" && orderData.paymentProofUrl && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="mb-3 font-semibold">Bukti Pembayaran QRIS</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-20 h-20 border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50">
+                          <Image
+                            src={orderData.paymentProofUrl}
+                            alt="Bukti Pembayaran QRIS"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2 flex-1">
+                          <div className="flex gap-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs"
+                                >
+                                  <FileImage className="h-3 w-3 mr-1" />
+                                  Lihat Detail
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-2xl">
+                                <DialogHeader>
+                                  <DialogTitle>Detail Bukti Pembayaran QRIS</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                      <p className="font-medium text-muted-foreground">Nomor Invoice:</p>
+                                      <p className="font-semibold">#{orderData.invoiceNumber}</p>
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-muted-foreground">Total Pembayaran:</p>
+                                      <p className="font-semibold text-blue-600">{formatPrice(orderData.amount)}</p>
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-muted-foreground">Status:</p>
+                                      <p className="font-semibold">
+                                        {orderData.status === "PENDING" ? "Menunggu Konfirmasi" :
+                                         orderData.status === "SUCCESS" ? "Dikonfirmasi" :
+                                         orderData.status}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-muted-foreground">Waktu Upload:</p>
+                                      <p className="font-semibold">
+                                        {orderData.details?.paymentProofUploadedAt ?
+                                          new Date(orderData.details.paymentProofUploadedAt).toLocaleString('id-ID') :
+                                          'Tidak diketahui'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="border-t pt-4">
+                                    <p className="font-medium text-sm mb-2">Bukti Pembayaran:</p>
+                                    <div className="relative w-full max-w-md mx-auto">
+                                      <Image
+                                        src={orderData.paymentProofUrl}
+                                        alt="Bukti Pembayaran QRIS"
+                                        width={400}
+                                        height={400}
+                                        className="w-full h-auto border rounded-lg shadow-sm"
+                                      />
+                                    </div>
+                                    <div className="flex justify-center mt-3">
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => window.open(orderData.paymentProofUrl, '_blank')}
+                                        className="text-sm"
+                                      >
+                                        <ExternalLink className="h-4 w-4 mr-2" />
+                                        Buka di Tab Baru
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(orderData.paymentProofUrl, '_blank')}
+                              className="text-xs"
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Buka Gambar
+                            </Button>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            <p>
+                              Upload: {orderData.details?.paymentProofUploadedAt ?
+                                new Date(orderData.details.paymentProofUploadedAt).toLocaleDateString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }) :
+                                'Tidak diketahui'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <Alert>
+                        <FileImage className="h-4 w-4" />
+                        <AlertDescription>
+                          <strong>Bukti pembayaran telah diterima!</strong>
+                          <br />
+                          Pesanan Anda sedang menunggu konfirmasi dari organizer. Halaman ini akan otomatis terupdate ketika pembayaran dikonfirmasi.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

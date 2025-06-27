@@ -9,19 +9,29 @@ import { prisma } from "~/server/db";
  */
 export async function POST(req: NextRequest) {
   try {
-    // Check authentication
+    // Check authentication (optional for guest purchases)
     const session = await auth();
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
-      );
-    }
 
     // Get the form data
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const orderId = formData.get("orderId") as string;
+
+    // Get session ID for guest access
+    const sessionId = req.headers.get("x-session-id");
+
+    // For guest users, we need either a session ID or authentication
+    if (!session?.user && !sessionId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Authentication or session ID required for payment proof upload",
+          message:
+            "Please provide a session ID or log in to upload payment proof",
+        },
+        { status: 401 },
+      );
+    }
 
     if (!file) {
       return NextResponse.json(
@@ -41,9 +51,9 @@ export async function POST(req: NextRequest) {
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: "Invalid file type. Only JPEG, PNG, and WebP images are allowed." 
+        {
+          success: false,
+          error: "Invalid file type. Only JPEG, PNG, and WebP images are allowed."
         },
         { status: 400 },
       );
@@ -53,31 +63,40 @@ export async function POST(req: NextRequest) {
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: "File size too large. Maximum size is 5MB." 
+        {
+          success: false,
+          error: "File size too large. Maximum size is 5MB."
         },
         { status: 400 },
       );
     }
 
-    // Verify order exists and belongs to user (or is accessible via session)
-    const sessionId = req.headers.get("x-session-id");
+    // Build where clause for order lookup
+    let whereClause: any = {
+      id: orderId,
+    };
 
+    if (session?.user?.id) {
+      // For authenticated users
+      whereClause.OR = [
+        { userId: session.user.id }, // User owns the order
+        // Also check for guest orders with session ID
+        ...(sessionId ? [{
+          user: {
+            phone: `guest_${sessionId}`, // Guest users have phone set to guest_sessionId
+          },
+        }] : []),
+      ];
+    } else if (sessionId) {
+      // For guest users only
+      whereClause.user = {
+        phone: `guest_${sessionId}`, // Guest users have phone set to guest_sessionId
+      };
+    }
+
+    // Verify order exists and belongs to user (or is accessible via session)
     const order = await prisma.transaction.findFirst({
-      where: {
-        id: orderId,
-        OR: [
-          { userId: session.user.id }, // User owns the order
-          // For guest orders, check session ID in details
-          ...(sessionId ? [{
-            details: {
-              path: ["sessionId"],
-              equals: sessionId,
-            },
-          }] : []),
-        ],
-      },
+      where: whereClause,
     });
 
     if (!order) {

@@ -26,9 +26,11 @@ export async function handleGetAdminOrders(params: {
   // Add status filter
   if (status) {
     if (status === "MANUAL_PENDING") {
-      // Filter for manual payments awaiting verification
+      // Filter for manual payments and QRIS By Wonders awaiting verification
       where.status = "PENDING";
-      where.paymentMethod = "MANUAL_PAYMENT";
+      where.paymentMethod = {
+        in: ["MANUAL_PAYMENT", "QRIS_BY_WONDERS"]
+      };
       where.details = {
         path: ["awaitingVerification"],
         equals: true,
