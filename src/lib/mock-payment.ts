@@ -74,8 +74,6 @@ export async function createMockPayment(
 
         Silakan scan QR code yang telah ditampilkan untuk melakukan pembayaran.
         Pembayaran akan dikonfirmasi secara manual oleh admin setelah berhasil.
-
-        CATATAN: Ini adalah mode test. QR code yang ditampilkan hanya untuk demonstrasi.
       `;
       break;
   }

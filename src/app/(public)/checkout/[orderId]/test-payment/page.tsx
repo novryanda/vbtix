@@ -77,16 +77,16 @@ export default function TestPaymentPage({ params }: TestPaymentPageProps) {
       setPaymentStatus(success ? "success" : "failed");
 
       if (success) {
-        toast.success("Test payment successful!");
+        toast.success("Payment successful!");
         // Redirect to success page after a short delay
         setTimeout(() => {
           router.push(`/checkout/success?orderId=${orderId}`);
         }, 1500);
       } else {
-        toast.error("Test payment failed!");
+        toast.error("Payment failed!");
       }
     } catch (err: any) {
-      console.error("Error processing test payment:", err);
+      console.error("Error processing payment:", err);
       setError(err.message || "Failed to process payment");
       setPaymentStatus("failed");
     } finally {
@@ -120,22 +120,13 @@ export default function TestPaymentPage({ params }: TestPaymentPageProps) {
             <Button variant="ghost" size="icon" onClick={handleBackToOrder}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-semibold">Test Payment</h1>
+            <h1 className="text-2xl font-semibold">Payment Simulation</h1>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-6">
         <div className="mx-auto max-w-md">
-          {/* Test Mode Alert */}
-          <Alert className="mb-6">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Test Mode:</strong> This is a simulated payment
-              environment. No real money will be charged.
-            </AlertDescription>
-          </Alert>
-
           {/* Payment Status */}
           {paymentStatus !== "pending" && (
             <Card className="mb-6">
@@ -150,7 +141,7 @@ export default function TestPaymentPage({ params }: TestPaymentPageProps) {
                         Payment Successful!
                       </h2>
                       <p className="text-gray-600">
-                        Your test payment has been processed successfully.
+                        Your payment has been processed successfully.
                       </p>
                       <Badge className="mt-2" variant="default">
                         Redirecting to success page...
@@ -165,7 +156,7 @@ export default function TestPaymentPage({ params }: TestPaymentPageProps) {
                         Payment Failed!
                       </h2>
                       <p className="text-gray-600">
-                        Your test payment simulation failed.
+                        Your payment simulation failed.
                       </p>
                     </>
                   )}

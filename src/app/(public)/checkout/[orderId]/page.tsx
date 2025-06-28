@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Calendar, MapPin, AlertTriangle, ArrowLeft, FileImage, ExternalLink } from "lucide-react";
+import { Calendar, MapPin, AlertTriangle, ArrowLeft, FileImage, ExternalLink, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
@@ -157,6 +157,88 @@ export default function OrderDetailPage({
     }
   };
 
+  const downloadTickets = async () => {
+    if (!orderData?.id) {
+      toast.error("Order information not available");
+      return;
+    }
+
+    try {
+      // Show loading state
+      toast.info("Preparing your tickets for download...");
+
+      // Get session ID for guest access
+      const sessionId = localStorage.getItem("vbticket_session_id");
+
+      // Build download URL with session ID for guest access
+      const downloadUrl = sessionId
+        ? `/api/public/orders/${orderData.id}/download-tickets?sessionId=${sessionId}`
+        : `/api/public/orders/${orderData.id}/download-tickets`;
+
+      console.log("Downloading tickets from:", downloadUrl);
+
+      // Fetch the PDF file
+      const response = await fetch(downloadUrl);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Download error response:", errorData);
+
+        // Provide specific error messages based on the error type
+        let errorMessage = errorData.message || errorData.error || "Failed to download tickets";
+
+        if (response.status === 401) {
+          errorMessage = "Authentication required. Please refresh the page and try again.";
+        } else if (response.status === 403) {
+          errorMessage = "Access denied. You don't have permission to download these tickets.";
+        } else if (response.status === 404) {
+          errorMessage = "Order not found or you don't have access to it.";
+        } else if (errorData.currentStatus && errorData.currentStatus !== "SUCCESS") {
+          errorMessage = `Tickets are not ready yet. Order status: ${errorData.currentStatus}`;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob();
+
+      // Get filename from response headers or create default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `tiket-${orderData.invoiceNumber || 'order'}.pdf`;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create download link and trigger download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      // Show success message
+      toast.success("Tickets downloaded successfully!", {
+        description: "Your PDF tickets have been saved to your device.",
+      });
+
+    } catch (error: any) {
+      console.error("Error downloading tickets:", error);
+      toast.error("Failed to download tickets", {
+        description: error.message || "Please try again later or contact support.",
+      });
+    }
+  };
+
   const handlePaymentMethodSelect = async (
     method: string,
     details: PaymentMethodDetails,
@@ -254,8 +336,8 @@ export default function OrderDetailPage({
         });
         window.location.href = result.data.checkoutUrl;
       } else if (result.data.isTestMode) {
-        // For test mode, redirect to test payment page
-        toast.info("Redirecting to test payment...", {
+        // For mock mode, redirect to payment simulation page
+        toast.info("Redirecting to payment simulation...", {
           description:
             "You will be redirected to simulate the payment process.",
         });
@@ -591,25 +673,48 @@ export default function OrderDetailPage({
             </CardContent>
           </Card>
 
-          {/* Payment Method Selection */}
-          <PaymentMethodSelector
-            onPaymentMethodSelect={handlePaymentMethodSelect}
-            isLoading={isProcessing}
-            orderId={orderId}
-          />
+          {/* Download Tickets - Only show for successful orders */}
+          {orderData.status === "SUCCESS" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Your Tickets</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button onClick={downloadTickets} className="w-full">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Tickets
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Your tickets have been sent to your email. You can also
+                  download them here as PDF files.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Cancel Order */}
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancelOrder}
-              disabled={isCancelling || isProcessing}
-              className="text-muted-foreground hover:text-foreground text-sm"
-            >
-              {isCancelling ? "Membatalkan..." : "Batalkan Pesanan"}
-            </Button>
-          </div>
+          {/* Payment Method Selection - Only show for pending orders */}
+          {orderData.status === "PENDING" && (
+            <PaymentMethodSelector
+              onPaymentMethodSelect={handlePaymentMethodSelect}
+              isLoading={isProcessing}
+              orderId={orderId}
+            />
+          )}
+
+          {/* Cancel Order - Only show for pending orders */}
+          {orderData.status === "PENDING" && (
+            <div className="text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCancelOrder}
+                disabled={isCancelling || isProcessing}
+                className="text-muted-foreground hover:text-foreground text-sm"
+              >
+                {isCancelling ? "Membatalkan..." : "Batalkan Pesanan"}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

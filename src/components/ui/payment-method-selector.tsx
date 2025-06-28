@@ -32,76 +32,64 @@ export interface PaymentMethodSelectorProps {
   orderId?: string; // Add orderId for payment proof upload
 }
 
-// Check if we're in test mode (Xendit not enabled)
-const isTestMode = process.env.NEXT_PUBLIC_XENDIT_ENABLED !== "true";
-
-const paymentMethods = isTestMode
-  ? [
-      {
-        id: "MANUAL_PAYMENT",
-        name: "Pembayaran Manual",
-        description: "Pembayaran akan dikonfirmasi manual oleh admin",
-        icon: HandCoins,
-      },
-      {
-        id: "QRIS_BY_WONDERS",
-        name: "QRIS By Wonders",
-        description: "Scan QR code untuk pembayaran dengan QRIS",
-        icon: QrCode,
-        showQRCode: true,
-      },
-    ]
-  : [
-      {
-        id: "MANUAL_PAYMENT",
-        name: "Pembayaran Manual",
-        description: "Pembayaran akan dikonfirmasi manual oleh admin",
-        icon: HandCoins,
-      },
-      {
-        id: "VIRTUAL_ACCOUNT",
-        name: "Virtual Account",
-        description: "Transfer bank melalui virtual account",
-        icon: CreditCard,
-        banks: [
-          { code: "BCA", name: "BCA" },
-          { code: "BNI", name: "BNI" },
-          { code: "BRI", name: "BRI" },
-          { code: "MANDIRI", name: "Mandiri" },
-          { code: "PERMATA", name: "Permata" },
-          { code: "BSI", name: "BSI" },
-        ],
-      },
-      {
-        id: "EWALLET",
-        name: "E-Wallet",
-        description: "Bayar dengan dompet digital",
-        icon: Smartphone,
-        types: [
-          { code: "OVO", name: "OVO" },
-          { code: "DANA", name: "DANA" },
-          { code: "LINKAJA", name: "LinkAja" },
-          { code: "SHOPEEPAY", name: "ShopeePay" },
-          { code: "GOPAY", name: "GoPay" },
-        ],
-      },
-      {
-        id: "QR_CODE",
-        name: "QR Code",
-        description: "Scan QR code untuk pembayaran",
-        icon: QrCode,
-      },
-      {
-        id: "RETAIL_OUTLET",
-        name: "Retail Outlet",
-        description: "Bayar di Alfamart atau Indomaret",
-        icon: Store,
-        outlets: [
-          { code: "ALFAMART", name: "Alfamart" },
-          { code: "INDOMARET", name: "Indomaret" },
-        ],
-      },
-    ];
+const paymentMethods = [
+  {
+    id: "MANUAL_PAYMENT",
+    name: "Pembayaran Manual",
+    description: "Pembayaran akan dikonfirmasi manual oleh admin",
+    icon: HandCoins,
+  },
+  {
+    id: "QRIS_BY_WONDERS",
+    name: "QRIS By Wonders",
+    description: "Scan QR code untuk pembayaran dengan QRIS",
+    icon: QrCode,
+    showQRCode: true,
+  },
+  // {
+  //   id: "VIRTUAL_ACCOUNT",
+  //   name: "Virtual Account",
+  //   description: "Transfer bank melalui virtual account",
+  //   icon: CreditCard,
+  //   banks: [
+  //     { code: "BCA", name: "BCA" },
+  //     { code: "BNI", name: "BNI" },
+  //     { code: "BRI", name: "BRI" },
+  //     { code: "MANDIRI", name: "Mandiri" },
+  //     { code: "PERMATA", name: "Permata" },
+  //     { code: "BSI", name: "BSI" },
+  //   ],
+  // },
+  // {
+  //   id: "EWALLET",
+  //   name: "E-Wallet",
+  //   description: "Bayar dengan dompet digital",
+  //   icon: Smartphone,
+  //   types: [
+  //     { code: "OVO", name: "OVO" },
+  //     { code: "DANA", name: "DANA" },
+  //     { code: "LINKAJA", name: "LinkAja" },
+  //     { code: "SHOPEEPAY", name: "ShopeePay" },
+  //     { code: "GOPAY", name: "GoPay" },
+  //   ],
+  // },
+  // {
+  //   id: "QR_CODE",
+  //   name: "QR Code",
+  //   description: "Scan QR code untuk pembayaran",
+  //   icon: QrCode,
+  // },
+  // {
+  //   id: "RETAIL_OUTLET",
+  //   name: "Retail Outlet",
+  //   description: "Bayar di Alfamart atau Indomaret",
+  //   icon: Store,
+  //   outlets: [
+  //     { code: "ALFAMART", name: "Alfamart" },
+  //     { code: "INDOMARET", name: "Indomaret" },
+  //   ],
+  // },
+];
 
 export function PaymentMethodSelector({
   onPaymentMethodSelect,
@@ -173,7 +161,7 @@ export function PaymentMethodSelector({
 
     let details: PaymentMethodDetails = {};
 
-    // Handle both test and production payment methods
+    // Handle both mock and production payment methods
     switch (selectedMethod) {
       case "VIRTUAL_ACCOUNT":
         if (!selectedBank) return;
@@ -231,18 +219,7 @@ export function PaymentMethodSelector({
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Pilih Metode Pembayaran
-          {isTestMode && (
-            <span className="rounded-md bg-yellow-100 px-2 py-1 text-sm text-yellow-800">
-              MODE TEST
-            </span>
-          )}
         </CardTitle>
-        {isTestMode && (
-          <p className="text-muted-foreground text-sm">
-            Ini adalah mode test. Tidak ada uang yang akan dipotong dari akun
-            Anda.
-          </p>
-        )}
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">

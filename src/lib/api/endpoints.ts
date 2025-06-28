@@ -146,6 +146,7 @@ export const PUBLIC_ENDPOINTS = {
   PURCHASE_TICKET: `${API_BASE}/public/tickets/purchase`,
   CANCEL_TICKET: (id: string) => `${API_BASE}/public/tickets/${id}/cancel`,
   TICKET_QR_CODE: (ticketId: string) => `${API_BASE}/public/tickets/${ticketId}/qr-code`,
+  DOWNLOAD_TICKETS: (orderId: string) => `${API_BASE}/public/orders/${orderId}/download-tickets`,
   BANNERS: `${API_BASE}/public/banners`,
 };
 

@@ -19,20 +19,9 @@ export function PaymentModeDebug() {
             {xenditEnabled ?? "undefined"}&quot;
           </div>
           <div>
-            <strong>Is Test Mode:</strong> {isTestMode ? "Yes" : "No"}
-          </div>
-          <div>
-            <strong>Current Mode:</strong> {isTestMode ? "TEST" : "PRODUCTION"}
+            <strong>Current Mode:</strong> {isTestMode ? "MOCK" : "LIVE"}
           </div>
         </div>
-
-        {isTestMode && (
-          <Alert className="mt-3">
-            <AlertDescription>
-              Test mode is active. Mock payments will be used.
-            </AlertDescription>
-          </Alert>
-        )}
       </CardContent>
     </Card>
   );

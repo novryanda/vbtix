@@ -25,14 +25,21 @@ import { UserRole } from "@prisma/client";
 const pathMap: Record<string, string> = {
   organizer: "Organizer",
   admin: "Admin",
+  buyer: "Buyer",
   event: "My Events",
   events: "Events",
   tickets: "Tickets",
+  "my-tickets": "My Tickets",
   attendees: "Attendees",
   analytics: "Analytics",
   settings: "Settings",
   dashboard: "Dashboard",
   organizers: "Organizers",
+  orders: "Orders",
+  checkout: "Checkout",
+  profile: "Profile",
+  favorites: "Favorites",
+  help: "Help",
 };
 
 interface SiteHeaderProps {

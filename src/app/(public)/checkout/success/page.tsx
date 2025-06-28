@@ -159,9 +159,86 @@ export default function CheckoutSuccessPage() {
     toast.success(`${label} copied to clipboard!`);
   };
 
-  const downloadTickets = () => {
-    // TODO: Implement ticket download functionality
-    toast.info("Ticket download feature coming soon!");
+  const downloadTickets = async () => {
+    if (!orderData?.id) {
+      toast.error("Order information not available");
+      return;
+    }
+
+    try {
+      // Show loading state
+      toast.info("Preparing your tickets for download...");
+
+      // Get session ID for guest access
+      const sessionId = localStorage.getItem("vbticket_session_id");
+
+      // Build download URL with session ID for guest access
+      const downloadUrl = sessionId
+        ? `/api/public/orders/${orderData.id}/download-tickets?sessionId=${sessionId}`
+        : `/api/public/orders/${orderData.id}/download-tickets`;
+
+      console.log("Downloading tickets from:", downloadUrl);
+
+      // Fetch the PDF file
+      const response = await fetch(downloadUrl);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Download error response:", errorData);
+
+        // Provide specific error messages based on the error type
+        let errorMessage = errorData.message || errorData.error || "Failed to download tickets";
+
+        if (response.status === 401) {
+          errorMessage = "Authentication required. Please refresh the page and try again.";
+        } else if (response.status === 403) {
+          errorMessage = "Access denied. You don't have permission to download these tickets.";
+        } else if (response.status === 404) {
+          errorMessage = "Order not found or you don't have access to it.";
+        } else if (errorData.currentStatus && errorData.currentStatus !== "SUCCESS") {
+          errorMessage = `Tickets are not ready yet. Order status: ${errorData.currentStatus}`;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob();
+
+      // Get filename from response headers or create default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `tiket-${orderData.invoiceNumber || 'order'}.pdf`;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create download link and trigger download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      // Show success message
+      toast.success("Tickets downloaded successfully!", {
+        description: "Your PDF tickets have been saved to your device.",
+      });
+
+    } catch (error: any) {
+      console.error("Error downloading tickets:", error);
+      toast.error("Failed to download tickets", {
+        description: error.message || "Please try again later or contact support.",
+      });
+    }
   };
 
   if (loading) {
@@ -228,14 +305,10 @@ export default function CheckoutSuccessPage() {
                     <CheckCircle className="h-8 w-8 text-green-600" />
                   </div>
                   <h2 className="mb-2 text-2xl font-bold text-green-600">
-                    {orderData.isTestMode
-                      ? "Test Payment Successful!"
-                      : "Payment Successful!"}
+                    Payment Successful!
                   </h2>
                   <p className="text-gray-600">
-                    {orderData.isTestMode
-                      ? "Your test transaction has been completed successfully."
-                      : "Your payment has been processed successfully. Your tickets are ready!"}
+                    Your payment has been processed successfully. Your tickets are ready!
                   </p>
                 </>
               ) : (
@@ -272,16 +345,6 @@ export default function CheckoutSuccessPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Test Mode Alert */}
-        {orderData.isTestMode && (
-          <Alert className="mb-6">
-            <AlertDescription>
-              <strong>Test Mode:</strong> This was a test transaction. No actual
-              payment was processed.
-            </AlertDescription>
-          </Alert>
-        )}
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Order Details */}

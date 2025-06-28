@@ -44,26 +44,26 @@ export function TestPaymentInstructions({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to process test payment");
+        throw new Error(result.error || "Failed to process payment");
       }
 
       setCompleted(true);
 
       // Show success/failure toast
       if (success) {
-        toast.success("Test Payment Successful!", {
-          description: "Your test transaction has been completed successfully.",
+        toast.success("Payment Successful!", {
+          description: "Your transaction has been completed successfully.",
         });
       } else {
-        toast.error("Test Payment Failed", {
-          description: "Your test transaction has been marked as failed.",
+        toast.error("Payment Failed", {
+          description: "Your transaction has been marked as failed.",
         });
       }
 
       onPaymentComplete?.(success);
     } catch (err: any) {
-      console.error("Error processing test payment:", err);
-      setError(err.message || "Failed to process test payment");
+      console.error("Error processing payment:", err);
+      setError(err.message || "Failed to process payment");
     } finally {
       setIsProcessing(false);
     }
@@ -75,14 +75,14 @@ export function TestPaymentInstructions({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-600">
             <CheckCircle className="h-5 w-5" />
-            Test Payment Completed
+            Payment Completed
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert>
             <CheckCircle className="h-4 w-4" />
             <AlertDescription>
-              Test payment has been completed successfully. You will be
+              Payment has been completed successfully. You will be
               redirected shortly.
             </AlertDescription>
           </Alert>
@@ -96,18 +96,10 @@ export function TestPaymentInstructions({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-yellow-600" />
-          Test Payment Instructions
+          Payment Instructions
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>MODE TEST:</strong> Ini adalah transaksi simulasi. Tidak ada
-            uang yang akan dipotong.
-          </AlertDescription>
-        </Alert>
-
         <div className="rounded-lg bg-gray-50 p-4">
           <pre className="font-mono text-sm whitespace-pre-wrap">
             {instructions}

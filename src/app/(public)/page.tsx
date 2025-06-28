@@ -19,6 +19,10 @@ const BannerCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [banners, setBanners] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startPos, setStartPos] = useState(0);
+  const [currentPos, setCurrentPos] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
 
   // Fetch banners from API
   useEffect(() => {
@@ -83,13 +87,96 @@ const BannerCarousel = () => {
 
   // Auto-change banner every 5 seconds
   useEffect(() => {
-    if (banners.length > 0) {
+    if (banners.length > 0 && !isDragging) {
       const interval = setInterval(() => {
         setCurrentSlide((prev) => (prev + 1) % banners.length);
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [banners.length]);
+  }, [banners.length, isDragging]);
+
+  // Handle drag/swipe functions
+  const handleDragStart = (clientX: number) => {
+    setIsDragging(true);
+    setStartPos(clientX);
+    setCurrentPos(clientX);
+  };
+
+  const handleDragMove = (clientX: number) => {
+    if (!isDragging) return;
+    
+    const diff = clientX - startPos;
+    setCurrentPos(clientX);
+    setDragOffset(diff);
+  };
+
+  const handleDragEnd = () => {
+    if (!isDragging) return;
+    
+    const diff = currentPos - startPos;
+    const threshold = 50; // Minimum drag distance to trigger slide change
+    
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0) {
+        // Dragged right - go to previous slide
+        setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
+      } else {
+        // Dragged left - go to next slide
+        setCurrentSlide((prev) => (prev + 1) % banners.length);
+      }
+    }
+    
+    setIsDragging(false);
+    setStartPos(0);
+    setCurrentPos(0);
+    setDragOffset(0);
+  };
+
+  // Mouse events
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleDragStart(e.clientX);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handleDragMove(e.clientX);
+  };
+
+  const handleMouseUp = () => {
+    handleDragEnd();
+  };
+
+  const handleMouseLeave = () => {
+    handleDragEnd();
+  };
+
+  // Touch events
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches[0]) {
+      handleDragStart(e.touches[0].clientX);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches[0]) {
+      handleDragMove(e.touches[0].clientX);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    handleDragEnd();
+  };
+
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setCurrentSlide((prev) => (prev + 1) % banners.length);
+    }
+  };
 
   // Show loading state
   if (isLoading) {
@@ -147,22 +234,40 @@ const BannerCarousel = () => {
 
   return (
     <div className="relative mb-4 overflow-hidden rounded-lg sm:mb-6 sm:rounded-xl lg:mb-8 xl:mb-10">
-      <div className="relative h-[180px] w-full xs:h-[200px] sm:h-[250px] md:h-[300px] lg:h-[350px] xl:h-[400px] 2xl:h-[450px]">
+      <div 
+        className="relative h-[180px] w-full xs:h-[200px] sm:h-[250px] md:h-[300px] lg:h-[350px] xl:h-[400px] 2xl:h-[450px] cursor-grab active:cursor-grabbing select-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 rounded-lg"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="region"
+        aria-label="Banner carousel - Gunakan panah kiri/kanan atau geser untuk navigasi"
+      >
         {banners.map((banner, index) => (
           <div
             key={banner.id || index}
-            className={`absolute inset-0 transition-opacity duration-1000 ${
+            className={`absolute inset-0 transition-all duration-1000 ${
               index === currentSlide ? "opacity-100" : "opacity-0"
             }`}
+            style={{
+              transform: isDragging && index === currentSlide ? `translateX(${dragOffset}px)` : 'translateX(0)',
+              transition: isDragging ? 'none' : 'opacity 1000ms, transform 300ms ease-out'
+            }}
           >
             <img
               src={banner.imageUrl}
               alt={banner.title}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
               onLoad={() => console.log("Banner image loaded:", banner.imageUrl)}
               onError={(e) => console.error("Banner image failed to load:", banner.imageUrl, e)}
+              draggable={false}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent pointer-events-none" />
             <div className="absolute right-0 bottom-0 left-0 p-3 text-white sm:p-4 md:p-6 lg:p-8">
               <div className="mx-auto max-w-7xl">
                 <h2 className="mb-1.5 text-base font-bold sm:mb-2 sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl leading-tight">
@@ -197,20 +302,7 @@ const BannerCarousel = () => {
             </div>
           </div>
         ))}
-      </div>
-      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 space-x-1 sm:bottom-3 sm:space-x-1.5 md:bottom-4 md:space-x-2">
-        {banners.map((_, index) => (
-          <button
-            key={index}
-            className={`h-1 w-1 rounded-full transition-all duration-200 touch-target sm:h-1.5 sm:w-1.5 md:h-2 md:w-2 ${
-              index === currentSlide
-                ? "scale-125 bg-white"
-                : "bg-white/50 hover:bg-white/75"
-            }`}
-            onClick={() => setCurrentSlide(index)}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
+        
       </div>
     </div>
   );
