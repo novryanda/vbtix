@@ -41,7 +41,7 @@ const paymentMethods = [
   },
   {
     id: "QRIS_BY_WONDERS",
-    name: "QRIS By Wonders",
+    name: "Wondr by BNI",
     description: "Scan QR code untuk pembayaran dengan QRIS",
     icon: QrCode,
     showQRCode: true,
@@ -180,7 +180,7 @@ export function PaymentMethodSelector({
         details.type = "QRIS";
         break;
       case "QRIS_BY_WONDERS":
-        // No additional details needed for QRIS By Wonders
+        // No additional details needed for Wondr by BNI
         break;
       case "MANUAL_PAYMENT":
         // No additional details needed for manual payment
@@ -205,7 +205,7 @@ export function PaymentMethodSelector({
       case "QR_CODE":
         return true;
       case "QRIS_BY_WONDERS":
-        // For QRIS By Wonders, require payment proof file to be selected (upload happens after order creation)
+        // For Wondr by BNI, require payment proof file to be selected (upload happens after order creation)
         return !!paymentProofFile;
       case "MANUAL_PAYMENT":
         return true;
@@ -329,7 +329,7 @@ export function PaymentMethodSelector({
                             <div className="flex justify-center">
                               <Image
                                 src="/qrcode.jpg"
-                                alt="QRIS Payment QR Code"
+                                alt="Wondr by BNI Payment QR Code"
                                 width={200}
                                 height={200}
                                 className="border rounded-lg shadow-sm"

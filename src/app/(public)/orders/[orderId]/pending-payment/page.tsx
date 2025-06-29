@@ -146,19 +146,18 @@ export default function PendingPaymentPage({
 
   // Calculate totals from order data
   const calculateTotals = () => {
-    if (!orderData) return { subtotal: 0, serviceFee: 0, total: 0 };
+    if (!orderData) return { subtotal: 0, total: 0 };
 
     const subtotal = orderData.items.reduce(
       (sum: number, item) => sum + Number(item.price) * item.quantity,
       0,
     );
-    const serviceFee = Math.round(subtotal * 0.05); // 5% service fee
-    const total = subtotal + serviceFee;
+    const total = subtotal;
 
-    return { subtotal, serviceFee, total };
+    return { subtotal, total };
   };
 
-  const { subtotal, serviceFee, total } = calculateTotals();
+  const { subtotal, total } = calculateTotals();
 
   // Use real-time status if available, otherwise use initial order status
   const currentStatus = realtimeStatus || orderData?.status || "PENDING";
@@ -376,13 +375,13 @@ export default function PendingPaymentPage({
                 <>
                   <Separator />
                   <div>
-                    <h3 className="mb-3 font-semibold">Bukti Pembayaran QRIS</h3>
+                    <h3 className="mb-3 font-semibold">Bukti Pembayaran Wondr by BNI</h3>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
                         <div className="relative w-20 h-20 border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50">
                           <Image
                             src={orderData.paymentProofUrl}
-                            alt="Bukti Pembayaran QRIS"
+                            alt="Bukti Pembayaran Wondr by BNI"
                             fill
                             className="object-cover"
                           />
@@ -402,7 +401,7 @@ export default function PendingPaymentPage({
                               </DialogTrigger>
                               <DialogContent className="max-w-2xl">
                                 <DialogHeader>
-                                  <DialogTitle>Detail Bukti Pembayaran QRIS</DialogTitle>
+                                  <DialogTitle>Detail Bukti Pembayaran Wondr by BNI</DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-4">
                                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -436,7 +435,7 @@ export default function PendingPaymentPage({
                                     <div className="relative w-full max-w-md mx-auto">
                                       <Image
                                         src={orderData.paymentProofUrl}
-                                        alt="Bukti Pembayaran QRIS"
+                                        alt="Bukti Pembayaran Wondr by BNI"
                                         width={400}
                                         height={400}
                                         className="w-full h-auto border rounded-lg shadow-sm"
@@ -508,10 +507,6 @@ export default function PendingPaymentPage({
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span>{formatPrice(subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Biaya Layanan</span>
-                  <span>{formatPrice(serviceFee)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-lg font-semibold">

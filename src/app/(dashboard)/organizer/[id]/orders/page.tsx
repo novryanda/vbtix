@@ -378,12 +378,12 @@ export default function OrganizerOrdersPage() {
                             {/* Payment Proof for QRIS payments */}
                             {order.paymentMethod === "QRIS_BY_WONDERS" && order.paymentProofUrl && (
                               <div className="space-y-2">
-                                <p className="font-medium text-sm">Bukti Pembayaran QRIS:</p>
+                                <p className="font-medium text-sm">Bukti Pembayaran Wondr by BNI:</p>
                                 <div className="flex items-center gap-3">
                                   <div className="relative w-24 h-24 border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50">
                                     <Image
                                       src={order.paymentProofUrl}
-                                      alt="Bukti Pembayaran QRIS"
+                                      alt="Bukti Pembayaran Wondr by BNI"
                                       fill
                                       className="object-cover"
                                     />
@@ -403,7 +403,7 @@ export default function OrganizerOrdersPage() {
                                         </DialogTrigger>
                                         <DialogContent className="max-w-2xl">
                                           <DialogHeader>
-                                            <DialogTitle>Detail Bukti Pembayaran QRIS</DialogTitle>
+                                            <DialogTitle>Detail Bukti Pembayaran Wondr by BNI</DialogTitle>
                                           </DialogHeader>
                                           <div className="space-y-4">
                                             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -433,7 +433,7 @@ export default function OrganizerOrdersPage() {
                                               <div className="relative w-full max-w-md mx-auto">
                                                 <Image
                                                   src={order.paymentProofUrl}
-                                                  alt="Bukti Pembayaran QRIS"
+                                                  alt="Bukti Pembayaran Wondr by BNI"
                                                   width={400}
                                                   height={400}
                                                   className="w-full h-auto border rounded-lg shadow-sm"

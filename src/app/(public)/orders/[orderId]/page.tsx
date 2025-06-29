@@ -376,8 +376,8 @@ export default function OrderPage() {
     return total;
   }, 0);
 
-  const serviceFee = Math.round(subtotal * 0.05); // 5% service fee
-  const total = subtotal + serviceFee;
+  const serviceFee = 0; // Removed service fee
+  const total = subtotal;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1162,12 +1162,6 @@ export default function OrderPage() {
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium text-gray-800">
                     {formatPrice(subtotal)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Biaya Layanan</span>
-                  <span className="font-medium text-gray-800">
-                    {formatPrice(serviceFee)}
                   </span>
                 </div>
                 <Separator className="my-2" />

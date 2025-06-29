@@ -67,7 +67,7 @@ export async function createMockPayment(
   switch (params.paymentMethod) {
     case MockPaymentMethod.QRIS_BY_WONDERS:
       paymentInstructions = `
-        INSTRUKSI PEMBAYARAN - QRIS BY WONDERS
+        INSTRUKSI PEMBAYARAN - WONDR BY BNI
 
         Jumlah: ${params.currency} ${params.amount.toLocaleString("id-ID")}
         Kode Referensi: ${params.orderId}

@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: "Payment proof upload is only allowed for QRIS By Wonders payments" 
+          error: "Payment proof upload is only allowed for Wondr by BNI payments" 
         },
         { status: 400 },
       );

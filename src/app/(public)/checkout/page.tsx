@@ -661,8 +661,7 @@ export default function TicketPurchasePage() {
       (sum, ticket) => sum + ticket.subtotal,
       0,
     );
-    const serviceFee = Math.round(subtotal * 0.05); // 5% service fee
-    return { subtotal, serviceFee, total: subtotal + serviceFee };
+    return { subtotal, total: subtotal };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -892,7 +891,7 @@ export default function TicketPurchasePage() {
     );
   }
 
-  const { subtotal, serviceFee, total } = calculateTotal();
+  const { subtotal, total } = calculateTotal();
 
   // Cleanup reservations helper function
   const cleanupReservationsAsync = async () => {
@@ -1422,10 +1421,6 @@ export default function TicketPurchasePage() {
                   <div className="flex justify-between">
                     <span>Subtotal</span>
                     <span>{formatPrice(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Biaya Layanan</span>
-                    <span>{formatPrice(serviceFee)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">

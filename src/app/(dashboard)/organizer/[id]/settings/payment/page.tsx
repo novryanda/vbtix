@@ -483,7 +483,8 @@ export default function PaymentSettingsPage({
                   </CardContent>
                 </Card>
 
-                {/* Service Fee Settings */}
+                {/* Service Fee Settings - Disabled */}
+                {/* 
                 <Card>
                   <CardHeader>
                     <CardTitle>Service Fee</CardTitle>
@@ -530,6 +531,7 @@ export default function PaymentSettingsPage({
                     </div>
                   </CardContent>
                 </Card>
+                */}
 
                 <div className="flex justify-end gap-2">
                   <Button
