@@ -87,11 +87,16 @@ export async function handleGetOrganizerSalesReport(params: {
 
     // Initialize or update the data for this date
     const existingData = salesByDate.get(dateKey) || { count: 0, revenue: 0, ticketsSold: 0 };
-    
+
+    // Only count ACTIVE and USED tickets as sold
+    const soldTicketsCount = transaction.tickets.filter(ticket =>
+      ticket.status === 'ACTIVE' || ticket.status === 'USED'
+    ).length;
+
     salesByDate.set(dateKey, {
       count: existingData.count + 1,
       revenue: existingData.revenue + Number(transaction.amount),
-      ticketsSold: existingData.ticketsSold + transaction.tickets.length,
+      ticketsSold: existingData.ticketsSold + soldTicketsCount,
     });
   });
 

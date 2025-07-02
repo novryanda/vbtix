@@ -57,10 +57,10 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         data: updatedOrder,
-        message: 
-          validatedData.status === "SUCCESS" 
-            ? "Manual payment approved successfully. Tickets have been generated and sent to customer."
-            : "Manual payment rejected successfully.",
+        message:
+          validatedData.status === "SUCCESS"
+            ? "Payment approved! Tickets activated, counted as sold, and sent to customer."
+            : "Payment rejected successfully.",
       });
     } catch (validationError) {
       return NextResponse.json(

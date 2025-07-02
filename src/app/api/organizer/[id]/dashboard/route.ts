@@ -75,13 +75,16 @@ export async function GET(_request: NextRequest) {
         take: 5,
       }),
 
-      // Total tickets sold
+      // Total tickets sold (only count ACTIVE and USED tickets - organizer-approved)
       prisma.ticket.count({
         where: {
           ticketType: {
             event: {
               organizerId: organizer.id,
             },
+          },
+          status: {
+            in: ["ACTIVE", "USED"], // Only count organizer-approved tickets as sold
           },
         },
       }),
@@ -132,12 +135,10 @@ export async function GET(_request: NextRequest) {
         },
         include: {
           ticketTypes: {
-            include: {
-              _count: {
-                select: {
-                  tickets: true,
-                },
-              },
+            select: {
+              id: true,
+              name: true,
+              quantity: true,
             },
           },
           _count: {
@@ -153,6 +154,35 @@ export async function GET(_request: NextRequest) {
       }),
     ]);
 
+    // Calculate tickets sold for each event (only ACTIVE and USED tickets)
+    const eventPerformanceWithTickets = await Promise.all(
+      eventPerformance.map(async (event: any) => {
+        let ticketsSold = 0;
+
+        // Count only ACTIVE and USED tickets for each ticket type
+        for (const ticketType of event.ticketTypes) {
+          const soldCount = await prisma.ticket.count({
+            where: {
+              ticketTypeId: ticketType.id,
+              status: {
+                in: ["ACTIVE", "USED"], // Only count organizer-approved tickets
+              },
+            },
+          });
+          ticketsSold += soldCount;
+        }
+
+        return {
+          id: event.id,
+          title: event.title,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          ticketsSold,
+          totalTransactions: event._count.transactions,
+        };
+      })
+    );
+
     // Format the data
     const dashboardData = {
       stats: {
@@ -163,17 +193,7 @@ export async function GET(_request: NextRequest) {
       },
       upcomingEvents,
       recentTransactions,
-      eventPerformance: eventPerformance.map((event: any) => ({
-        id: event.id,
-        title: event.title,
-        startDate: event.startDate,
-        endDate: event.endDate,
-        ticketsSold: event.ticketTypes.reduce(
-          (acc: number, type: any) => acc + type._count.tickets,
-          0,
-        ),
-        totalTransactions: event._count.transactions,
-      })),
+      eventPerformance: eventPerformanceWithTickets,
     };
 
     // Return response

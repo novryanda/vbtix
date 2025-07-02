@@ -77,6 +77,31 @@ export async function POST(
       0
     ) - (orderData.discountAmount || 0);
 
+    // Validate ticket availability for SUCCESS payments (immediate sales)
+    if (orderData.paymentStatus === "SUCCESS") {
+      for (const item of orderData.orderItems) {
+        const ticketType = await prisma.ticketType.findUnique({
+          where: { id: item.ticketTypeId },
+          select: { quantity: true, sold: true, reserved: true }
+        });
+
+        if (!ticketType) {
+          return NextResponse.json(
+            { success: false, error: `Ticket type ${item.ticketTypeId} not found` },
+            { status: 404 }
+          );
+        }
+
+        const available = ticketType.quantity - ticketType.sold - ticketType.reserved;
+        if (available < item.quantity) {
+          return NextResponse.json(
+            { success: false, error: `Insufficient tickets available for ${item.ticketTypeId}. Available: ${available}, Requested: ${item.quantity}` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Create the complete order in a transaction
     const result = await prisma.$transaction(
       async (tx) => {
@@ -120,6 +145,10 @@ export async function POST(
         const ticketData = [];
         let ticketIndex = 0;
 
+        // Determine ticket status based on payment status
+        // Manual tickets created by organizers with SUCCESS payment status are immediately ACTIVE
+        const ticketStatus = orderData.paymentStatus === "SUCCESS" ? TicketStatus.ACTIVE : TicketStatus.PENDING;
+
         for (const item of orderData.orderItems) {
           for (let i = 0; i < item.quantity; i++) {
             const qrCode = generateUniqueCode();
@@ -131,7 +160,7 @@ export async function POST(
               transactionId: transaction.id,
               userId: session.user.id,
               qrCode,
-              status: TicketStatus.ACTIVE,
+              status: ticketStatus, // ACTIVE for SUCCESS payments, PENDING for others
             });
             ticketIndex++;
           }
@@ -142,18 +171,20 @@ export async function POST(
           data: ticketData,
         });
 
-        // Update ticket type sold counts
-        const updatePromises = orderData.orderItems.map((item: any) =>
-          tx.ticketType.update({
-            where: { id: item.ticketTypeId },
-            data: {
-              sold: {
-                increment: item.quantity,
+        // For manual tickets with SUCCESS payment status, immediately increment sold count
+        // This treats organizer-created tickets as direct sales
+        if (orderData.paymentStatus === "SUCCESS") {
+          for (const item of orderData.orderItems) {
+            await tx.ticketType.update({
+              where: { id: item.ticketTypeId },
+              data: {
+                sold: {
+                  increment: item.quantity,
+                },
               },
-            },
-          }),
-        );
-        await Promise.all(updatePromises);
+            });
+          }
+        }
 
         return { transaction, tickets: createdTickets };
       },

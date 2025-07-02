@@ -144,6 +144,7 @@ model TicketType {
   orderItems        OrderItem[]
   tickets           Ticket[]
   reservations      TicketReservation[]
+  allowedPaymentMethods TicketTypePaymentMethod[]
   event             Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
@@ -302,7 +303,7 @@ model Ticket {
   qrCodeData       String?       // Encrypted QR code data for validation
   qrCodeGeneratedAt DateTime?    // When QR code was generated
   qrCodeStatus     QRCodeStatus  @default(PENDING) // Status of QR code
-  status           TicketStatus  @default(ACTIVE)
+  status           TicketStatus  @default(PENDING)
   checkedIn        Boolean       @default(false)
   checkInTime      DateTime?
   createdAt        DateTime      @default(now())
@@ -442,6 +443,7 @@ enum ApprovalStatus {
 }
 
 enum TicketStatus {
+  PENDING
   ACTIVE
   USED
   CANCELLED
@@ -481,4 +483,33 @@ enum QRCodeStatus {
   ACTIVE
   USED
   EXPIRED
+}
+
+// Payment method configuration models
+model PaymentMethod {
+  id          String   @id @default(cuid())
+  code        String   @unique // e.g., "MANUAL_PAYMENT", "QRIS_BY_WONDERS"
+  name        String   // e.g., "Pembayaran Manual", "Wondr by BNI"
+  description String?  // Optional description
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ticketTypes TicketTypePaymentMethod[]
+}
+
+// Junction table for many-to-many relationship between TicketType and PaymentMethod
+model TicketTypePaymentMethod {
+  id            String        @id @default(cuid())
+  ticketTypeId  String
+  paymentMethodId String
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  ticketType    TicketType    @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id], onDelete: Cascade)
+
+  // Ensure unique combination
+  @@unique([ticketTypeId, paymentMethodId])
 }

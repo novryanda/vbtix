@@ -108,11 +108,15 @@ export class OrderExpirationService {
         });
 
         // Return ticket quantities to inventory
+        // With the new logic, PENDING tickets don't increment sold count,
+        // so we only need to decrement reserved count if it was being held
         for (const item of order.orderItems) {
           await tx.ticketType.update({
             where: { id: item.ticketTypeId },
             data: {
-              sold: {
+              // Do NOT decrement sold count for PENDING tickets since they were never counted as sold
+              // Only decrement reserved count to restore inventory
+              reserved: {
                 decrement: item.quantity,
               },
             },

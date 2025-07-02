@@ -14,6 +14,9 @@ const publicRoutes = [
   "/debug",
   "/debug-session",
   "/debug-auth",
+  "/events",
+  "/my-orders",
+  "/test-public-experience",
 ];
 
 // Memeriksa apakah rute adalah rute publik
@@ -33,6 +36,9 @@ function isPublicRoute(path: string) {
     path.startsWith("/orders/") || // Allow access to public order pages
     path.startsWith("/tickets/") || // Allow access to public ticket pages
     path.startsWith("/profile") || // Allow access to public profile page
+    path.startsWith("/my-orders") || // Allow access to public order management
+    path.startsWith("/my-tickets") || // Allow access to public ticket pages
+    path.startsWith("/test-") || // Allow access to test pages
     path.startsWith("/api/public/") // Allow access to all public API endpoints
   ) {
     return true;
@@ -103,8 +109,9 @@ export async function authMiddleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // Jika pengguna sudah login dan mencoba mengakses halaman publik, alihkan ke dashboard
-    if (isPublicRoute(path) && isAuthenticated && token && token.role) {
+    // Allow authenticated users to access public pages without redirect
+    // Only redirect from auth pages (login/register) if already authenticated
+    if (isAuthenticated && token && token.role && (path === "/login" || path === "/register")) {
       const dashboardRoute = getDashboardRoute(token.role as UserRole);
       return NextResponse.redirect(new URL(dashboardRoute, req.url));
     }

@@ -103,6 +103,9 @@ export default function EventDetailPage() {
     Record<string, number>
   >({});
   const [isCreatingReservation, setIsCreatingReservation] = useState(false);
+  const [ticketPaymentMethods, setTicketPaymentMethods] = useState<
+    Record<string, any[]>
+  >({});
 
   // Fetch event details
   useEffect(() => {
@@ -133,6 +136,35 @@ export default function EventDetailPage() {
       fetchEventDetails();
     }
   }, [eventId]);
+
+  // Fetch payment methods for each ticket type
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      if (!event?.ticketTypes) return;
+
+      const paymentMethodsData: Record<string, any[]> = {};
+
+      for (const ticket of event.ticketTypes) {
+        try {
+          const response = await fetch(`/api/ticket-types/${ticket.id}/payment-methods`);
+          const result = await response.json();
+
+          if (result.success) {
+            paymentMethodsData[ticket.id] = result.data;
+          } else {
+            paymentMethodsData[ticket.id] = [];
+          }
+        } catch (error) {
+          console.error(`Error fetching payment methods for ticket ${ticket.id}:`, error);
+          paymentMethodsData[ticket.id] = [];
+        }
+      }
+
+      setTicketPaymentMethods(paymentMethodsData);
+    };
+
+    fetchPaymentMethods();
+  }, [event]);
 
   // Handle ticket quantity change
   const handleQuantityChange = (ticketTypeId: string, newQuantity: number) => {
@@ -518,6 +550,26 @@ export default function EventDetailPage() {
                               <p className="text-sm text-gray-600">
                                 {ticket.description}
                               </p>
+                            )}
+
+                            {/* Payment Methods */}
+                            {ticketPaymentMethods[ticket.id] && ticketPaymentMethods[ticket.id].length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-gray-700">
+                                  Metode Pembayaran Tersedia:
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {ticketPaymentMethods[ticket.id].map((paymentMethod) => (
+                                    <Badge
+                                      key={paymentMethod.id}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {paymentMethod.name}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
                             )}
 
                             {/* Price and Action */}

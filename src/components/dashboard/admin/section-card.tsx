@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Users, Calendar, SparklesIcon, ArrowUpIcon, TrendingUpIcon } from "lucide-react";
+import { Users, Calendar, SparklesIcon, ArrowUpIcon, TrendingUpIcon, Ticket } from "lucide-react";
 
 import { MagicCard } from "~/components/ui/magic-card";
 import {
@@ -26,12 +26,14 @@ export function SectionCards() {
     totalOrganizers: 0,
     totalEvents: 0,
     totalSales: 0,
+    totalTicketsSold: 0,
   };
 
   // Extract data with fallback to default values
   const totalOrganizers = stats.totalOrganizers;
   const totalEvents = stats.totalEvents;
   const totalSales = stats.totalSales;
+  const totalTicketsSold = stats.totalTicketsSold;
 
   return (
     <div className="dashboard-cards-grid max-w-7xl mx-auto px-2 sm:px-4">
@@ -104,6 +106,40 @@ export function SectionCards() {
           </CardFooter>
         </MagicCard>
       </Link>
+
+      {/* Tickets Sold Card */}
+      <div className="h-full">
+        <MagicCard
+          className="border-0 bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/20 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] h-full flex flex-col"
+          gradientColor="rgba(251, 146, 60, 0.1)"
+        >
+          <CardHeader className="relative pb-3 sm:pb-4 flex-shrink-0">
+            <div className="flex items-start justify-between gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2 flex-1 min-w-0">
+                <CardDescription className="text-muted-foreground/80 font-medium flex items-center gap-2 text-xs sm:text-sm">
+                  <SparklesIcon className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500 flex-shrink-0" />
+                  <span className="truncate">Tickets Sold</span>
+                </CardDescription>
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent leading-tight">
+                  {isLoading ? (
+                    <div className="h-8 sm:h-10 w-20 sm:w-24 bg-muted animate-pulse rounded-lg"></div>
+                  ) : (
+                    totalTicketsSold.toLocaleString()
+                  )}
+                </CardTitle>
+              </div>
+              <div className="rounded-xl sm:rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 p-3 sm:p-4 shadow-lg flex-shrink-0">
+                <Ticket className="text-white size-6 sm:size-8" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardFooter className="flex-col items-start gap-2 sm:gap-3 text-xs sm:text-sm pt-0 flex-grow">
+            <div className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
+              Total tiket yang telah terjual (organizer-approved)
+            </div>
+          </CardFooter>
+        </MagicCard>
+      </div>
 
       {/* Total Sales Card */}
       <div className="h-full sm:col-span-2 lg:col-span-1">

@@ -68,35 +68,42 @@ export async function GET(
 }
 
 /**
- * DELETE /api/buyer/orders/[id]
- * Cancel an order
- * This endpoint requires authentication
+ * DELETE /api/public/orders/[orderId]
+ * Cancel an order (supports guest purchases)
+ * This endpoint allows guest access using sessionId
  */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> },
 ) {
   try {
-    // Check authentication
+    // Check authentication (optional for guest purchases)
     const session = await auth();
-    if (!session?.user) {
+
+    // Unwrap params
+    const { orderId } = await params;
+
+    // Get query parameters for guest access
+    const searchParams = request.nextUrl.searchParams;
+    const sessionId = searchParams.get("sessionId");
+
+    // For guest users, we need either a session ID or authentication
+    if (!session?.user && !sessionId) {
       return NextResponse.json(
         {
           success: false,
-          error: "Authentication required to cancel orders",
-          message: "Please log in to cancel orders",
+          error: "Authentication or session ID required to cancel orders",
+          message: "Please provide a session ID or log in to cancel orders",
         },
         { status: 401 },
       );
     }
 
-    // Unwrap params
-    const { orderId } = await params;
-
-    // Cancel order
+    // Cancel order with appropriate user identification
     const result = await handleCancelOrder({
       orderId,
-      userId: session.user.id,
+      userId: session?.user?.id || null,
+      sessionId: sessionId || undefined,
     });
 
     // Return response

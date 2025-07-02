@@ -453,13 +453,24 @@ export const reservationService = {
     });
 
     const currentlyReserved = activeReservations._sum.quantity || 0;
+
+    // Count pending tickets (purchased but not yet approved by admin)
+    const pendingTickets = await prisma.ticket.count({
+      where: {
+        ticketTypeId,
+        status: "PENDING",
+      },
+    });
+
+    // Available = Total - Sold - Reserved - Pending
     const availableTickets =
-      ticketType.quantity - ticketType.sold - currentlyReserved;
+      ticketType.quantity - ticketType.sold - currentlyReserved - pendingTickets;
 
     return {
       total: ticketType.quantity,
       sold: ticketType.sold,
       reserved: currentlyReserved,
+      pending: pendingTickets,
       available: Math.max(0, availableTickets),
     };
   },

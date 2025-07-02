@@ -248,7 +248,7 @@ export const ticketService = {
             },
           },
           status: {
-            in: [TicketStatus.ACTIVE, TicketStatus.USED],
+            in: [TicketStatus.ACTIVE, TicketStatus.USED], // Only count approved tickets as sold
           },
         },
       });
@@ -362,7 +362,7 @@ export const ticketService = {
             where: {
               ticketTypeId: ticketType.id,
               status: {
-                in: [TicketStatus.ACTIVE, TicketStatus.USED],
+                in: [TicketStatus.ACTIVE, TicketStatus.USED], // Only count approved tickets as sold
               },
             },
           });

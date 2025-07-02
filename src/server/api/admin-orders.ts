@@ -1,8 +1,7 @@
 import { prisma } from "~/server/db";
 import { PaymentStatus } from "@prisma/client";
 import { formatDate } from "~/lib/utils";
-import { generateTransactionQRCodes } from "~/server/services/ticket-qr.service";
-import { emailService } from "~/lib/email-service";
+// Note: QR generation and email service removed - handled by organizer approval
 
 /**
  * Get all orders for admin with filtering and pagination
@@ -222,165 +221,56 @@ export async function handleUpdateOrderStatus(params: {
     });
   }
 
-  // If approved, generate tickets
-  if (status === "SUCCESS" && order.tickets.length === 0) {
-    // Generate tickets for successful manual payment
-    const ticketData = order.orderItems?.map((item: any) => 
-      Array.from({ length: item.quantity }, (_, index) => ({
-        ticketTypeId: item.ticketTypeId,
-        transactionId: order.id,
-        userId: order.userId,
-        qrCode: `${order.id}-${item.ticketTypeId}-${index + 1}`,
-        status: "ACTIVE" as const,
-        checkedIn: false,
-      }))
-    ).flat() || [];
+  // Admin approval only handles payment verification, NOT sales counting
+  // Sales counting and ticket activation is handled by organizer approval
+  if (status === "SUCCESS") {
+    console.log(`✅ Admin approved payment for order ${order.id} - payment verification complete`);
+    console.log(`ℹ️  Note: Tickets remain PENDING until organizer approval for sales counting`);
 
-    if (ticketData.length > 0) {
-      await prisma.ticket.createMany({
-        data: ticketData,
-      });
+    // Admin approval does NOT:
+    // - Increment sold count (organizer handles this)
+    // - Activate tickets (organizer handles this)
+    // - Generate QR codes (organizer handles this)
+    // - Send customer emails (organizer handles this)
 
-      // Generate QR codes for the newly created tickets
-      try {
-        const qrResult = await generateTransactionQRCodes(order.id);
-        console.log(`QR code generation result: ${qrResult.generatedCount} generated, errors:`, qrResult.errors);
-      } catch (qrError) {
-        console.error("Error generating QR codes:", qrError);
-        // Don't fail the approval process if QR generation fails
-      }
-    }
+    // Admin approval only verifies payment legitimacy
   }
 
-  // Send email notification if order is approved
-  if (status === "SUCCESS") {
-    try {
-      // Get the updated order with all related data for email
-      const orderWithDetails = await prisma.transaction.findUnique({
-        where: { id: orderId },
-        include: {
-          user: true,
-          event: true,
-          tickets: {
-            include: {
-              ticketType: true,
-              ticketHolder: true,
-            },
-          },
-          buyerInfo: true,
+  // If rejected, cancel tickets and restore inventory
+  if (status === "FAILED") {
+    await prisma.$transaction(async (tx) => {
+      // Cancel all tickets for this transaction
+      await tx.ticket.updateMany({
+        where: {
+          transactionId: order.id,
+          status: { in: ["PENDING", "ACTIVE"] }
+        },
+        data: {
+          status: "CANCELLED",
         },
       });
 
-      if (orderWithDetails) {
-        // Get the email to send to (buyer info email or user email)
-        const emailTo = orderWithDetails.buyerInfo?.email || orderWithDetails.user.email;
-
-        if (emailTo) {
-          // Format event date and time
-          const eventDate = new Date(orderWithDetails.event.startDate).toLocaleDateString(
-            "id-ID",
-            {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
+      // Restore inventory by decrementing reserved count (don't touch sold count since it wasn't incremented)
+      if (order.orderItems) {
+        for (const item of order.orderItems) {
+          await tx.ticketType.update({
+            where: { id: item.ticketTypeId },
+            data: {
+              // Restore reserved inventory back to available
+              reserved: {
+                decrement: item.quantity,
+              },
+              // Note: We don't need to decrement sold count since it was never incremented
             },
-          );
-
-          const eventTime = orderWithDetails.event.startTime || "Waktu akan diumumkan";
-          const customerName =
-            orderWithDetails.buyerInfo?.fullName || orderWithDetails.user.name || "Customer";
-
-          // Format payment date
-          const paymentDate =
-            new Date().toLocaleDateString("id-ID", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            }) + " WIB";
-
-          // Send ticket delivery email with PDF attachments only
-          try {
-            await emailService.sendTicketDeliveryWithPDF({
-              to: emailTo,
-              customerName,
-              event: {
-                title: orderWithDetails.event.title,
-                date: eventDate,
-                time: eventTime,
-                location: orderWithDetails.event.venue,
-                address: `${orderWithDetails.event.address}, ${orderWithDetails.event.city}, ${orderWithDetails.event.province}`,
-                image: orderWithDetails.event.posterUrl || undefined,
-              },
-              order: {
-                invoiceNumber: orderWithDetails.invoiceNumber,
-                totalAmount: Number(orderWithDetails.amount),
-                paymentDate,
-              },
-              tickets: orderWithDetails.tickets.map((ticket) => ({
-                id: ticket.id,
-                ticketNumber: ticket.id,
-                ticketType: ticket.ticketType.name,
-                holderName: ticket.ticketHolder?.fullName || customerName,
-                qrCode: ticket.qrCodeImageUrl || undefined,
-                // Additional fields needed for PDF generation
-                eventId: orderWithDetails.event.id,
-                userId: orderWithDetails.userId,
-                transactionId: orderWithDetails.id,
-                ticketTypeId: ticket.ticketTypeId,
-                eventDate: orderWithDetails.event.startDate,
-              })),
-            });
-
-            console.log(
-              `✅ Admin verification: Ticket delivery email with PDF sent to ${emailTo} for order ${orderWithDetails.invoiceNumber}`,
-            );
-          } catch (pdfError) {
-            console.error("Failed to send PDF email, falling back to regular email:", pdfError);
-
-            // Fallback to regular email
-            await emailService.sendTicketDelivery({
-              to: emailTo,
-              customerName,
-              event: {
-                title: orderWithDetails.event.title,
-                date: eventDate,
-                time: eventTime,
-                location: orderWithDetails.event.venue,
-                address: `${orderWithDetails.event.address}, ${orderWithDetails.event.city}, ${orderWithDetails.event.province}`,
-                image: orderWithDetails.event.posterUrl || undefined,
-              },
-              order: {
-                invoiceNumber: orderWithDetails.invoiceNumber,
-                totalAmount: Number(orderWithDetails.amount),
-                paymentDate,
-              },
-              tickets: orderWithDetails.tickets.map((ticket) => ({
-                id: ticket.id,
-                ticketNumber: ticket.id,
-                ticketType: ticket.ticketType.name,
-                holderName: ticket.ticketHolder?.fullName || customerName,
-                qrCode: ticket.qrCodeImageUrl || undefined,
-              })),
-            });
-
-            console.log(
-              `✅ Admin verification: Fallback ticket delivery email sent to ${emailTo} for order ${orderWithDetails.invoiceNumber}`,
-            );
-          }
-
-          console.log(
-            `✅ Admin verification: Ticket delivery email sent to ${emailTo} for order ${orderWithDetails.invoiceNumber}`,
-          );
+          });
         }
       }
-    } catch (emailError) {
-      console.error("Failed to send ticket email after admin verification:", emailError);
-      // Don't throw error here, order update should still succeed
-    }
+    });
   }
+
+  // Admin approval does NOT send emails - that's handled by organizer approval
+  // Admin only verifies payment legitimacy, organizer handles customer communication
+  console.log(`ℹ️  Admin approval complete for order ${orderId}. Organizer approval needed for ticket delivery.`);
 
   return updatedOrder;
 }

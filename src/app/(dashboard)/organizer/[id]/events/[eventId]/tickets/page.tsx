@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -76,7 +76,6 @@ export default function EventTicketsPage({
 }) {
   const router = useRouter();
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [ticketFormData, setTicketFormData] = useState({
     name: "",
@@ -97,6 +96,8 @@ export default function EventTicketsPage({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<string[]>([]);
 
   // Unwrap params with React.use()
   const { id, eventId } = React.use(params);
@@ -120,8 +121,41 @@ export default function EventTicketsPage({
   // Type assertion for TypeScript
   const tickets = ticketsData?.data as any[] | undefined;
 
+  // Fetch payment methods
+  React.useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        console.log("Fetching payment methods...");
+        const response = await fetch("/api/payment-methods");
+        const result = await response.json();
+        console.log("Payment methods response:", result);
+        if (result.success) {
+          console.log("Setting payment methods:", result.data);
+          setPaymentMethods(result.data);
+          // Set all payment methods as selected by default for new tickets
+          setSelectedPaymentMethods(result.data.map((pm: any) => pm.id));
+          console.log("Selected payment methods:", result.data.map((pm: any) => pm.id));
+        } else {
+          console.error("Failed to fetch payment methods:", result);
+        }
+      } catch (error) {
+        console.error("Error fetching payment methods:", error);
+      }
+    };
+
+    // Only fetch if payment methods haven't been loaded yet
+    if (paymentMethods.length === 0) {
+      fetchPaymentMethods();
+    }
+  }, [paymentMethods.length]);
+
+  // Debug dialog state
+  React.useEffect(() => {
+    console.log("Dialog state changed:", isTicketDialogOpen);
+  }, [isTicketDialogOpen]);
+
   // Handle ticket form change
-  const handleTicketFormChange = (
+  const handleTicketFormChange = useCallback((
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
@@ -129,21 +163,45 @@ export default function EventTicketsPage({
       ...prev,
       [name]: value,
     }));
-  };
+  }, []);
 
   // Handle logo upload change
-  const handleLogoChange = (logoData: { url: string; publicId: string } | null) => {
+  const handleLogoChange = useCallback((logoData: { url: string; publicId: string } | null) => {
     setTicketFormData((prev) => ({
       ...prev,
       logoUrl: logoData?.url || "",
       logoPublicId: logoData?.publicId || "",
     }));
-  };
+  }, []);
 
+  // Handle payment method selection
+  const handlePaymentMethodToggle = useCallback((paymentMethodId: string) => {
+    setSelectedPaymentMethods((prev) => {
+      if (prev.includes(paymentMethodId)) {
+        return prev.filter((id) => id !== paymentMethodId);
+      } else {
+        return [...prev, paymentMethodId];
+      }
+    });
+  }, []);
 
+  // Handle checkbox changes
+  const handleVisibilityChange = useCallback((checked: boolean) => {
+    setTicketFormData((prev) => ({
+      ...prev,
+      isVisible: checked === true,
+    }));
+  }, []);
+
+  const handleTransferChange = useCallback((checked: boolean) => {
+    setTicketFormData((prev) => ({
+      ...prev,
+      allowTransfer: checked === true,
+    }));
+  }, []);
 
   // Handle create ticket
-  const handleCreateTicket = async (e: React.FormEvent) => {
+  const handleCreateTicket = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setFormError("");
@@ -151,16 +209,16 @@ export default function EventTicketsPage({
     try {
       // Validate required fields before processing
       if (!ticketFormData.name.trim()) {
-        throw new Error("Ticket name is required");
+        throw new Error("Nama tiket harus diisi");
       }
       if (!ticketFormData.price || isNaN(Number(ticketFormData.price))) {
-        throw new Error("Valid price is required");
+        throw new Error("Harga tiket harus berupa angka yang valid");
       }
       if (!ticketFormData.quantity || isNaN(Number(ticketFormData.quantity))) {
-        throw new Error("Valid quantity is required");
+        throw new Error("Jumlah tiket harus berupa angka yang valid");
       }
       if (!ticketFormData.maxPerPurchase || isNaN(Number(ticketFormData.maxPerPurchase))) {
-        throw new Error("Valid max per purchase is required");
+        throw new Error("Maksimal pembelian harus berupa angka yang valid");
       }
 
       // Parse numeric values
@@ -170,16 +228,21 @@ export default function EventTicketsPage({
 
       // Additional validation
       if (price < 0) {
-        throw new Error("Price must be a positive number");
+        throw new Error("Harga tiket harus berupa angka positif");
       }
       if (quantity <= 0) {
-        throw new Error("Quantity must be a positive integer");
+        throw new Error("Jumlah tiket harus lebih dari 0");
       }
       if (maxPerPurchase <= 0) {
-        throw new Error("Max per purchase must be a positive integer");
+        throw new Error("Maksimal pembelian harus lebih dari 0");
       }
       if (maxPerPurchase > quantity) {
-        throw new Error("Max per purchase cannot exceed total quantity");
+        throw new Error("Maksimal pembelian tidak boleh melebihi total jumlah tiket");
+      }
+
+      // Validate payment methods selection
+      if (selectedPaymentMethods.length === 0) {
+        throw new Error("Minimal satu metode pembayaran harus dipilih");
       }
 
       // Create the ticket data with proper types
@@ -198,6 +261,7 @@ export default function EventTicketsPage({
         earlyBirdDeadline: ticketFormData.earlyBirdDeadline.trim() || undefined,
         saleStartDate: ticketFormData.saleStartDate.trim() || undefined,
         saleEndDate: ticketFormData.saleEndDate.trim() || undefined,
+        allowedPaymentMethodIds: selectedPaymentMethods,
       };
 
       // Create the ticket first
@@ -220,30 +284,35 @@ export default function EventTicketsPage({
           const errorMessages = result.details.map((detail: any) => detail.message).join(", ");
           throw new Error(`Validation error: ${errorMessages}`);
         }
-        throw new Error(result.error || "Failed to create ticket");
+        throw new Error(result.error || "Gagal membuat tiket");
       }
 
 
 
-      // Reset form and close dialog
-      setTicketFormData({
-        name: "",
-        description: "",
-        price: "",
-        quantity: "",
-        maxPerPurchase: "10",
-        isVisible: true,
-        allowTransfer: false,
-        ticketFeatures: "",
-        perks: "",
-        earlyBirdDeadline: "",
-        saleStartDate: "",
-        saleEndDate: "",
-        logoUrl: "",
-        logoPublicId: "",
-      });
+      // Reset form and close dialog in a single batch
+      React.startTransition(() => {
+        setTicketFormData({
+          name: "",
+          description: "",
+          price: "",
+          quantity: "",
+          maxPerPurchase: "10",
+          isVisible: true,
+          allowTransfer: false,
+          ticketFeatures: "",
+          perks: "",
+          earlyBirdDeadline: "",
+          saleStartDate: "",
+          saleEndDate: "",
+          logoUrl: "",
+          logoPublicId: "",
+        });
 
-      setIsTicketDialogOpen(false);
+        // Reset payment methods to all selected by default
+        setSelectedPaymentMethods(paymentMethods.map((pm: any) => pm.id));
+
+        setIsTicketDialogOpen(false);
+      });
 
       // Refresh tickets data
       mutateTickets();
@@ -256,19 +325,19 @@ export default function EventTicketsPage({
       }
     } catch (err: any) {
       console.error("Error creating ticket:", err);
-      setFormError(err.message || "Failed to create ticket. Please try again.");
+      setFormError(err.message || "Gagal membuat tiket. Silakan coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [ticketFormData, selectedPaymentMethods, paymentMethods, id, eventId, mutateTickets, router]);
 
   // Handle edit ticket
-  const handleEditTicket = (ticketId: string) => {
+  const handleEditTicket = useCallback((ticketId: string) => {
     router.push(`/organizer/${id}/events/${eventId}/tickets/${ticketId}`);
-  };
+  }, [router, id, eventId]);
 
   // Handle delete ticket
-  const handleDeleteTicket = async () => {
+  const handleDeleteTicket = useCallback(async () => {
     if (!selectedTicketId) return;
 
     try {
@@ -291,9 +360,114 @@ export default function EventTicketsPage({
       alert(err.message || "Failed to delete ticket. Please try again.");
     } finally {
       setSelectedTicketId(null);
-      setIsDeleteDialogOpen(false);
     }
-  };
+  }, [selectedTicketId, id, eventId, mutateTickets]);
+
+  // Debug handlers
+  const handleDebugDialogOpen = useCallback(() => {
+    console.log("Debug: Manual dialog open triggered");
+    setIsTicketDialogOpen(true);
+  }, []);
+
+  const handleDebugRefetchPaymentMethods = useCallback(async () => {
+    console.log("Debug: Refetching payment methods");
+    try {
+      console.log("Manual refetch: Fetching payment methods...");
+      const response = await fetch("/api/payment-methods");
+      const result = await response.json();
+      console.log("Manual refetch: Payment methods response:", result);
+      if (result.success) {
+        // Batch state updates to prevent multiple re-renders
+        const newPaymentMethods = result.data;
+        const newSelectedMethods = newPaymentMethods.map((pm: any) => pm.id);
+
+        setPaymentMethods(newPaymentMethods);
+        setSelectedPaymentMethods(newSelectedMethods);
+      }
+    } catch (error) {
+      console.error("Manual refetch error:", error);
+    }
+  }, []);
+
+  // Handle payment method card click with event propagation control
+  const handlePaymentMethodCardClick = useCallback((paymentMethodId: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handlePaymentMethodToggle(paymentMethodId);
+  }, [handlePaymentMethodToggle]);
+
+  // Handle dialog close
+  const handleDialogClose = useCallback(() => {
+    setIsTicketDialogOpen(false);
+  }, []);
+
+  // Memoized payment methods list to prevent unnecessary re-renders
+  const paymentMethodsList = useMemo(() => {
+    if (paymentMethods.length === 0) {
+      return (
+        <div className="flex items-center justify-center py-8 text-muted-foreground">
+          <div className="text-center space-y-2">
+            <div className="text-sm">Memuat metode pembayaran...</div>
+            <div className="text-xs">Debug: Payment methods array length: {paymentMethods.length}</div>
+          </div>
+        </div>
+      );
+    }
+
+    return paymentMethods.map((paymentMethod) => {
+      console.log("Rendering payment method:", paymentMethod);
+      return (
+        <Card
+          key={paymentMethod.id}
+          className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+            selectedPaymentMethods.includes(paymentMethod.id)
+              ? 'ring-2 ring-primary bg-primary/5 border-primary'
+              : 'hover:border-primary/50'
+          }`}
+          onClick={(e) => handlePaymentMethodCardClick(paymentMethod.id, e)}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-3">
+              <div
+                className="pt-0.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Checkbox
+                  id={`payment-method-${paymentMethod.id}`}
+                  checked={selectedPaymentMethods.includes(paymentMethod.id)}
+                  readOnly
+                  className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <Label
+                  htmlFor={`payment-method-${paymentMethod.id}`}
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  {paymentMethod.name}
+                </Label>
+                {paymentMethod.description && (
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    {paymentMethod.description}
+                  </p>
+                )}
+              </div>
+              {paymentMethod.code === 'QRIS_BY_WONDERS' && (
+                <div className="flex items-center space-x-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded-md">
+                  <span>QR</span>
+                </div>
+              )}
+              {paymentMethod.code === 'MANUAL_PAYMENT' && (
+                <div className="flex items-center space-x-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-md">
+                  <span>Manual</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      );
+    });
+  }, [paymentMethods, selectedPaymentMethods]);
 
   // Loading state
   if (isEventLoading) {
@@ -394,8 +568,15 @@ export default function EventTicketsPage({
                   </div>
                 </div>
                 <Dialog
+                  key="ticket-creation-dialog"
                   open={isTicketDialogOpen}
-                  onOpenChange={setIsTicketDialogOpen}
+                  onOpenChange={(open) => {
+                    if (!open) {
+                      handleDialogClose();
+                    } else {
+                      setIsTicketDialogOpen(true);
+                    }
+                  }}
                 >
                   <DialogTrigger asChild>
                     <Button>
@@ -649,12 +830,7 @@ export default function EventTicketsPage({
                               <Checkbox
                                 id="isVisible"
                                 checked={ticketFormData.isVisible}
-                                onCheckedChange={(checked) =>
-                                  setTicketFormData((prev) => ({
-                                    ...prev,
-                                    isVisible: checked === true,
-                                  }))
-                                }
+                                onCheckedChange={handleVisibilityChange}
                               />
                             </div>
                             <div>
@@ -674,12 +850,7 @@ export default function EventTicketsPage({
                               <Checkbox
                                 id="allowTransfer"
                                 checked={ticketFormData.allowTransfer}
-                                onCheckedChange={(checked) =>
-                                  setTicketFormData((prev) => ({
-                                    ...prev,
-                                    allowTransfer: checked === true,
-                                  }))
-                                }
+                                onCheckedChange={handleTransferChange}
                               />
                             </div>
                             <div>
@@ -694,13 +865,48 @@ export default function EventTicketsPage({
                           </div>
                         </div>
 
+                        <Separator className="my-2" />
+
+                        {/* Payment Methods */}
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              Metode Pembayaran yang Diizinkan
+                            </h3>
+                            <p className="text-muted-foreground text-xs leading-relaxed">
+                              Pilih metode pembayaran yang dapat digunakan pelanggan untuk membeli tiket ini.
+                              Minimal satu metode pembayaran harus dipilih.
+                            </p>
+                          </div>
+
+                          {/* Debug Information */}
+                          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                            <h4 className="font-medium text-yellow-800">Debug Info:</h4>
+                            <p className="text-sm text-yellow-700">Payment methods count: {paymentMethods.length}</p>
+                            <p className="text-sm text-yellow-700">Selected methods: {selectedPaymentMethods.length}</p>
+                            <p className="text-sm text-yellow-700">Payment methods data: {JSON.stringify(paymentMethods, null, 2)}</p>
+                          </div>
+
+                          <div className="space-y-3">
+                            {paymentMethodsList}
+                          </div>
+
+                          {selectedPaymentMethods.length === 0 && paymentMethods.length > 0 && (
+                            <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                              <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                              <p className="text-red-700 text-xs">
+                                Silakan pilih minimal satu metode pembayaran.
+                              </p>
+                            </div>
+                          )}
+                        </div>
 
                       </div>
                       <DialogFooter>
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => setIsTicketDialogOpen(false)}
+                          onClick={handleDialogClose}
                         >
                           Cancel
                         </Button>
@@ -771,6 +977,66 @@ export default function EventTicketsPage({
                           quantity
                         </li>
                       </ol>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Debug Panel */}
+            <div className="px-4 lg:px-6">
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader>
+                  <CardTitle className="text-blue-800">🔍 Debug Information</CardTitle>
+                  <CardDescription className="text-blue-700">
+                    Payment method configuration debugging
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="font-medium text-blue-800">Payment Methods Count:</span>
+                        <span className="ml-2 text-blue-700">{paymentMethods.length}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-800">Selected Methods:</span>
+                        <span className="ml-2 text-blue-700">{selectedPaymentMethods.length}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-800">Dialog Open:</span>
+                        <span className="ml-2 text-blue-700">{isTicketDialogOpen ? 'Yes' : 'No'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-800">Form Loading:</span>
+                        <span className="ml-2 text-blue-700">{isSubmitting ? 'Yes' : 'No'}</span>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <span className="font-medium text-blue-800">Payment Methods Data:</span>
+                      <pre className="mt-2 max-h-32 overflow-y-auto rounded bg-blue-100 p-2 text-xs text-blue-900">
+                        {JSON.stringify(paymentMethods, null, 2)}
+                      </pre>
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDebugDialogOpen}
+                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                      >
+                        🔧 Test Dialog Open
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDebugRefetchPaymentMethods}
+                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                      >
+                        🔄 Refetch Payment Methods
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -883,21 +1149,18 @@ export default function EventTicketsPage({
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <AlertDialog
-                                      open={
-                                        isDeleteDialogOpen &&
-                                        selectedTicketId === ticket.id
-                                      }
+                                      open={selectedTicketId === ticket.id}
                                       onOpenChange={(open: boolean) => {
-                                        setIsDeleteDialogOpen(open);
-                                        if (!open) setSelectedTicketId(null);
+                                        if (open) {
+                                          setSelectedTicketId(ticket.id);
+                                        } else {
+                                          setSelectedTicketId(null);
+                                        }
                                       }}
                                     >
                                       <AlertDialogTrigger asChild>
                                         <DropdownMenuItem
                                           className="text-destructive focus:text-destructive"
-                                          onClick={() =>
-                                            setSelectedTicketId(ticket.id)
-                                          }
                                           onSelect={(e) => e.preventDefault()}
                                         >
                                           <Trash className="mr-2 h-4 w-4" />

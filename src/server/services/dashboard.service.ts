@@ -36,8 +36,14 @@ export async function getAdminDashboardStats() {
       totalSales = Number(salesData._sum?.amount) || 0;
       totalTransactions = salesData._count || 0;
 
-      // Total tickets sold
-      const ticketsData = await db.ticket.count();
+      // Total tickets sold (only count ACTIVE and USED tickets, exclude PENDING)
+      const ticketsData = await db.ticket.count({
+        where: {
+          status: {
+            in: ['ACTIVE', 'USED'], // Only count approved tickets as sold
+          },
+        },
+      });
       totalTicketsSold = ticketsData;
 
       // Today's sales
@@ -60,6 +66,9 @@ export async function getAdminDashboardStats() {
 
       const todaysTicketsData = await db.ticket.count({
         where: {
+          status: {
+            in: ['ACTIVE', 'USED'], // Only count approved tickets as sold
+          },
           createdAt: {
             gte: today,
             lt: tomorrow,
@@ -416,9 +425,14 @@ export async function getAdminSalesAnalytics(timeRange: string = "30d") {
       const dateKey = transaction.createdAt.toISOString().split('T')[0];
       const existing = salesByDate.get(dateKey) || { revenue: 0, tickets: 0, transactions: 0 };
 
+      // Only count ACTIVE and USED tickets as sold
+      const soldTicketsCount = transaction.tickets.filter(ticket =>
+        ticket.status === 'ACTIVE' || ticket.status === 'USED'
+      ).length;
+
       salesByDate.set(dateKey, {
         revenue: existing.revenue + Number(transaction.amount),
-        tickets: existing.tickets + transaction.tickets.length,
+        tickets: existing.tickets + soldTicketsCount,
         transactions: existing.transactions + 1,
       });
     });
@@ -481,9 +495,14 @@ export async function getOrganizerSalesAnalytics(organizerId: string, timeRange:
       const dateKey = transaction.createdAt.toISOString().split('T')[0];
       const existing = salesByDate.get(dateKey) || { revenue: 0, tickets: 0, transactions: 0 };
 
+      // Only count ACTIVE and USED tickets as sold
+      const soldTicketsCount = transaction.tickets.filter(ticket =>
+        ticket.status === 'ACTIVE' || ticket.status === 'USED'
+      ).length;
+
       salesByDate.set(dateKey, {
         revenue: existing.revenue + Number(transaction.amount),
-        tickets: existing.tickets + transaction.tickets.length,
+        tickets: existing.tickets + soldTicketsCount,
         transactions: existing.transactions + 1,
       });
     });

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { MagicCard } from "~/components/ui/magic-card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { QRCodeDisplay, QRCodeDisplayCompact } from "~/components/ui/qr-code-display";
 import { useTicketQRCode } from "~/lib/api/hooks/qr-code";
@@ -22,6 +23,9 @@ import {
   AlertCircle,
   CheckCircle,
   RefreshCw,
+  ArrowLeft,
+  Lock,
+  Search,
 } from "lucide-react";
 import { formatDate, formatPrice } from "~/lib/utils";
 import Link from "next/link";
@@ -39,11 +43,12 @@ export default function MyTicketsPage() {
     status: activeTab === "all" ? undefined : activeTab.toUpperCase(),
   });
 
-  // Redirect to login if not authenticated
+  // Handle authentication status without redirect
   useEffect(() => {
     if (status === "loading") return;
+    // Don't redirect - show guest message instead
     if (!session) {
-      router.push("/auth/signin?callbackUrl=/my-tickets");
+      setIsLoading(false);
     }
   }, [session, status, router]);
 
@@ -96,6 +101,73 @@ export default function MyTicketsPage() {
   };
 
   const filteredTickets = filterTickets(activeTab);
+
+  // Guest user experience - no login redirect
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="bg-white border-b">
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">My Tickets</h1>
+                <p className="text-gray-600 mt-1">Access your event tickets</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto">
+            <Card className="border-blue-200 bg-white shadow-md">
+              <CardHeader className="text-center border-b border-blue-200 bg-blue-600 text-white">
+                <CardTitle className="flex items-center justify-center">
+                  <Ticket className="mr-2 h-5 w-5" />
+                  Ticket Access
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 text-center">
+                <div className="space-y-4">
+                  <div className="rounded-full bg-blue-100 p-4 mx-auto w-fit">
+                    <Lock className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Access Your Tickets
+                  </h3>
+                  <p className="text-gray-600">
+                    To view your tickets, you can either log in to your account or find your orders as a guest using your order details.
+                  </p>
+                  <div className="space-y-3">
+                    <Button asChild className="w-full">
+                      <Link href="/login">
+                        <User className="mr-2 h-4 w-4" />
+                        Login to Account
+                      </Link>
+                    </Button>
+                    <Button variant="outline" asChild className="w-full">
+                      <Link href="/my-orders">
+                        <Search className="mr-2 h-4 w-4" />
+                        Find My Orders
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" asChild className="w-full">
+                      <Link href="/">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Home
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">

@@ -113,14 +113,14 @@ After successful test payment, verify:
 ### Scenario 1: Single Ticket Purchase
 1. Buy 1 Regular ticket
 2. Use buyer data for ticket holder
-3. Complete with Test Bank Transfer
+3. Complete with Manual Payment
 4. Verify successful completion
 
 ### Scenario 2: Multiple Tickets, Mixed Holders
 1. Buy 2 VIP tickets + 1 Regular ticket
 2. Use buyer data for first ticket only
 3. Manually fill other ticket holders
-4. Complete with Test E-Wallet
+4. Complete with QRIS By Wonders
 5. Verify all ticket holders are correctly saved
 
 ### Scenario 3: Payment Failure Simulation
@@ -143,6 +143,7 @@ After successful test payment, verify:
 **Issue**: Payment methods show real Xendit options instead of test methods
 - **Solution**: Check `NEXT_PUBLIC_XENDIT_ENABLED=""` in .env file
 - **Solution**: Restart the development server after changing environment variables
+- **Expected**: Should show "Manual Payment" and "QRIS By Wonders" options only
 
 **Issue**: "Validation error" when submitting order
 - **Solution**: Check browser console for detailed validation errors

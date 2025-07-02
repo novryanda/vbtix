@@ -2,6 +2,7 @@
 
 import React from "react";
 import { BuyerHeader } from "~/components/navigation/buyer-header";
+import { MobileBottomNav } from "~/components/navigation/mobile-bottom-nav";
 
 export default function BuyerLayout({
   children,
@@ -13,13 +14,14 @@ export default function BuyerLayout({
       <BuyerHeader />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col">
-          <main className="flex-1 space-y-3 p-2 sm:space-y-4 sm:p-3 md:p-4 lg:p-6 xl:p-8 2xl:p-10 md:space-y-6">
-            <div className="container-responsive">
-              {children}
-            </div>
+          {/* Mobile-optimized main container with bottom nav spacing */}
+          <main className="flex-1 w-full max-w-7xl mx-auto pb-16 sm:pb-0">
+            {children}
           </main>
         </div>
       </div>
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

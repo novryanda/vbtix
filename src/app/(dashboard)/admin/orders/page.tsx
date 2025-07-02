@@ -108,8 +108,8 @@ export default function AdminOrdersPage() {
       if (result.success) {
         toast.success(
           status === "SUCCESS"
-            ? "Manual payment approved! Tickets generated for customer."
-            : "Manual payment rejected."
+            ? "Payment verified! Order now awaits organizer approval for ticket activation."
+            : "Payment rejected."
         );
         fetchOrders(); // Refresh the list
       } else {

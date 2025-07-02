@@ -33,22 +33,30 @@ export async function handleGetEventInventory(params: {
     orderBy: { price: "asc" },
   });
 
-  // Get sold tickets count for each ticket type
+  // Get sold and pending tickets count for each ticket type
   const inventoryData = await Promise.all(
     ticketTypes.map(async (ticketType) => {
       const soldCount = await prisma.ticket.count({
         where: {
           ticketTypeId: ticketType.id,
-          status: { not: "CANCELLED" },
+          status: { in: ["ACTIVE", "USED"] }, // Only count actually sold tickets
         },
       });
 
-      const availableCount = ticketType.quantity - soldCount;
+      const pendingCount = await prisma.ticket.count({
+        where: {
+          ticketTypeId: ticketType.id,
+          status: "PENDING", // Count pending tickets separately
+        },
+      });
+
+      const availableCount = ticketType.quantity - soldCount - pendingCount;
 
       return {
         ...ticketType,
         sold: soldCount,
-        available: availableCount,
+        pending: pendingCount,
+        available: Math.max(0, availableCount),
         percentageSold:
           ticketType.quantity > 0
             ? Math.round((soldCount / ticketType.quantity) * 100)
@@ -95,18 +103,27 @@ export async function handleUpdateTicketQuantity(params: {
     throw new Error("Ticket type does not belong to this organizer's event");
   }
 
-  // Get current sold tickets count
+  // Get current sold and pending tickets count
   const soldCount = await prisma.ticket.count({
     where: {
       ticketTypeId,
-      status: { not: "CANCELLED" },
+      status: { in: ["ACTIVE", "USED"] },
     },
   });
 
-  // Ensure new quantity is not less than sold tickets
-  if (quantity < soldCount) {
+  const pendingCount = await prisma.ticket.count({
+    where: {
+      ticketTypeId,
+      status: "PENDING",
+    },
+  });
+
+  const totalCommittedTickets = soldCount + pendingCount;
+
+  // Ensure new quantity is not less than sold + pending tickets
+  if (quantity < totalCommittedTickets) {
     throw new Error(
-      `Cannot reduce quantity below sold tickets count (${soldCount})`,
+      `Cannot reduce quantity below committed tickets count (${soldCount} sold + ${pendingCount} pending = ${totalCommittedTickets})`,
     );
   }
 
@@ -159,7 +176,7 @@ export async function handleGetOrganizerInventorySummary(params: {
         const soldCount = await prisma.ticket.count({
           where: {
             ticketTypeId: ticketType.id,
-            status: { not: "CANCELLED" },
+            status: { in: ["ACTIVE", "USED"] }, // Only count approved tickets as sold
           },
         });
 

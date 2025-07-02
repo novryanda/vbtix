@@ -270,20 +270,35 @@ export async function handleGetOrderById(params: {
 }
 
 /**
- * Cancel an order
+ * Cancel an order (supports guest purchases)
  */
 export async function handleCancelOrder(params: {
   orderId: string;
-  userId: string;
+  userId?: string | null;
+  sessionId?: string;
 }) {
-  const { orderId, userId } = params;
+  const { orderId, userId, sessionId } = params;
+
+  // Build where clause for order lookup (same logic as handleGetOrderById)
+  let whereClause: any = {
+    id: orderId,
+  };
+
+  if (userId) {
+    // For authenticated users
+    whereClause.userId = userId;
+  } else if (sessionId) {
+    // For guest users, find orders created by guest users with matching session ID
+    whereClause.user = {
+      phone: `guest_${sessionId}`, // Guest users have phone set to guest_sessionId
+    };
+  } else {
+    throw new Error("Either userId or sessionId must be provided");
+  }
 
   // Get order
   const order = await prisma.transaction.findFirst({
-    where: {
-      id: orderId,
-      userId,
-    },
+    where: whereClause,
     include: {
       tickets: true,
       orderItems: true,

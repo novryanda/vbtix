@@ -194,9 +194,14 @@ export async function handleGetOrganizerTicketStats(organizerId: string) {
     statusCounts,
     upcomingEvents,
   ] = await Promise.all([
-    // Total tickets sold
+    // Total tickets sold (only count ACTIVE and USED tickets)
     prisma.ticket.count({
-      where: baseWhere,
+      where: {
+        ...baseWhere,
+        status: {
+          in: ["ACTIVE", "USED"], // Only count approved tickets as sold
+        },
+      },
     }),
 
     // Total revenue - calculate from successful transactions

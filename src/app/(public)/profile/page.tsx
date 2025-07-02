@@ -55,7 +55,8 @@ export default function ProfilePage() {
       if (status === "loading") return;
 
       if (!session) {
-        router.push("/login");
+        // Don't redirect to login - show guest message instead
+        setIsLoading(false);
         return;
       }
 
@@ -143,6 +144,71 @@ export default function ProfilePage() {
           <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-blue-600"></div>
         </div>
       </div>
+    );
+  }
+
+  // Guest user experience - no login redirect
+  if (!session) {
+    return (
+      <main className="min-h-screen bg-blue-50 pb-16">
+        <div className="bg-blue-600 shadow-md">
+          <div className="container mx-auto px-4 py-4">
+            <Link
+              href="/"
+              className="inline-flex items-center text-white hover:text-blue-100"
+            >
+              <ArrowLeft size={16} className="mr-2" />
+              <span>Kembali ke Beranda</span>
+            </Link>
+          </div>
+        </div>
+
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto">
+            <Card className="border-blue-200 bg-white shadow-md">
+              <CardHeader className="text-center border-b border-blue-200 bg-blue-600 text-white">
+                <CardTitle className="flex items-center justify-center">
+                  <User className="mr-2 h-5 w-5" />
+                  Profile Access
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 text-center">
+                <div className="space-y-4">
+                  <div className="rounded-full bg-blue-100 p-4 mx-auto w-fit">
+                    <Lock className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Profile Management
+                  </h3>
+                  <p className="text-gray-600">
+                    To manage your profile and account settings, you can either log in to your account or continue as a guest to manage your orders.
+                  </p>
+                  <div className="space-y-3">
+                    <Button asChild className="w-full">
+                      <Link href="/login">
+                        <User className="mr-2 h-4 w-4" />
+                        Login to Account
+                      </Link>
+                    </Button>
+                    <Button variant="outline" asChild className="w-full">
+                      <Link href="/my-orders">
+                        <Mail className="mr-2 h-4 w-4" />
+                        Manage Orders as Guest
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" asChild className="w-full">
+                      <Link href="/">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Home
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
     );
   }
 

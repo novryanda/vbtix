@@ -393,6 +393,22 @@ export async function handleUpdateOrganizerOrderStatus(params: {
           },
         });
 
+        // Increment sold count for each ticket type (this was missing!)
+        for (const item of order.orderItems) {
+          await tx.ticketType.update({
+            where: { id: item.ticketTypeId },
+            data: {
+              sold: {
+                increment: item.quantity,
+              },
+              // Also decrement reserved count if it was being held
+              reserved: {
+                decrement: item.quantity,
+              },
+            },
+          });
+        }
+
         // Update payment status if exists
         if (order.payments.length > 0) {
           await tx.payment.updateMany({
@@ -425,12 +441,14 @@ export async function handleUpdateOrganizerOrderStatus(params: {
           },
         });
 
-        // Restore ticket type quantities
+        // Restore reserved quantities (do NOT decrement sold count for PENDING tickets)
         for (const item of order.orderItems) {
           await tx.ticketType.update({
             where: { id: item.ticketTypeId },
             data: {
-              sold: {
+              // Do NOT decrement sold count since PENDING tickets were never counted as sold
+              // Only restore reserved inventory
+              reserved: {
                 decrement: item.quantity,
               },
             },

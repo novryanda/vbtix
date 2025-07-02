@@ -65,7 +65,7 @@ export const createTicketSchema = z.object({
   qrCodeStatus: QRCodeStatus.optional().default("PENDING"),
   imageUrl: z.string().nullable().optional(),
   imagePublicId: z.string().nullable().optional(),
-  status: TicketStatus.optional().default("ACTIVE"),
+  status: TicketStatus.optional().default("PENDING"),
   checkedIn: z.boolean().optional().default(false),
 });
 
@@ -252,6 +252,9 @@ export const createTicketTypeSchema = z.object({
       return val;
     })
     .pipe(z.string().datetime().optional()),
+  allowedPaymentMethodIds: z
+    .array(z.string().min(1, { message: "Payment method ID cannot be empty" }))
+    .min(1, { message: "At least one payment method must be selected" }),
 })
 .refine((data) => {
   // Validate that maxPerPurchase doesn't exceed quantity
@@ -369,6 +372,10 @@ export const updateTicketTypeSchema = z.object({
     .string()
     .min(1, { message: "Logo public ID cannot be empty" })
     .nullable()
+    .optional(),
+  allowedPaymentMethodIds: z
+    .array(z.string().cuid({ message: "Invalid payment method ID format" }))
+    .min(1, { message: "At least one payment method must be selected" })
     .optional(),
 });
 

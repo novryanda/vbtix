@@ -23,6 +23,8 @@ import {
   type MockPaymentParams,
 } from "~/lib/mock-payment";
 
+import { paymentMethodService } from "~/server/services/payment-method.service";
+
 /**
  * Initiate checkout process with Xendit (supports guest purchases)
  */
@@ -72,44 +74,123 @@ export async function handleInitiateCheckout(params: {
     throw new Error("Only pending orders can be checked out");
   }
 
+  // Validate payment method is allowed for all ticket types in the order
+  for (const orderItem of order.orderItems) {
+    const isAllowed = await paymentMethodService.isPaymentMethodAllowedForTicketType(
+      orderItem.ticketTypeId,
+      paymentMethod
+    );
+
+    if (!isAllowed) {
+      // Get ticket type name for better error message
+      const ticketType = await prisma.ticketType.findUnique({
+        where: { id: orderItem.ticketTypeId },
+        select: { name: true },
+      });
+
+      throw new Error(
+        `Payment method "${paymentMethod}" is not allowed for ticket type "${ticketType?.name || 'Unknown'}"`
+      );
+    }
+  }
+
   // Handle manual payment
   if (paymentMethod === "MANUAL_PAYMENT") {
-    // Update order status to PENDING for manual approval
-    // We'll use the details field to mark this as awaiting manual verification
-    const updatedOrder = await prisma.transaction.update({
-      where: { id: orderId },
-      data: {
-        paymentMethod: "MANUAL_PAYMENT",
-        status: "PENDING",
-        details: {
-          type: "manual_payment",
-          awaitingVerification: true,
-          submittedAt: new Date().toISOString(),
+    // Update order status to PENDING for manual approval and create tickets in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Update order with payment method
+      const updatedOrder = await tx.transaction.update({
+        where: { id: orderId },
+        data: {
+          paymentMethod: "MANUAL_PAYMENT",
+          status: "PENDING",
+          details: {
+            type: "manual_payment",
+            awaitingVerification: true,
+            submittedAt: new Date().toISOString(),
+          },
         },
-      },
-    });
+        include: {
+          orderItems: true,
+          tickets: true,
+        },
+      });
 
-    // Create payment record for manual payment
-    const payment = await prisma.payment.create({
-      data: {
-        orderId,
-        gateway: "MANUAL",
-        amount: order.amount,
-        status: "PENDING",
-        paymentId: `MANUAL_${orderId}_${Date.now()}`,
-        callbackPayload: {
-          type: "manual_payment",
-          orderId: orderId,
-          createdAt: new Date().toISOString(),
+      // Create tickets if they don't exist yet (after payment method selection)
+      if (updatedOrder.tickets.length === 0) {
+        const ticketData = [];
+        const ticketHolderData = [];
+
+        // Get stored ticket holder data from transaction details
+        const storedTicketHolders = (updatedOrder.details as any)?.ticketHolders || [];
+
+        for (const item of updatedOrder.orderItems) {
+          for (let i = 0; i < item.quantity; i++) {
+            const qrCode = `${orderId}-${item.ticketTypeId}-${i + 1}`;
+            const ticketId = `ticket_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 11)}`;
+
+            ticketData.push({
+              id: ticketId,
+              ticketTypeId: item.ticketTypeId,
+              transactionId: orderId,
+              userId: updatedOrder.userId,
+              qrCode,
+              status: "PENDING", // PENDING until admin approval
+            });
+
+            // Add ticket holder data if exists
+            const holder = storedTicketHolders.find((h: any) => h.ticketIndex === i);
+            if (holder) {
+              ticketHolderData.push({
+                ticketId,
+                fullName: holder.fullName,
+                identityType: holder.identityType,
+                identityNumber: holder.identityNumber,
+                email: holder.email,
+                whatsapp: holder.whatsapp,
+              });
+            }
+          }
+        }
+
+        if (ticketData.length > 0) {
+          await tx.ticket.createMany({
+            data: ticketData,
+          });
+
+          // Create ticket holders if any
+          if (ticketHolderData.length > 0) {
+            await tx.ticketHolder.createMany({
+              data: ticketHolderData,
+            });
+          }
+        }
+      }
+
+      // Create payment record for manual payment
+      const payment = await tx.payment.create({
+        data: {
+          orderId,
+          gateway: "MANUAL",
+          amount: order.amount,
+          status: "PENDING",
+          paymentId: `MANUAL_${orderId}_${Date.now()}`,
+          callbackPayload: {
+            type: "manual_payment",
+            orderId: orderId,
+            createdAt: new Date().toISOString(),
+          },
         },
-      },
+      });
+
+      return { updatedOrder, payment };
     });
 
     return {
-      order: updatedOrder,
-      payment,
+      order: result.updatedOrder,
+      payment: result.payment,
       checkoutUrl: undefined,
-      paymentToken: payment.paymentId,
+      paymentToken: result.payment.paymentId,
       paymentInstructions: {
         type: "manual_payment",
         message:
@@ -122,42 +203,101 @@ export async function handleInitiateCheckout(params: {
 
   // Handle QRIS By Wonders payment (same as manual but with QRIS identifier)
   if (paymentMethod === "QRIS_BY_WONDERS") {
-    // Update order status to PENDING for manual approval
-    // We'll use the details field to mark this as awaiting manual verification
-    const updatedOrder = await prisma.transaction.update({
-      where: { id: orderId },
-      data: {
-        paymentMethod: "QRIS_BY_WONDERS",
-        status: "PENDING",
-        details: {
-          type: "qris_by_wonders",
-          awaitingVerification: true,
-          submittedAt: new Date().toISOString(),
+    // Update order status to PENDING for manual approval and create tickets in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Update order with payment method
+      const updatedOrder = await tx.transaction.update({
+        where: { id: orderId },
+        data: {
+          paymentMethod: "QRIS_BY_WONDERS",
+          status: "PENDING",
+          details: {
+            type: "qris_by_wonders",
+            awaitingVerification: true,
+            submittedAt: new Date().toISOString(),
+          },
         },
-      },
-    });
+        include: {
+          orderItems: true,
+          tickets: true,
+        },
+      });
 
-    // Create payment record for QRIS By Wonders payment
-    const payment = await prisma.payment.create({
-      data: {
-        orderId,
-        gateway: "QRIS_WONDERS",
-        amount: order.amount,
-        status: "PENDING",
-        paymentId: `QRIS_WONDERS_${orderId}_${Date.now()}`,
-        callbackPayload: {
-          type: "qris_by_wonders",
-          orderId: orderId,
-          createdAt: new Date().toISOString(),
+      // Create tickets if they don't exist yet (after payment method selection)
+      if (updatedOrder.tickets.length === 0) {
+        const ticketData = [];
+        const ticketHolderData = [];
+
+        // Get stored ticket holder data from transaction details
+        const storedTicketHolders = (updatedOrder.details as any)?.ticketHolders || [];
+
+        for (const item of updatedOrder.orderItems) {
+          for (let i = 0; i < item.quantity; i++) {
+            const qrCode = `${orderId}-${item.ticketTypeId}-${i + 1}`;
+            const ticketId = `ticket_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 11)}`;
+
+            ticketData.push({
+              id: ticketId,
+              ticketTypeId: item.ticketTypeId,
+              transactionId: orderId,
+              userId: updatedOrder.userId,
+              qrCode,
+              status: "PENDING", // PENDING until admin approval
+            });
+
+            // Add ticket holder data if exists
+            const holder = storedTicketHolders.find((h: any) => h.ticketIndex === i);
+            if (holder) {
+              ticketHolderData.push({
+                ticketId,
+                fullName: holder.fullName,
+                identityType: holder.identityType,
+                identityNumber: holder.identityNumber,
+                email: holder.email,
+                whatsapp: holder.whatsapp,
+              });
+            }
+          }
+        }
+
+        if (ticketData.length > 0) {
+          await tx.ticket.createMany({
+            data: ticketData,
+          });
+
+          // Create ticket holders if any
+          if (ticketHolderData.length > 0) {
+            await tx.ticketHolder.createMany({
+              data: ticketHolderData,
+            });
+          }
+        }
+      }
+
+      // Create payment record for QRIS By Wonders payment
+      const payment = await tx.payment.create({
+        data: {
+          orderId,
+          gateway: "QRIS_WONDERS",
+          amount: order.amount,
+          status: "PENDING",
+          paymentId: `QRIS_WONDERS_${orderId}_${Date.now()}`,
+          callbackPayload: {
+            type: "qris_by_wonders",
+            orderId: orderId,
+            createdAt: new Date().toISOString(),
+          },
         },
-      },
+      });
+
+      return { updatedOrder, payment };
     });
 
     return {
-      order: updatedOrder,
-      payment,
+      order: result.updatedOrder,
+      payment: result.payment,
       checkoutUrl: undefined,
-      paymentToken: payment.paymentId,
+      paymentToken: result.payment.paymentId,
       paymentInstructions: {
         type: "qris_by_wonders",
         message:
@@ -231,24 +371,84 @@ export async function handleInitiateCheckout(params: {
       gateway = "MOCK";
     }
 
-    // Update order with payment method
-    const updatedOrder = await prisma.transaction.update({
-      where: { id: orderId },
-      data: {
-        paymentMethod,
-      },
-    });
+    // Update order with payment method and create tickets in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Update order with payment method
+      const updatedOrder = await tx.transaction.update({
+        where: { id: orderId },
+        data: {
+          paymentMethod,
+        },
+        include: {
+          orderItems: true,
+          tickets: true,
+        },
+      });
 
-    // Create payment record
-    const payment = await prisma.payment.create({
-      data: {
-        orderId,
-        gateway,
-        amount: order.amount,
-        status: "PENDING",
-        paymentId: paymentResponse.id,
-        callbackPayload: paymentResponse as any,
-      },
+      // Create tickets if they don't exist yet (after payment method selection)
+      if (updatedOrder.tickets.length === 0) {
+        const ticketData = [];
+        const ticketHolderData = [];
+
+        // Get stored ticket holder data from transaction details
+        const storedTicketHolders = (updatedOrder.details as any)?.ticketHolders || [];
+
+        for (const item of updatedOrder.orderItems) {
+          for (let i = 0; i < item.quantity; i++) {
+            const qrCode = `${orderId}-${item.ticketTypeId}-${i + 1}`;
+            const ticketId = `ticket_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 11)}`;
+
+            ticketData.push({
+              id: ticketId,
+              ticketTypeId: item.ticketTypeId,
+              transactionId: orderId,
+              userId: updatedOrder.userId,
+              qrCode,
+              status: "PENDING", // PENDING until admin approval
+            });
+
+            // Add ticket holder data if exists
+            const holder = storedTicketHolders.find((h: any) => h.ticketIndex === i);
+            if (holder) {
+              ticketHolderData.push({
+                ticketId,
+                fullName: holder.fullName,
+                identityType: holder.identityType,
+                identityNumber: holder.identityNumber,
+                email: holder.email,
+                whatsapp: holder.whatsapp,
+              });
+            }
+          }
+        }
+
+        if (ticketData.length > 0) {
+          await tx.ticket.createMany({
+            data: ticketData,
+          });
+
+          // Create ticket holders if any
+          if (ticketHolderData.length > 0) {
+            await tx.ticketHolder.createMany({
+              data: ticketHolderData,
+            });
+          }
+        }
+      }
+
+      // Create payment record
+      const payment = await tx.payment.create({
+        data: {
+          orderId,
+          gateway,
+          amount: order.amount,
+          status: "PENDING",
+          paymentId: paymentResponse.id,
+          callbackPayload: paymentResponse as any,
+        },
+      });
+
+      return { updatedOrder, payment };
     });
 
     // Extract checkout URL or payment instructions
@@ -257,8 +457,8 @@ export async function handleInitiateCheckout(params: {
       : undefined;
 
     return {
-      order: updatedOrder,
-      payment,
+      order: result.updatedOrder,
+      payment: result.payment,
       checkoutUrl,
       paymentToken: paymentResponse.id,
       paymentInstructions: paymentResponse.paymentInstructions,
@@ -413,7 +613,9 @@ export async function handlePaymentCallback(params: {
           await tx.ticketType.update({
             where: { id: item.ticketTypeId },
             data: {
-              sold: {
+              // Do NOT decrement sold count for PENDING tickets since they were never counted as sold
+              // Only restore reserved inventory
+              reserved: {
                 decrement: item.quantity,
               },
             },

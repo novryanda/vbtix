@@ -127,6 +127,27 @@ export type PaymentStatus =
   | "EXPIRED"
   | "REFUNDED";
 
+// PaymentMethod type
+export interface PaymentMethod {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// TicketTypePaymentMethod junction type
+export interface TicketTypePaymentMethod {
+  id: string;
+  ticketTypeId: string;
+  paymentMethodId: string;
+  createdAt: string;
+  ticketType?: TicketType;
+  paymentMethod?: PaymentMethod;
+}
+
 // TicketType type
 export interface TicketType {
   id: string;
@@ -149,6 +170,7 @@ export interface TicketType {
   imagePublicId?: string | null;
   createdAt: string;
   updatedAt: string;
+  allowedPaymentMethods?: TicketTypePaymentMethod[];
 }
 
 // Approval type

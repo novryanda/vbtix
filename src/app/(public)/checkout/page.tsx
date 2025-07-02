@@ -43,6 +43,7 @@ import {
 import { formatPrice } from "~/lib/utils";
 import { toast } from "sonner";
 import { Clock } from "lucide-react";
+import { GuestSessionInfo } from "~/components/ui/guest-session-info";
 
 interface Event {
   id: string;
@@ -1126,6 +1127,9 @@ export default function TicketPurchasePage() {
                 </AlertDescription>
               </Alert>
             )}
+
+            {/* Guest Session Info */}
+            <GuestSessionInfo className="mb-6" />
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Buyer Information */}

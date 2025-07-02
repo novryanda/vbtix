@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
@@ -30,6 +30,7 @@ export interface PaymentMethodSelectorProps {
   ) => void;
   isLoading?: boolean;
   orderId?: string; // Add orderId for payment proof upload
+  ticketTypeIds?: string[]; // Add ticket type IDs to filter payment methods
 }
 
 const paymentMethods = [
@@ -95,6 +96,7 @@ export function PaymentMethodSelector({
   onPaymentMethodSelect,
   isLoading,
   orderId,
+  ticketTypeIds = [],
 }: PaymentMethodSelectorProps) {
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [selectedBank, setSelectedBank] = useState<string>("");
@@ -104,6 +106,56 @@ export function PaymentMethodSelector({
   // Payment proof file selection state
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // State for allowed payment methods
+  const [allowedPaymentMethods, setAllowedPaymentMethods] = useState<any[]>([]);
+  const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false);
+
+  // Fetch allowed payment methods for ticket types
+  useEffect(() => {
+    const fetchAllowedPaymentMethods = async () => {
+      if (ticketTypeIds.length === 0) {
+        // If no ticket types specified, use all available payment methods
+        setAllowedPaymentMethods(paymentMethods);
+        return;
+      }
+
+      setIsLoadingPaymentMethods(true);
+      try {
+        // Get intersection of allowed payment methods for all ticket types
+        const allowedMethodsPromises = ticketTypeIds.map(async (ticketTypeId) => {
+          const response = await fetch(`/api/ticket-types/${ticketTypeId}/payment-methods`);
+          const result = await response.json();
+          return result.success ? result.data : [];
+        });
+
+        const allAllowedMethods = await Promise.all(allowedMethodsPromises);
+
+        // Find intersection of all allowed methods (methods allowed for ALL ticket types)
+        let intersection = allAllowedMethods[0] || [];
+        for (let i = 1; i < allAllowedMethods.length; i++) {
+          intersection = intersection.filter((method: any) =>
+            allAllowedMethods[i].some((m: any) => m.code === method.code)
+          );
+        }
+
+        // Map to the format expected by the component
+        const filteredPaymentMethods = paymentMethods.filter((pm) =>
+          intersection.some((allowed: any) => allowed.code === pm.id)
+        );
+
+        setAllowedPaymentMethods(filteredPaymentMethods);
+      } catch (error) {
+        console.error("Error fetching allowed payment methods:", error);
+        // Fallback to all payment methods on error
+        setAllowedPaymentMethods(paymentMethods);
+      } finally {
+        setIsLoadingPaymentMethods(false);
+      }
+    };
+
+    fetchAllowedPaymentMethods();
+  }, [ticketTypeIds]);
 
   const handleMethodChange = (method: string) => {
     setSelectedMethod(method);
@@ -222,8 +274,18 @@ export function PaymentMethodSelector({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-4">
-          {paymentMethods.map((method) => {
+        {isLoadingPaymentMethods ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="ml-2">Loading payment methods...</span>
+          </div>
+        ) : allowedPaymentMethods.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No payment methods available for the selected tickets.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {allowedPaymentMethods.map((method) => {
             const Icon = method.icon;
             const isSelected = selectedMethod === method.id;
             return (
@@ -412,7 +474,8 @@ export function PaymentMethodSelector({
               </div>
             );
           })}
-        </div>
+          </div>
+        )}
 
         <MagicButton
           onClick={handleProceed}

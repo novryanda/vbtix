@@ -12,20 +12,21 @@ const ordersQuerySchema = z.object({
 });
 
 /**
- * GET /api/buyer/orders
- * Get orders for the authenticated user
- * This endpoint requires authentication
+ * GET /api/public/orders
+ * Get orders for authenticated users (public endpoint that requires authentication)
+ * For guest users, use the order lookup endpoint instead
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
+    // Check authentication (required for this endpoint)
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
         {
           success: false,
           error: "Authentication required to view orders",
-          message: "Please log in to view your orders",
+          message: "For guest orders, please use the order lookup feature",
+          guestLookupUrl: "/orders/lookup",
         },
         { status: 401 },
       );

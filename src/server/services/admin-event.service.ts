@@ -228,7 +228,19 @@ export const adminEventService = {
 
     // Calculate statistics
     const totalCapacity = event.ticketTypes.reduce((sum: number, t: any) => sum + t.quantity, 0);
-    const totalSold = event.ticketTypes.reduce((sum: number, t: any) => sum + t.sold, 0);
+
+    // Calculate total sold tickets by counting ACTIVE and USED tickets directly from database
+    const totalSold = await prisma.ticket.count({
+      where: {
+        ticketType: {
+          eventId: event.id,
+        },
+        status: {
+          in: ["ACTIVE", "USED"], // Only count organizer-approved tickets as sold
+        },
+      },
+    });
+
     const totalRevenue = event.transactions
       .filter((o: any) => o.status === "SUCCESS")
       .reduce((sum: number, o: any) => sum + Number(o.amount), 0);

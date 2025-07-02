@@ -266,60 +266,38 @@ export async function handlePurchaseTickets(params: {
           },
         });
 
-        // Prepare ticket data for batch creation
-        const ticketData = [];
+        // Store ticket holder data for later ticket creation (during checkout)
         const ticketHolderData = [];
-
         for (let i = 0; i < orderItem.quantity; i++) {
-          const qrCode = generateUniqueCode();
-          const ticketId = `ticket_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 11)}`;
-
-          ticketData.push({
-            id: ticketId,
-            ticketTypeId: orderItem.ticketTypeId,
-            transactionId: transaction.id,
-            userId,
-            qrCode,
-            status: TicketStatus.ACTIVE,
-          });
-
-          // Prepare ticket holder data if exists
           const holder = ticketHolders[i];
           if (holder) {
             ticketHolderData.push({
-              ticketId,
               fullName: holder.fullName,
               identityType: holder.identityType,
               identityNumber: holder.identityNumber,
               email: holder.email,
               whatsapp: holder.whatsapp,
+              ticketIndex: i, // Store index for later ticket creation
             });
           }
         }
 
-        // Batch create tickets
-        const createdTickets = await tx.ticket.createManyAndReturn({
-          data: ticketData,
-        });
-
-        // Batch create ticket holders if any
+        // Store ticket holder data in transaction details for later use during checkout
         if (ticketHolderData.length > 0) {
-          await tx.ticketHolder.createMany({
-            data: ticketHolderData,
+          await tx.transaction.update({
+            where: { id: transaction.id },
+            data: {
+              details: {
+                ticketHolders: ticketHolderData,
+              },
+            },
           });
         }
 
-        // Update ticket type sold count
-        await tx.ticketType.update({
-          where: { id: orderItem.ticketTypeId },
-          data: {
-            sold: {
-              increment: orderItem.quantity,
-            },
-          },
-        });
+        // Note: Tickets will be created during checkout, not here
+        // Note: Sold count will be incremented during admin approval, not here
 
-        return { transaction, tickets: createdTickets };
+        return { transaction, tickets: [] }; // Tickets will be created during checkout
       },
       {
         maxWait: 10000, // 10 seconds
@@ -421,8 +399,16 @@ export async function handleBulkPurchaseTickets(params: {
       throw new Error(`Ticket type not found: ${item.ticketTypeId}`);
     }
 
+    // Count pending tickets to prevent overselling
+    const pendingTickets = await prisma.ticket.count({
+      where: {
+        ticketTypeId: ticketType.id,
+        status: "PENDING",
+      },
+    });
+
     const availableTickets =
-      ticketType.quantity - ticketType.sold - ticketType.reserved;
+      ticketType.quantity - ticketType.sold - ticketType.reserved - pendingTickets;
     if (availableTickets < item.quantity) {
       throw new Error(
         `Not enough tickets available for ${ticketType.name}. Available: ${availableTickets}, Requested: ${item.quantity}`,
@@ -516,7 +502,7 @@ export async function handleBulkPurchaseTickets(params: {
               transactionId: transaction.id,
               userId,
               qrCode,
-              status: TicketStatus.ACTIVE,
+              status: TicketStatus.PENDING, // Set to PENDING until admin approval
             });
 
             // Prepare ticket holder data if exists
@@ -549,18 +535,9 @@ export async function handleBulkPurchaseTickets(params: {
           });
         }
 
-        // Update ticket type sold counts in parallel
-        const updatePromises = orderItems.map((item) =>
-          tx.ticketType.update({
-            where: { id: item.ticketTypeId },
-            data: {
-              sold: {
-                increment: item.quantity,
-              },
-            },
-          }),
-        );
-        await Promise.all(updatePromises);
+        // Do NOT increment sold counts yet - this will happen on admin approval
+        // Keep inventory reserved to prevent overselling during pending verification
+        // The tickets are created but sold count will only be incremented after admin approval
 
         return { transaction, tickets: createdTickets };
       },
@@ -664,10 +641,7 @@ export async function handlePurchaseFromReservation(params: {
     throw new Error("Reservation has expired");
   }
 
-  // Activate reservation if it's still pending
-  if (reservation.status === "PENDING") {
-    await reservationService.activateReservation(reservationId, { sessionId });
-  }
+  // Note: Reservation activation is handled during checkout, not here
 
   // Validate ticket holders count matches reservation quantity
   if (ticketHolders.length !== reservation.quantity) {
@@ -724,61 +698,43 @@ export async function handlePurchaseFromReservation(params: {
           },
         });
 
-        // Prepare ticket data for batch creation
-        const ticketData = [];
+        // Store ticket holder data for later ticket creation (during checkout)
         const ticketHolderData = [];
-
         for (let i = 0; i < reservation.quantity; i++) {
-          const qrCode = generateUniqueCode();
-          const ticketId = `ticket_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 11)}`;
-
-          ticketData.push({
-            id: ticketId,
-            ticketTypeId: ticketType.id,
-            transactionId: transaction.id,
-            userId: actualUserId,
-            qrCode,
-            status: TicketStatus.ACTIVE,
-          });
-
-          // Prepare ticket holder data if exists
           const holder = ticketHolders[i];
           if (holder) {
             ticketHolderData.push({
-              ticketId,
               fullName: holder.fullName,
               identityType: holder.identityType,
               identityNumber: holder.identityNumber,
               email: holder.email,
               whatsapp: holder.whatsapp,
+              ticketIndex: i, // Store index for later ticket creation
             });
           }
         }
 
-        // Batch create tickets
-        const createdTickets = await tx.ticket.createManyAndReturn({
-          data: ticketData,
-        });
-
-        // Batch create ticket holders if any
+        // Store ticket holder data in transaction details for later use during checkout
         if (ticketHolderData.length > 0) {
-          await tx.ticketHolder.createMany({
-            data: ticketHolderData,
+          await tx.transaction.update({
+            where: { id: transaction.id },
+            data: {
+              details: {
+                ticketHolders: ticketHolderData,
+              },
+            },
           });
         }
 
-        // Update ticket type counts and reservation status in parallel
+        // Update reservation status and maintain reserved count for pending verification
         await Promise.all([
-          // Update ticket type sold count and decrease reserved count
+          // Keep reserved count but don't increment sold yet (will be done on admin approval)
+          // Reserved count stays the same to prevent overselling during pending verification
           tx.ticketType.update({
             where: { id: ticketType.id },
             data: {
-              sold: {
-                increment: reservation.quantity,
-              },
-              reserved: {
-                decrement: reservation.quantity,
-              },
+              // Do NOT increment sold count yet - this will happen on admin approval
+              // Keep reserved count to prevent overselling while awaiting verification
             },
           }),
           // Convert reservation to purchased status
@@ -790,12 +746,13 @@ export async function handlePurchaseFromReservation(params: {
                 ...((reservation.metadata as any) || {}),
                 transactionId: transaction.id,
                 convertedAt: new Date().toISOString(),
+                awaitingAdminVerification: true, // Mark as awaiting verification
               },
             },
           }),
         ]);
 
-        return { transaction, tickets: createdTickets, reservation };
+        return { transaction, tickets: [], reservation }; // Tickets will be created during checkout
       },
       {
         maxWait: 10000, // 10 seconds

@@ -13,5 +13,15 @@
     "env": {
       "SKIP_ENV_VALIDATION": "true"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/cleanup-pending-tickets?maxAge=24&includeFailedPayments=true",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-pending-tickets?maxAge=1&includeFailedPayments=true",
+      "schedule": "0 3 * * 0"
+    }
+  ]
 }

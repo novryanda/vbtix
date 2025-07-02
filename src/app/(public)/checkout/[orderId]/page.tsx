@@ -79,8 +79,21 @@ export default function OrderDetailPage({
   useEffect(() => {
     const fetchOrderData = async () => {
       try {
-        // Get session ID from localStorage for guest access
-        const sessionId = localStorage.getItem("vbticket_session_id");
+        // Check if we have lookup data from sessionStorage (from order lookup page)
+        const lookupDataStr = sessionStorage.getItem("order_lookup_data");
+        let sessionId = localStorage.getItem("vbticket_session_id");
+
+        if (lookupDataStr) {
+          const lookupData = JSON.parse(lookupDataStr);
+          // If we have lookup data, use the sessionId from there for guest orders
+          if (lookupData.isGuestOrder && lookupData.sessionId) {
+            sessionId = lookupData.sessionId;
+            // Store the sessionId in localStorage for future use
+            localStorage.setItem("vbticket_session_id", lookupData.sessionId);
+          }
+          // Clear the lookup data after using it
+          sessionStorage.removeItem("order_lookup_data");
+        }
 
         // Build URL with session ID for guest access
         const url = sessionId
@@ -129,7 +142,15 @@ export default function OrderDetailPage({
 
     setIsCancelling(true);
     try {
-      const response = await fetch(`/api/public/orders/${orderId}`, {
+      // Get session ID from localStorage for guest access
+      const sessionId = localStorage.getItem("vbticket_session_id");
+
+      // Build URL with session ID for guest access
+      const url = sessionId
+        ? `/api/public/orders/${orderId}?sessionId=${sessionId}`
+        : `/api/public/orders/${orderId}`;
+
+      const response = await fetch(url, {
         method: "DELETE",
       });
 
@@ -693,6 +714,7 @@ export default function OrderDetailPage({
               onPaymentMethodSelect={handlePaymentMethodSelect}
               isLoading={isProcessing}
               orderId={orderId}
+              ticketTypeIds={orderData.items?.map((item: any) => item.ticketType.id) || []}
             />
           )}
 

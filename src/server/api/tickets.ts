@@ -2,6 +2,7 @@ import { prisma } from "~/server/db";
 import { organizerService } from "~/server/services/organizer.service";
 import { eventService } from "~/server/services/event.service";
 import { ticketService } from "~/server/services/ticket.service";
+import { paymentMethodService } from "~/server/services/payment-method.service";
 import { Prisma, TicketStatus } from "@prisma/client";
 
 /**
@@ -89,20 +90,28 @@ export async function handleGetTicketTypeById(params: {
     throw new Error("Ticket type does not belong to this organizer's event");
   }
 
-  // Get sold tickets count
+  // Get sold and pending tickets count
   const soldCount = await prisma.ticket.count({
     where: {
       ticketTypeId,
       status: {
-        in: ["ACTIVE", "USED"],
+        in: ["ACTIVE", "USED"], // Only count approved tickets as sold
       },
+    },
+  });
+
+  const pendingCount = await prisma.ticket.count({
+    where: {
+      ticketTypeId,
+      status: "PENDING", // Count pending tickets separately
     },
   });
 
   return {
     ...ticketType,
     sold: soldCount,
-    available: ticketType.quantity - soldCount,
+    pending: pendingCount,
+    available: ticketType.quantity - soldCount - pendingCount,
   };
 }
 
@@ -156,12 +165,60 @@ export async function handleCreateTicketType(params: {
 
   console.log("Creating ticket type with data:", JSON.stringify(prismaData, null, 2));
 
-  // Create ticket type
-  const ticketType = await prisma.ticketType.create({
-    data: prismaData,
+  // Create ticket type and handle payment method associations in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // Create ticket type
+    const ticketType = await tx.ticketType.create({
+      data: prismaData,
+    });
+
+    // Handle payment method associations
+    if (ticketTypeData.allowedPaymentMethodIds && ticketTypeData.allowedPaymentMethodIds.length > 0) {
+      // Validate that all payment method IDs exist
+      const existingPaymentMethods = await tx.paymentMethod.findMany({
+        where: {
+          id: { in: ticketTypeData.allowedPaymentMethodIds },
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+
+
+      if (existingPaymentMethods.length !== ticketTypeData.allowedPaymentMethodIds.length) {
+        const existingIds = existingPaymentMethods.map(pm => pm.id);
+        const missingIds = ticketTypeData.allowedPaymentMethodIds.filter((id: string) => !existingIds.includes(id));
+        throw new Error(`Invalid payment method IDs: ${missingIds.join(', ')}`);
+      }
+
+      // Create associations with specified payment methods
+      await tx.ticketTypePaymentMethod.createMany({
+        data: ticketTypeData.allowedPaymentMethodIds.map((paymentMethodId: string) => ({
+          ticketTypeId: ticketType.id,
+          paymentMethodId,
+        })),
+      });
+    } else {
+      // If no payment methods specified, allow all active payment methods for backward compatibility
+      const activePaymentMethods = await tx.paymentMethod.findMany({
+        where: { isActive: true },
+        select: { id: true },
+      });
+
+      if (activePaymentMethods.length > 0) {
+        await tx.ticketTypePaymentMethod.createMany({
+          data: activePaymentMethods.map((pm) => ({
+            ticketTypeId: ticketType.id,
+            paymentMethodId: pm.id,
+          })),
+        });
+      }
+    }
+
+    return ticketType;
   });
 
-  return ticketType;
+  return result;
 }
 
 /**
@@ -170,7 +227,7 @@ export async function handleCreateTicketType(params: {
 export async function handleUpdateTicketType(params: {
   userId: string;
   ticketTypeId: string;
-  ticketTypeData: Prisma.TicketTypeUpdateInput;
+  ticketTypeData: any; // Use any to handle allowedPaymentMethodIds
 }) {
   const { userId, ticketTypeId, ticketTypeData } = params;
 
@@ -195,13 +252,39 @@ export async function handleUpdateTicketType(params: {
     throw new Error("Ticket type does not belong to this organizer's event");
   }
 
-  // Update ticket type
-  const updatedTicketType = await prisma.ticketType.update({
-    where: { id: ticketTypeId },
-    data: ticketTypeData,
+  // Extract allowedPaymentMethodIds from ticketTypeData
+  const { allowedPaymentMethodIds, ...updateData } = ticketTypeData;
+
+  // Update ticket type and handle payment method associations in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // Update ticket type
+    const updatedTicketType = await tx.ticketType.update({
+      where: { id: ticketTypeId },
+      data: updateData,
+    });
+
+    // Handle payment method associations if provided
+    if (allowedPaymentMethodIds !== undefined) {
+      // First, delete existing associations
+      await tx.ticketTypePaymentMethod.deleteMany({
+        where: { ticketTypeId },
+      });
+
+      // Then, create new associations if any payment methods are specified
+      if (allowedPaymentMethodIds.length > 0) {
+        await tx.ticketTypePaymentMethod.createMany({
+          data: allowedPaymentMethodIds.map((paymentMethodId: string) => ({
+            ticketTypeId,
+            paymentMethodId,
+          })),
+        });
+      }
+    }
+
+    return updatedTicketType;
   });
 
-  return updatedTicketType;
+  return result;
 }
 
 /**
@@ -234,16 +317,16 @@ export async function handleDeleteTicketType(params: {
     throw new Error("Ticket type does not belong to this organizer's event");
   }
 
-  // Check if tickets have been sold for this ticket type
-  const soldTicketsCount = await prisma.ticket.count({
+  // Check if tickets have been sold or are pending for this ticket type
+  const committedTicketsCount = await prisma.ticket.count({
     where: {
       ticketTypeId,
-      status: { not: "CANCELLED" },
+      status: { in: ["ACTIVE", "USED", "PENDING"] }, // Include pending tickets
     },
   });
 
-  if (soldTicketsCount > 0) {
-    throw new Error("Cannot delete ticket type with sold tickets");
+  if (committedTicketsCount > 0) {
+    throw new Error("Cannot delete ticket type with sold or pending tickets");
   }
 
   // Delete ticket type
@@ -265,7 +348,9 @@ export async function countSoldTicketsByEventId(eventId: string) {
       ticketType: {
         eventId,
       },
-      status: "ACTIVE",
+      status: {
+        in: ["ACTIVE", "USED"], // Count both ACTIVE and USED tickets as sold
+      },
     },
   });
 }
@@ -306,7 +391,9 @@ export async function countSoldTicketsByOrganizerId(organizerId: string) {
           organizerId,
         },
       },
-      status: "ACTIVE",
+      status: {
+        in: ["ACTIVE", "USED"], // Count both ACTIVE and USED tickets as sold
+      },
     },
   });
 }

@@ -331,21 +331,29 @@ export const eventService = {
    */
   async getStatistics(id: string) {
     try {
-      const totalTickets = await db.ticket.count({
+      // Only count ACTIVE and USED tickets as sold
+      const totalTicketsSold = await db.ticket.count({
         where: {
           ticketType: {
             eventId: id,
           },
+          status: {
+            in: ['ACTIVE', 'USED'], // Only count approved tickets as sold
+          },
         },
       });
 
+      // Only count successful transactions for sales
       const totalSales = await db.transaction.aggregate({
         _sum: { amount: true },
-        where: { eventId: id },
+        where: {
+          eventId: id,
+          status: 'SUCCESS', // Only count successful transactions
+        },
       });
 
       return {
-        totalTickets,
+        totalTickets: totalTicketsSold, // Renamed for clarity - this is sold tickets
         totalSales: Number(totalSales._sum.amount) || 0,
       };
     } catch (error) {
@@ -479,11 +487,17 @@ export const eventService = {
         throw new Error("Event not found");
       }
 
-      // Calculate total tickets sold
-      const totalTicketsSold = event.ticketTypes.reduce(
-        (acc, type) => acc + type.sold,
-        0,
-      );
+      // Calculate total tickets sold by counting ACTIVE and USED tickets directly
+      const totalTicketsSold = await db.ticket.count({
+        where: {
+          ticketType: {
+            eventId: id,
+          },
+          status: {
+            in: ["ACTIVE", "USED"], // Only count organizer-approved tickets as sold
+          },
+        },
+      });
 
       // Calculate total capacity
       const totalCapacity = event.ticketTypes.reduce(
