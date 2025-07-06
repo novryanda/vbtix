@@ -30,7 +30,19 @@ export function ThemeToggle({
   React.useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return null;
+    // Return a placeholder with the same dimensions to prevent layout shift
+    return (
+      <Button
+        variant={variant}
+        size={size}
+        className={cn("opacity-0", className)}
+        disabled
+        {...props}
+      >
+        <Sun className="h-[1.2rem] w-[1.2rem]" />
+        <span className="sr-only">Loading theme toggle</span>
+      </Button>
+    );
   }
 
   const toggleTheme = () => {

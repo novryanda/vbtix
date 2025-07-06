@@ -6,6 +6,7 @@ import { SessionProvider } from "next-auth/react";
 import { Toaster } from "~/components/ui/sonner";
 import { fetcher } from "~/lib/api/client";
 import { ThemeProvider } from "~/components/theme/theme-provider";
+import { HydrationFix } from "~/components/hydration-fix";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export function Providers({ children }: ProvidersProps) {
             dedupingInterval: 5000,
           }}
         >
+          <HydrationFix />
           {children}
           <Toaster />
         </SWRConfig>

@@ -24,7 +24,10 @@ export default function OrganizerTicketsPage({
 }) {
   const [organizerId, setOrganizerId] = useState<string>("");
   const [activeTab, setActiveTab] = useState("overview");
-  const [filters, setFilters] = useState<any>({});
+  const [filters, setFilters] = useState<any>({
+    page: 1,
+    limit: 10
+  });
 
   useEffect(() => {
     params.then((resolvedParams) => {
@@ -33,7 +36,20 @@ export default function OrganizerTicketsPage({
   }, [params]);
 
   const handleFiltersChange = useCallback((newFilters: any) => {
-    setFilters(newFilters);
+    setFilters(prevFilters => {
+      // If only page changed, keep the new filters as is
+      const prevWithoutPage = { ...prevFilters };
+      delete prevWithoutPage.page;
+      const newWithoutPage = { ...newFilters };
+      delete newWithoutPage.page;
+
+      // If other filters changed, reset to page 1
+      if (JSON.stringify(prevWithoutPage) !== JSON.stringify(newWithoutPage)) {
+        return { ...newFilters, page: 1 };
+      }
+
+      return newFilters;
+    });
   }, []);
 
   if (!organizerId) {
@@ -126,7 +142,7 @@ export default function OrganizerTicketsPage({
 
             <TabsContent value="tickets" className="space-y-6">
               <TicketFilters organizerId={organizerId} onFiltersChange={handleFiltersChange} />
-              <TicketList organizerId={organizerId} filters={filters} />
+              <TicketList organizerId={organizerId} filters={filters} onFiltersChange={handleFiltersChange} />
             </TabsContent>
 
             <TabsContent value="checkin" className="space-y-6">

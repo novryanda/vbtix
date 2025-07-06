@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { MagicCard } from "~/components/ui/magic-card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import {
   Table,
   TableBody,
@@ -39,23 +46,28 @@ import {
   AlertCircleIcon,
   QrCode,
   ImageIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "lucide-react";
 
 interface TicketListProps {
   organizerId: string;
   filters: any;
+  onFiltersChange?: (filters: any) => void;
 }
 
-export function TicketList({ organizerId, filters }: TicketListProps) {
+export function TicketList({ organizerId, filters, onFiltersChange }: TicketListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [logoUploadStates, setLogoUploadStates] = useState<Record<string, boolean>>({});
 
-  // Combine filters with search term directly
+  // Combine filters with search term and pagination
   const currentFilters = useMemo(() => ({
     ...filters,
-    search: searchTerm
+    search: searchTerm,
+    page: filters.page || 1,
+    limit: filters.limit || 10
   }), [filters, searchTerm]);
 
   const { data, isLoading, error, refetch } = useOrganizerSoldTickets(
@@ -63,9 +75,67 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
     currentFilters
   );
 
+  // Extract data and meta early to avoid reference errors
+  const tickets = data?.data || [];
+  const meta = data?.meta || null;
+
   const handleSearch = (value: string) => {
     setSearchTerm(value);
   };
+
+  const handlePageChange = useCallback((newPage: number) => {
+    if (onFiltersChange) {
+      onFiltersChange({
+        ...filters,
+        page: newPage
+      });
+    }
+  }, [onFiltersChange, filters]);
+
+  const handlePreviousPage = useCallback(() => {
+    if (meta && meta.page > 1) {
+      handlePageChange(meta.page - 1);
+    }
+  }, [meta, handlePageChange]);
+
+  const handleNextPage = useCallback(() => {
+    if (meta && meta.page < meta.totalPages) {
+      handlePageChange(meta.page + 1);
+    }
+  }, [meta, handlePageChange]);
+
+  const handlePageSizeChange = useCallback((newPageSize: string) => {
+    if (onFiltersChange) {
+      onFiltersChange({
+        ...filters,
+        page: 1, // Reset to first page when changing page size
+        limit: parseInt(newPageSize)
+      });
+    }
+  }, [onFiltersChange, filters]);
+
+  // Keyboard navigation support
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!meta) return;
+
+      // Only handle keyboard navigation when not typing in an input
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (event.key === "ArrowLeft" && meta.page > 1) {
+        event.preventDefault();
+        handlePreviousPage();
+      } else if (event.key === "ArrowRight" && meta.page < meta.totalPages) {
+        event.preventDefault();
+        handleNextPage();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [meta, handlePreviousPage, handleNextPage]);
 
   const handleViewQRCode = (ticket: any) => {
     setSelectedTicket(ticket);
@@ -153,9 +223,6 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
       </MagicCard>
     );
   }
-
-  const tickets = data?.data || [];
-  const meta = data?.meta;
 
   return (
     <MagicCard className="border-0 bg-background/50 backdrop-blur-sm">
@@ -343,32 +410,70 @@ export function TicketList({ organizerId, filters }: TicketListProps) {
         )}
 
         {/* Pagination */}
-        {meta && meta.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-muted-foreground">
-              Showing {((meta.page - 1) * meta.limit) + 1} to{" "}
-              {Math.min(meta.page * meta.limit, meta.totalCount)} of{" "}
-              {meta.totalCount} tickets
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={meta.page <= 1}
-              >
-                Previous
-              </Button>
-              <span className="text-sm">
-                Page {meta.page} of {meta.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={meta.page >= meta.totalPages}
-              >
-                Next
-              </Button>
+        {meta && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6">
+            <div className="flex items-center gap-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {((meta.page - 1) * meta.limit) + 1} to{" "}
+                {Math.min(meta.page * meta.limit, meta.totalCount)} of{" "}
+                {meta.totalCount} tickets
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Show:</span>
+                <Select
+                  value={meta.limit.toString()}
+                  onValueChange={handlePageSizeChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="w-20 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            {meta.totalPages > 1 && (
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={meta.page <= 1 || isLoading}
+                    onClick={handlePreviousPage}
+                    title="Previous page (← arrow key)"
+                  >
+                    <ChevronLeftIcon className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-muted-foreground">Page</span>
+                    <span className="text-sm font-medium">{meta.page}</span>
+                    <span className="text-sm text-muted-foreground">of</span>
+                    <span className="text-sm font-medium">{meta.totalPages}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={meta.page >= meta.totalPages || isLoading}
+                    onClick={handleNextPage}
+                    title="Next page (→ arrow key)"
+                  >
+                    Next
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Use ← → arrow keys to navigate
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

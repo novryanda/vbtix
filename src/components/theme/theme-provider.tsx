@@ -8,7 +8,7 @@ import {
 /**
  * A wrapper component for the next-themes ThemeProvider
  * This allows us to use the ThemeProvider in our application
- * with our preferred configuration
+ * with our preferred configuration and proper hydration handling
  */
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return (
@@ -17,6 +17,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
+      suppressHydrationWarning
       {...props}
     >
       {children}
