@@ -22,7 +22,7 @@ import {
   AlertCircle,
   XCircle,
 } from "lucide-react";
-import { useToast } from "~/hooks/use-toast";
+import { toast } from "sonner";
 import { formatDate } from "~/lib/utils";
 import Image from "next/image";
 
@@ -52,7 +52,6 @@ interface WristbandQRModalProps {
 
 export function WristbandQRModal({ wristband, isOpen, onClose }: WristbandQRModalProps) {
   const [isDownloading, setIsDownloading] = useState(false);
-  const { toast } = useToast();
 
   if (!wristband) return null;
 
@@ -114,16 +113,9 @@ export function WristbandQRModal({ wristband, isOpen, onClose }: WristbandQRModa
       
       window.URL.revokeObjectURL(url);
       
-      toast({
-        title: "Downloaded",
-        description: "QR code image has been downloaded successfully.",
-      });
+      toast.success("QR code image has been downloaded successfully.");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to download QR code image.",
-        variant: "destructive",
-      });
+      toast.error("Failed to download QR code image.");
     } finally {
       setIsDownloading(false);
     }
@@ -131,10 +123,7 @@ export function WristbandQRModal({ wristband, isOpen, onClose }: WristbandQRModa
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(wristband.id);
-    toast({
-      title: "Copied",
-      description: "Wristband ID has been copied to clipboard.",
-    });
+    toast.success("Wristband ID has been copied to clipboard.");
   };
 
   const statusConfig = getStatusConfig(wristband.status);

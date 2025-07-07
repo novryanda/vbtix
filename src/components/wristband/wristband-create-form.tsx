@@ -26,7 +26,7 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { useCreateWristband } from "~/lib/api/hooks/qr-code";
-import { useToast } from "~/hooks/use-toast";
+import { toast } from "sonner";
 import { Loader2, Plus, QrCode } from "lucide-react";
 
 const wristbandSchema = z.object({
@@ -60,7 +60,6 @@ export function WristbandCreateForm({
 }: WristbandCreateFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createWristband } = useCreateWristband();
-  const { toast } = useToast();
 
   const form = useForm<WristbandFormData>({
     resolver: zodResolver(wristbandSchema),
@@ -85,19 +84,12 @@ export function WristbandCreateForm({
 
       const result = await createWristband(organizerId, wristbandData);
 
-      toast({
-        title: "Wristband Created",
-        description: "Wristband has been created successfully. You can now generate its QR code.",
-      });
+      toast.success("Wristband has been created successfully. You can now generate its QR code.");
 
       form.reset();
       onSuccess?.(result.data);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create wristband",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to create wristband");
     } finally {
       setIsSubmitting(false);
     }

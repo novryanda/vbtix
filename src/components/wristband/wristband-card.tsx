@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { useWristbandQRGeneration } from "~/lib/api/hooks/qr-code";
-import { useToast } from "~/hooks/use-toast";
+import { toast } from "sonner";
 import {
   QrCode,
   MoreHorizontal,
@@ -65,7 +65,6 @@ export function WristbandCard({
 }: WristbandCardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const { generateWristbandQR } = useWristbandQRGeneration();
-  const { toast } = useToast();
 
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -111,17 +110,10 @@ export function WristbandCard({
     setIsGenerating(true);
     try {
       await generateWristbandQR(organizerId, wristband.id);
-      toast({
-        title: "QR Code Generated",
-        description: "Wristband QR code has been generated successfully.",
-      });
+      toast.success("Wristband QR code has been generated successfully.");
       onQRGenerated?.();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate QR code",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to generate QR code");
     } finally {
       setIsGenerating(false);
     }
