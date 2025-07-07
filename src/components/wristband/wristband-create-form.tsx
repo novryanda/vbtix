@@ -45,9 +45,10 @@ interface WristbandCreateFormProps {
   events: Array<{
     id: string;
     title: string;
-    startDate: Date;
-    endDate: Date;
+    startDate: string;
+    endDate: string;
   }>;
+  isEventsLoading?: boolean;
   onSuccess?: (wristband: any) => void;
   onCancel?: () => void;
 }
@@ -55,6 +56,7 @@ interface WristbandCreateFormProps {
 export function WristbandCreateForm({
   organizerId,
   events,
+  isEventsLoading = false,
   onSuccess,
   onCancel,
 }: WristbandCreateFormProps) {
@@ -112,18 +114,31 @@ export function WristbandCreateForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Event</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isEventsLoading}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select an event" />
+                        <SelectValue placeholder={isEventsLoading ? "Loading events..." : "Select an event"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {events.map((event) => (
-                        <SelectItem key={event.id} value={event.id}>
-                          {event.title}
+                      {isEventsLoading ? (
+                        <SelectItem value="" disabled>
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Loading events...
+                          </div>
                         </SelectItem>
-                      ))}
+                      ) : events.length > 0 ? (
+                        events.map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.title}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>
+                          No events available
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormDescription>

@@ -42,7 +42,7 @@ export default function WristbandsPage() {
 
   // Fetch organizer events for the create form
   const { data: eventsData, isLoading: isEventsLoading, error: eventsError } = useOrganizerEvents(organizerId);
-  const events = eventsData?.events || [];
+  const events = eventsData?.data || [];
 
   const handleCreateSuccess = (wristband: any) => {
     setIsCreateDialogOpen(false);
@@ -130,6 +130,7 @@ export default function WristbandsPage() {
               <WristbandCreateForm
                 organizerId={organizerId}
                 events={events}
+                isEventsLoading={isEventsLoading}
                 onSuccess={handleCreateSuccess}
                 onCancel={() => setIsCreateDialogOpen(false)}
               />
