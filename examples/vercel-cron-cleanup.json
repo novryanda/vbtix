@@ -1,0 +1,19 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/cleanup-pending-tickets?maxAge=24&includeFailedPayments=true",
+      "schedule": "0 2 * * *",
+      "description": "Daily cleanup of PENDING tickets older than 24 hours"
+    },
+    {
+      "path": "/api/cron/cleanup-pending-tickets?maxAge=168&includeFailedPayments=true",
+      "schedule": "0 3 * * 0",
+      "description": "Weekly deep cleanup of PENDING tickets older than 7 days"
+    },
+    {
+      "path": "/api/cron/cleanup-pending-tickets?statsOnly=true",
+      "schedule": "0 1 * * *",
+      "description": "Daily statistics collection for monitoring"
+    }
+  ]
+}

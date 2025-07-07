@@ -1,0 +1,152 @@
+name: VBTix Database Cleanup
+
+on:
+  schedule:
+    # Daily cleanup at 2 AM UTC
+    - cron: '0 2 * * *'
+    # Weekly deep cleanup on Sundays at 3 AM UTC
+    - cron: '0 3 * * 0'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      maxAge:
+        description: 'Maximum age in hours for PENDING tickets'
+        required: false
+        default: '24'
+        type: string
+      includeFailedPayments:
+        description: 'Include tickets from failed/expired payments'
+        required: false
+        default: 'true'
+        type: boolean
+      dryRun:
+        description: 'Dry run mode (preview only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  cleanup-pending-tickets:
+    runs-on: ubuntu-latest
+    name: Cleanup PENDING Tickets
+    
+    steps:
+      - name: Determine cleanup parameters
+        id: params
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "${{ github.event.schedule }}" = "0 2 * * *" ]; then
+              # Daily cleanup
+              echo "maxAge=24" >> $GITHUB_OUTPUT
+              echo "includeFailedPayments=true" >> $GITHUB_OUTPUT
+              echo "dryRun=false" >> $GITHUB_OUTPUT
+              echo "type=daily" >> $GITHUB_OUTPUT
+            elif [ "${{ github.event.schedule }}" = "0 3 * * 0" ]; then
+              # Weekly deep cleanup
+              echo "maxAge=168" >> $GITHUB_OUTPUT
+              echo "includeFailedPayments=true" >> $GITHUB_OUTPUT
+              echo "dryRun=false" >> $GITHUB_OUTPUT
+              echo "type=weekly" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Manual trigger
+            echo "maxAge=${{ github.event.inputs.maxAge }}" >> $GITHUB_OUTPUT
+            echo "includeFailedPayments=${{ github.event.inputs.includeFailedPayments }}" >> $GITHUB_OUTPUT
+            echo "dryRun=${{ github.event.inputs.dryRun }}" >> $GITHUB_OUTPUT
+            echo "type=manual" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get statistics before cleanup
+        id: stats
+        run: |
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/cleanup-pending-tickets?maxAge=${{ steps.params.outputs.maxAge }}&includeFailedPayments=${{ steps.params.outputs.includeFailedPayments }}&statsOnly=true")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ Failed to get statistics: HTTP $http_code"
+            echo "$body"
+            exit 1
+          fi
+          
+          echo "✅ Statistics retrieved successfully"
+          echo "$body" | jq '.'
+
+      - name: Perform cleanup
+        id: cleanup
+        run: |
+          echo "🧹 Starting ${{ steps.params.outputs.type }} cleanup..."
+          echo "Parameters: maxAge=${{ steps.params.outputs.maxAge }}h, includeFailedPayments=${{ steps.params.outputs.includeFailedPayments }}, dryRun=${{ steps.params.outputs.dryRun }}"
+          
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/cleanup-pending-tickets?maxAge=${{ steps.params.outputs.maxAge }}&includeFailedPayments=${{ steps.params.outputs.includeFailedPayments }}&dryRun=${{ steps.params.outputs.dryRun }}")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ Cleanup failed: HTTP $http_code"
+            echo "$body"
+            exit 1
+          fi
+          
+          echo "✅ Cleanup completed successfully"
+          echo "$body" | jq '.'
+          
+          # Extract key metrics for summary
+          deleted_tickets=$(echo "$body" | jq -r '.data.cleanup.deletedTickets // 0')
+          affected_transactions=$(echo "$body" | jq -r '.data.cleanup.affectedTransactions // 0')
+          execution_time=$(echo "$body" | jq -r '.data.executionTimeMs // 0')
+          
+          echo "deleted_tickets=$deleted_tickets" >> $GITHUB_OUTPUT
+          echo "affected_transactions=$affected_transactions" >> $GITHUB_OUTPUT
+          echo "execution_time=$execution_time" >> $GITHUB_OUTPUT
+
+      - name: Create summary
+        run: |
+          echo "## 🧹 VBTix Database Cleanup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Cleanup Type:** ${{ steps.params.outputs.type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Parameters:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Max Age: ${{ steps.params.outputs.maxAge }} hours" >> $GITHUB_STEP_SUMMARY
+          echo "- Include Failed Payments: ${{ steps.params.outputs.includeFailedPayments }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Dry Run: ${{ steps.params.outputs.dryRun }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Results:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Tickets ${{ steps.params.outputs.dryRun == 'true' && 'would be' || '' }} deleted: ${{ steps.cleanup.outputs.deleted_tickets }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Transactions affected: ${{ steps.cleanup.outputs.affected_transactions }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Execution time: ${{ steps.cleanup.outputs.execution_time }}ms" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ✅ Completed successfully" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "## ❌ VBTix Database Cleanup Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Cleanup Type:** ${{ steps.params.outputs.type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Error:** Check the logs above for details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the error logs" >> $GITHUB_STEP_SUMMARY
+          echo "2. Check database connectivity" >> $GITHUB_STEP_SUMMARY
+          echo "3. Verify CRON_SECRET is correctly set" >> $GITHUB_STEP_SUMMARY
+          echo "4. Try running with dry-run mode first" >> $GITHUB_STEP_SUMMARY
+
+  # Optional: Send notifications to Slack/Discord/Email
+  notify:
+    needs: cleanup-pending-tickets
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Send notification
+        run: |
+          # Add your notification logic here
+          # Example: Slack webhook, Discord webhook, email, etc.
+          echo "Cleanup job completed with status: ${{ needs.cleanup-pending-tickets.result }}"

@@ -1,0 +1,82 @@
+name: Database Cleanup
+
+on:
+  schedule:
+    # Daily cleanup at 2 AM UTC (tickets older than 24 hours)
+    - cron: '0 2 * * *'
+    # Weekly cleanup on Sunday at 3 AM UTC (all PENDING tickets)
+    - cron: '0 3 * * 0'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  cleanup-pending-tickets:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Daily Cleanup (24 hours)
+        if: github.event.schedule == '0 2 * * *' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "🧹 Starting daily cleanup (tickets older than 24 hours)..."
+          
+          response=$(curl -s -w "%{http_code}" -o response.json \
+            -X GET "${{ secrets.APP_URL }}/api/cron/cleanup-pending-tickets?maxAge=24&includeFailedPayments=true" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          
+          http_code=${response: -3}
+          
+          if [ $http_code -eq 200 ]; then
+            echo "✅ Daily cleanup completed successfully"
+            cat response.json | jq '.'
+          else
+            echo "❌ Daily cleanup failed with HTTP $http_code"
+            cat response.json
+            exit 1
+          fi
+
+      - name: Weekly Cleanup (All PENDING)
+        if: github.event.schedule == '0 3 * * 0'
+        run: |
+          echo "🧹 Starting weekly cleanup (all PENDING tickets)..."
+          
+          response=$(curl -s -w "%{http_code}" -o response.json \
+            -X GET "${{ secrets.APP_URL }}/api/cron/cleanup-pending-tickets?maxAge=1&includeFailedPayments=true" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          
+          http_code=${response: -3}
+          
+          if [ $http_code -eq 200 ]; then
+            echo "✅ Weekly cleanup completed successfully"
+            cat response.json | jq '.'
+          else
+            echo "❌ Weekly cleanup failed with HTTP $http_code"
+            cat response.json
+            exit 1
+          fi
+
+      - name: Cleanup Statistics Check
+        if: always()
+        run: |
+          echo "📊 Checking cleanup statistics..."
+          
+          response=$(curl -s -w "%{http_code}" -o stats.json \
+            -X POST "${{ secrets.APP_URL }}/api/cron/cleanup-pending-tickets" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -d '{"statsOnly":true}')
+          
+          http_code=${response: -3}
+          
+          if [ $http_code -eq 200 ]; then
+            echo "📈 Current database statistics:"
+            cat stats.json | jq '.data.statistics'
+          else
+            echo "⚠️ Failed to get statistics (HTTP $http_code)"
+            cat stats.json
+          fi
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "🚨 Database cleanup failed!"
+          echo "Please check the logs and investigate the issue."
+          # Add notification logic here (Slack, Discord, email, etc.)
