@@ -21,22 +21,26 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import { useOrganizerEvents } from "~/lib/api/hooks/organizer";
+import { useExportOrganizerTickets } from "~/lib/api/hooks/organizer-tickets";
 import { cn } from "~/lib/utils";
+import { toast } from "sonner";
 import {
   FilterIcon,
   CalendarIcon,
   XIcon,
   RefreshCwIcon,
   SearchIcon,
+  DownloadIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 
 interface TicketFiltersProps {
   organizerId: string;
   onFiltersChange: (filters: any) => void;
+  totalTickets?: number;
 }
 
-export function TicketFilters({ organizerId, onFiltersChange }: TicketFiltersProps) {
+export function TicketFilters({ organizerId, onFiltersChange, totalTickets = 0 }: TicketFiltersProps) {
   const [filters, setFilters] = useState({
     status: "all",
     eventId: "all",
@@ -51,6 +55,8 @@ export function TicketFilters({ organizerId, onFiltersChange }: TicketFiltersPro
 
   const { data: eventsData } = useOrganizerEvents(organizerId);
   const events = eventsData?.data || [];
+
+  const { exportTickets, isExporting } = useExportOrganizerTickets();
 
   useEffect(() => {
     // Convert "all" values to empty strings for the API
@@ -87,6 +93,32 @@ export function TicketFilters({ organizerId, onFiltersChange }: TicketFiltersPro
     ).length;
   };
 
+  const handleExportCSV = async () => {
+    try {
+      toast.loading("Exporting tickets...", { id: "export-tickets" });
+
+      // Convert filters for export (same as in useEffect)
+      const exportFilters = {
+        ...filters,
+        status: filters.status === "all" ? "" : filters.status,
+        eventId: filters.eventId === "all" ? "" : filters.eventId,
+        checkedIn: filters.checkedIn === "all" ? "" : filters.checkedIn,
+        dateFrom: filters.dateFrom?.toISOString().split('T')[0],
+        dateTo: filters.dateTo?.toISOString().split('T')[0],
+      };
+
+      const result = await exportTickets(organizerId, exportFilters, "csv");
+
+      toast.success(`Tickets exported successfully as ${result.filename}`, {
+        id: "export-tickets"
+      });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to export tickets", {
+        id: "export-tickets"
+      });
+    }
+  };
+
   const statusOptions = [
     { value: "ACTIVE", label: "Active" },
     { value: "USED", label: "Used" },
@@ -113,15 +145,31 @@ export function TicketFilters({ organizerId, onFiltersChange }: TicketFiltersPro
               </Badge>
             )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearFilters}
-            disabled={getActiveFiltersCount() === 0}
-          >
-            <RefreshCwIcon className="h-4 w-4 mr-2" />
-            Clear All
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              disabled={isExporting || totalTickets === 0}
+              title={totalTickets === 0 ? "No tickets to export" : `Export ${totalTickets} tickets`}
+            >
+              {isExporting ? (
+                <RefreshCwIcon className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <DownloadIcon className="h-4 w-4 mr-2" />
+              )}
+              Export CSV {totalTickets > 0 && `(${totalTickets})`}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearFilters}
+              disabled={getActiveFiltersCount() === 0}
+            >
+              <RefreshCwIcon className="h-4 w-4 mr-2" />
+              Clear All
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">

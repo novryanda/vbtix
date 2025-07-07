@@ -18,6 +18,7 @@ import {
   TicketIcon,
   UsersIcon,
   SparklesIcon,
+  ShieldIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -112,6 +113,11 @@ const getOrganizerNavigationData = (
       title: "Tickets",
       url: `/organizer/${organizerId}/tickets`,
       icon: TicketIcon,
+    },
+    {
+      title: "Wristbands",
+      url: `/organizer/${organizerId}/wristbands`,
+      icon: ShieldIcon,
     },
     {
       title: "Orders",

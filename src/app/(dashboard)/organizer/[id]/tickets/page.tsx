@@ -7,6 +7,7 @@ import { TicketList } from "./components/ticket-list";
 import { TicketFilters } from "./components/ticket-filters";
 import { RecentTicketsQR } from "./components/recent-tickets-qr";
 import { QRCodeScanner } from "~/components/ui/qr-code-scanner";
+import { useOrganizerSoldTickets } from "~/lib/api/hooks/organizer-tickets";
 import { MagicCard } from "~/components/ui/magic-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
@@ -28,6 +29,10 @@ export default function OrganizerTicketsPage({
     page: 1,
     limit: 10
   });
+
+  // Get ticket data for total count
+  const { data: ticketData } = useOrganizerSoldTickets(organizerId, filters);
+  const totalTickets = ticketData?.meta?.totalCount || 0;
 
   useEffect(() => {
     params.then((resolvedParams) => {
@@ -141,7 +146,11 @@ export default function OrganizerTicketsPage({
             </TabsContent>
 
             <TabsContent value="tickets" className="space-y-6">
-              <TicketFilters organizerId={organizerId} onFiltersChange={handleFiltersChange} />
+              <TicketFilters
+                organizerId={organizerId}
+                onFiltersChange={handleFiltersChange}
+                totalTickets={totalTickets}
+              />
               <TicketList organizerId={organizerId} filters={filters} onFiltersChange={handleFiltersChange} />
             </TabsContent>
 

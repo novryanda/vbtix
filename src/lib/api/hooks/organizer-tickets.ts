@@ -166,6 +166,74 @@ export function useOrganizerSoldTickets(organizerId: string, filters: FilterPara
 }
 
 /**
+ * Hook to export organizer tickets as CSV
+ */
+export function useExportOrganizerTickets() {
+  const [isExporting, setIsExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const exportTickets = async (
+    organizerId: string,
+    filters: FilterParams = {},
+    format: "csv" | "excel" = "csv"
+  ) => {
+    try {
+      setIsExporting(true);
+      setError(null);
+
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append("format", format);
+
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "" && key !== "page" && key !== "limit") {
+          params.append(key, value.toString());
+        }
+      });
+
+      const response = await fetch(
+        `/api/organizer/${organizerId}/sold-tickets/export?${params.toString()}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to export tickets");
+      }
+
+      // Get the filename from the response headers
+      const contentDisposition = response.headers.get("content-disposition");
+      const filename = contentDisposition
+        ? contentDisposition.split("filename=")[1]?.replace(/"/g, "")
+        : `tickets-export-${new Date().toISOString().split('T')[0]}.${format}`;
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true, filename };
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return {
+    exportTickets,
+    isExporting,
+    error,
+  };
+}
+
+/**
  * Hook to get detailed information about a specific ticket
  */
 export function useOrganizerTicketDetail(organizerId: string, ticketId: string) {

@@ -17,6 +17,22 @@ export interface TicketQRData {
 }
 
 /**
+ * QR Code data structure for wristbands
+ */
+export interface WristbandQRData {
+  wristbandId: string;
+  eventId: string;
+  organizerId: string;
+  name: string;
+  issuedAt: string;
+  validFrom?: string;
+  validUntil?: string;
+  isReusable: boolean;
+  maxScans?: number;
+  checksum: string;
+}
+
+/**
  * QR Code generation options
  */
 export interface QRCodeOptions {
@@ -115,6 +131,43 @@ export function generateQRCodeData(params: {
     ticketTypeId,
     issuedAt,
     expiresAt,
+    checksum,
+  };
+}
+
+/**
+ * Generate secure QR code data for a wristband
+ */
+export function generateWristbandQRCodeData(params: {
+  wristbandId: string;
+  eventId: string;
+  organizerId: string;
+  name: string;
+  validFrom?: Date;
+  validUntil?: Date;
+  isReusable?: boolean;
+  maxScans?: number;
+}): WristbandQRData {
+  const { wristbandId, eventId, organizerId, name, validFrom, validUntil, isReusable = true, maxScans } = params;
+
+  const issuedAt = new Date().toISOString();
+  const validFromStr = validFrom?.toISOString();
+  const validUntilStr = validUntil?.toISOString();
+
+  // Create checksum for data integrity
+  const dataToHash = `${wristbandId}:${eventId}:${organizerId}:${name}:${issuedAt}:${isReusable}`;
+  const checksum = createHash("sha256").update(dataToHash).digest("hex").substring(0, 16);
+
+  return {
+    wristbandId,
+    eventId,
+    organizerId,
+    name,
+    issuedAt,
+    validFrom: validFromStr,
+    validUntil: validUntilStr,
+    isReusable,
+    maxScans,
     checksum,
   };
 }
@@ -265,6 +318,91 @@ export function validateQRCodeData(data: TicketQRData): boolean {
 }
 
 /**
+ * Encrypt wristband QR code data for secure storage
+ */
+export function encryptWristbandQRCodeData(data: WristbandQRData): string {
+  try {
+    const iv = randomBytes(16);
+    const cipher = createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY.substring(0, 32)), iv);
+
+    let encrypted = cipher.update(JSON.stringify(data), "utf8", "hex");
+    encrypted += cipher.final("hex");
+
+    // Combine IV and encrypted data
+    return iv.toString("hex") + ":" + encrypted;
+  } catch (error) {
+    console.error("Error encrypting wristband QR code data:", error);
+    throw new Error("Failed to encrypt wristband QR code data");
+  }
+}
+
+/**
+ * Decrypt wristband QR code data for validation
+ */
+export function decryptWristbandQRCodeData(encryptedData: string): WristbandQRData {
+  try {
+    const [ivHex, encrypted] = encryptedData.split(":");
+    if (!ivHex || !encrypted) {
+      throw new Error("Invalid encrypted data format");
+    }
+
+    const iv = Buffer.from(ivHex, "hex");
+    const decipher = createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY.substring(0, 32)), iv);
+
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+
+    return JSON.parse(decrypted) as WristbandQRData;
+  } catch (error) {
+    console.error("Error decrypting wristband QR code data:", error);
+    throw new Error("Failed to decrypt wristband QR code data");
+  }
+}
+
+/**
+ * Validate wristband QR code data integrity
+ */
+export function validateWristbandQRCodeData(data: WristbandQRData): boolean {
+  try {
+    // Check if expired
+    if (data.validUntil) {
+      const expirationDate = new Date(data.validUntil);
+      const now = new Date();
+
+      if (now > expirationDate) {
+        console.warn(`Wristband QR code expired: ${data.validUntil}`);
+        return false;
+      }
+    }
+
+    // Check if not yet valid
+    if (data.validFrom) {
+      const validFromDate = new Date(data.validFrom);
+      const now = new Date();
+
+      if (now < validFromDate) {
+        console.warn(`Wristband QR code not yet valid: ${data.validFrom}`);
+        return false;
+      }
+    }
+
+    // Verify checksum
+    const dataToHash = `${data.wristbandId}:${data.eventId}:${data.organizerId}:${data.name}:${data.issuedAt}:${data.isReusable}`;
+    const expectedChecksum = createHash("sha256").update(dataToHash).digest("hex").substring(0, 16);
+
+    const checksumValid = data.checksum === expectedChecksum;
+    if (!checksumValid) {
+      console.warn(`Wristband QR code checksum mismatch: expected ${expectedChecksum}, got ${data.checksum}`);
+    }
+
+    return checksumValid;
+  } catch (error) {
+    console.error("Error validating wristband QR code data:", error);
+    return false;
+  }
+}
+
+/**
  * Generate QR code image as base64 data URL
  */
 export async function generateQRCodeImage(
@@ -406,6 +544,62 @@ export async function generatePDFQRCodeBuffer(
   } catch (error) {
     console.error("Error generating PDF QR code buffer:", error);
     throw new Error("Failed to generate PDF QR code buffer");
+  }
+}
+
+/**
+ * Generate wristband QR code image as base64 data URL
+ */
+export async function generateWristbandQRCodeImage(
+  data: WristbandQRData,
+  options: QRCodeOptions = {}
+): Promise<string> {
+  try {
+    const qrOptions = { ...DEFAULT_QR_OPTIONS, ...options };
+
+    // Encrypt the data before encoding in QR code
+    const encryptedData = encryptWristbandQRCodeData(data);
+
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(encryptedData, {
+      width: qrOptions.width,
+      margin: qrOptions.margin,
+      color: qrOptions.color,
+      errorCorrectionLevel: qrOptions.errorCorrectionLevel,
+    });
+
+    return qrCodeDataUrl;
+  } catch (error) {
+    console.error("Error generating wristband QR code image:", error);
+    throw new Error("Failed to generate wristband QR code image");
+  }
+}
+
+/**
+ * Generate wristband QR code image as buffer (for file storage)
+ */
+export async function generateWristbandQRCodeBuffer(
+  data: WristbandQRData,
+  options: QRCodeOptions = {}
+): Promise<Buffer> {
+  try {
+    const qrOptions = { ...DEFAULT_QR_OPTIONS, ...options };
+
+    // Encrypt the data before encoding in QR code
+    const encryptedData = encryptWristbandQRCodeData(data);
+
+    // Generate QR code as buffer
+    const qrCodeBuffer = await QRCode.toBuffer(encryptedData, {
+      width: qrOptions.width,
+      margin: qrOptions.margin,
+      color: qrOptions.color,
+      errorCorrectionLevel: qrOptions.errorCorrectionLevel,
+    });
+
+    return qrCodeBuffer;
+  } catch (error) {
+    console.error("Error generating wristband QR code buffer:", error);
+    throw new Error("Failed to generate wristband QR code buffer");
   }
 }
 

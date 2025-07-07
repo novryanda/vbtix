@@ -236,6 +236,219 @@ export function useOrganizerQRGeneration() {
 }
 
 /**
+ * Hook to get wristbands for an organizer
+ */
+export function useOrganizerWristbands(
+  organizerId: string,
+  filters?: {
+    eventId?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+  }
+) {
+  const queryParams = new URLSearchParams();
+
+  if (filters?.eventId) queryParams.append("eventId", filters.eventId);
+  if (filters?.page) queryParams.append("page", filters.page.toString());
+  if (filters?.limit) queryParams.append("limit", filters.limit.toString());
+  if (filters?.search) queryParams.append("search", filters.search);
+
+  const { data, error, isLoading, mutate } = useSWR(
+    organizerId ? `/api/organizer/${organizerId}/wristbands?${queryParams.toString()}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 10000, // 10 seconds
+    }
+  );
+
+  return {
+    wristbands: data?.data?.wristbands || [],
+    pagination: data?.data?.pagination,
+    isLoading,
+    error: error?.message,
+    refresh: mutate,
+  };
+}
+
+/**
+ * Hook to create a new wristband
+ */
+export function useCreateWristband() {
+  const createWristband = async (
+    organizerId: string,
+    wristbandData: {
+      eventId: string;
+      name: string;
+      description?: string;
+      validFrom?: string;
+      validUntil?: string;
+      maxScans?: number;
+    }
+  ) => {
+    try {
+      const response = await fetch(`/api/organizer/${organizerId}/wristbands`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(wristbandData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create wristband");
+      }
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  return {
+    createWristband,
+  };
+}
+
+/**
+ * Hook to generate QR code for a wristband
+ */
+export function useWristbandQRGeneration() {
+  const generateWristbandQR = async (organizerId: string, wristbandId: string) => {
+    try {
+      const response = await fetch(`/api/organizer/${organizerId}/wristbands/${wristbandId}/generate-qr`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "QR generation failed");
+      }
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  return {
+    generateWristbandQR,
+  };
+}
+
+/**
+ * Hook for wristband QR code validation and scanning
+ */
+export function useWristbandQRScanner(organizerId: string) {
+  const validateWristband = async (qrCodeData: string) => {
+    try {
+      const response = await fetch(`/api/organizer/${organizerId}/wristbands/validate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          qrCodeData,
+          scan: false, // Just validate, don't log scan
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Validation failed");
+      }
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const scanWristband = async (
+    qrCodeData: string,
+    scanLocation?: string,
+    scanDevice?: string
+  ) => {
+    try {
+      const response = await fetch(`/api/organizer/${organizerId}/wristbands/validate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          qrCodeData,
+          scan: true, // Validate and log scan
+          scanLocation,
+          scanDevice,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Scan failed");
+      }
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  return {
+    validateWristband,
+    scanWristband,
+  };
+}
+
+/**
+ * Hook to get scan logs for a wristband
+ */
+export function useWristbandScanLogs(
+  organizerId: string,
+  wristbandId: string,
+  filters?: {
+    page?: number;
+    limit?: number;
+  }
+) {
+  const queryParams = new URLSearchParams();
+
+  if (filters?.page) queryParams.append("page", filters.page.toString());
+  if (filters?.limit) queryParams.append("limit", filters.limit.toString());
+
+  const { data, error, isLoading, mutate } = useSWR(
+    organizerId && wristbandId
+      ? `/api/organizer/${organizerId}/wristbands/${wristbandId}/scans?${queryParams.toString()}`
+      : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 5000, // 5 seconds
+    }
+  );
+
+  return {
+    wristband: data?.data?.wristband,
+    scanLogs: data?.data?.scanLogs || [],
+    pagination: data?.data?.pagination,
+    isLoading,
+    error: error?.message,
+    refresh: mutate,
+  };
+}
+
+/**
  * Hook for QR code statistics
  */
 export function useQRCodeStats(organizerId?: string) {

@@ -563,10 +563,24 @@ export async function handleExportOrganizerTickets(params: {
       )
     ].join("\n");
 
+    // Generate descriptive filename
+    let filename = "tickets";
+    if (eventId && tickets.length > 0) {
+      const eventTitle = tickets[0].ticketType.event.title
+        .replace(/[^a-zA-Z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase();
+      filename = `tickets-${eventTitle}`;
+    } else {
+      filename = "tickets-all-events";
+    }
+    filename += `-${new Date().toISOString().split('T')[0]}.csv`;
+
     return {
       data: csvContent,
       contentType: "text/csv",
-      filename: `tickets-export-${new Date().toISOString().split('T')[0]}.csv`,
+      filename,
     };
   } else {
     // For Excel format, we'll return CSV for now
@@ -584,10 +598,24 @@ export async function handleExportOrganizerTickets(params: {
       )
     ].join("\n");
 
+    // Generate descriptive filename for Excel
+    let filename = "tickets";
+    if (eventId && tickets.length > 0) {
+      const eventTitle = tickets[0].ticketType.event.title
+        .replace(/[^a-zA-Z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase();
+      filename = `tickets-${eventTitle}`;
+    } else {
+      filename = "tickets-all-events";
+    }
+    filename += `-${new Date().toISOString().split('T')[0]}.xls`;
+
     return {
       data: csvContent,
       contentType: "application/vnd.ms-excel",
-      filename: `tickets-export-${new Date().toISOString().split('T')[0]}.xls`,
+      filename,
     };
   }
 }

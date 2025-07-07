@@ -7,7 +7,7 @@ import { Badge } from "~/components/ui/badge";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
-import { useQRCodeScanner } from "~/lib/api/hooks/qr-code";
+import { useQRCodeScanner, useWristbandQRScanner } from "~/lib/api/hooks/qr-code";
 import { CameraQRScanner } from "./camera-qr-scanner";
 import {
   Scan,

@@ -79,6 +79,7 @@ model Organizer {
   verification OrganizerVerification?
   vouchers     Voucher[]
   withdrawals  Withdrawal[]
+  wristbandQRCodes WristbandQRCode[]
 }
 
 model Event {
@@ -117,6 +118,7 @@ model Event {
   ticketTypes    TicketType[]
   transactions   Transaction[]
   vouchers       Voucher[]
+  wristbandQRCodes WristbandQRCode[]
 }
 
 model TicketType {
@@ -485,6 +487,14 @@ enum QRCodeStatus {
   EXPIRED
 }
 
+enum WristbandQRCodeStatus {
+  PENDING
+  GENERATED
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
 // Payment method configuration models
 model PaymentMethod {
   id          String   @id @default(cuid())
@@ -512,4 +522,51 @@ model TicketTypePaymentMethod {
 
   // Ensure unique combination
   @@unique([ticketTypeId, paymentMethodId])
+}
+
+model WristbandQRCode {
+  id                String                @id @default(cuid())
+  eventId           String
+  organizerId       String
+  name              String                // Name/identifier for the wristband batch
+  description       String?               // Optional description
+  qrCode            String                @unique // Unique QR code identifier
+  qrCodeImageUrl    String?               // URL to the generated QR code image
+  qrCodeData        String?               // Encrypted QR code data for validation
+  qrCodeGeneratedAt DateTime?             // When QR code was generated
+  status            WristbandQRCodeStatus @default(PENDING)
+  isReusable        Boolean               @default(true) // Wristbands are reusable by default
+  maxScans          Int?                  // Optional limit on number of scans
+  scanCount         Int                   @default(0) // Current number of scans
+  validFrom         DateTime?             // When wristband becomes valid
+  validUntil        DateTime?             // When wristband expires
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  createdBy         String                // User ID who created the wristband
+
+  // Relations
+  event             Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  organizer         Organizer             @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  scanLogs          WristbandScanLog[]
+
+  @@index([eventId])
+  @@index([organizerId])
+  @@index([status])
+}
+
+model WristbandScanLog {
+  id              String           @id @default(cuid())
+  wristbandQRId   String
+  scannedBy       String           // User ID who scanned
+  scannedAt       DateTime         @default(now())
+  scanResult      String           // SUCCESS, EXPIRED, INVALID, etc.
+  scanLocation    String?          // Optional location info
+  scanDevice      String?          // Optional device info
+  notes           String?          // Optional notes
+
+  // Relations
+  wristbandQR     WristbandQRCode  @relation(fields: [wristbandQRId], references: [id], onDelete: Cascade)
+
+  @@index([wristbandQRId])
+  @@index([scannedAt])
 }
