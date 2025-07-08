@@ -26,13 +26,6 @@ export function CameraBarcodeScanner({
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const [scanCount, setScanCount] = useState(0);
   const [lastScanTime, setLastScanTime] = useState<number>(0);
-  const [currentCameraInfo, setCurrentCameraInfo] = useState<{
-    deviceId?: string;
-    facingMode?: string;
-    width?: number;
-    height?: number;
-    label?: string;
-  } | null>(null);
 
   // Initialize code reader
   useEffect(() => {
@@ -46,21 +39,14 @@ export function CameraBarcodeScanner({
 
 
 
-  // Get available video devices
+  // Get available cameras using the correct API - SAME AS QR SCANNER
   const getDevices = useCallback(async () => {
     try {
-      console.log("🔍 Getting camera devices...");
-
       // Request permission first to get device labels
       await navigator.mediaDevices.getUserMedia({ video: true });
 
       const allDevices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = allDevices.filter(device => device.kind === 'videoinput');
-
-      console.log("📱 Available cameras:", videoDevices.map(d => ({
-        id: d.deviceId.substring(0, 8),
-        label: d.label
-      })));
 
       setDevices(videoDevices);
 
@@ -69,117 +55,58 @@ export function CameraBarcodeScanner({
         const backCamera = videoDevices.find(device =>
           device.label.toLowerCase().includes('back') ||
           device.label.toLowerCase().includes('rear') ||
-          device.label.toLowerCase().includes('environment') ||
-          device.label.toLowerCase().includes('facing back')
+          device.label.toLowerCase().includes('environment')
         );
-
-        const selectedCamera = backCamera || videoDevices[0];
-        console.log("📷 Selected camera:", {
-          id: selectedCamera.deviceId.substring(0, 8),
-          label: selectedCamera.label,
-          isBackCamera: !!backCamera
-        });
-
-        setSelectedDeviceId(selectedCamera.deviceId);
+        setSelectedDeviceId(backCamera?.deviceId || videoDevices[0].deviceId);
       }
     } catch (error) {
-      console.error("❌ Error getting video devices:", error);
+      console.error("Error getting video devices:", error);
       onError("Failed to access camera devices. Please ensure camera permissions are granted.");
     }
   }, [selectedDeviceId, onError]);
 
-  // Start scanning
+  // Start scanning - SIMPLIFIED LIKE QR SCANNER
   const startScanning = useCallback(async () => {
-    if (!codeReader || !videoRef.current) return;
+    if (!codeReader || !videoRef.current || isActive) return;
 
     try {
       setIsActive(true);
       setHasPermission(null);
 
-      // First get devices to ensure we have camera access
+      // Get devices first
       await getDevices();
 
-      // Request camera permission and start streaming
-      let constraints: MediaStreamConstraints;
-
-      if (selectedDeviceId) {
-        constraints = {
-          video: {
-            deviceId: { exact: selectedDeviceId },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        };
-        console.log("🎯 Using specific camera:", selectedDeviceId.substring(0, 8));
-      } else {
-        // Fallback constraints - try back camera first, then any camera
-        constraints = {
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        };
-        console.log("🔄 Using facingMode: environment (rear camera)");
-      }
+      // Request camera with rear camera preference
+      let constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
 
       let stream: MediaStream;
 
       try {
-        console.log("📡 Requesting camera with constraints:", constraints);
         stream = await navigator.mediaDevices.getUserMedia(constraints);
-        console.log("✅ Camera stream obtained successfully");
       } catch (constraintError) {
-        console.warn("⚠️ Failed with specific constraints:", constraintError);
-        console.log("🔄 Trying fallback constraints...");
-
-        // Try with facingMode environment first
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: { ideal: 'environment' }
-            }
-          });
-          console.log("✅ Fallback with environment facingMode successful");
-        } catch (envError) {
-          console.warn("⚠️ Environment facingMode failed:", envError);
-          // Final fallback to basic video constraints
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true
-          });
-          console.log("✅ Basic video constraints successful");
-        }
+        console.warn("Failed with rear camera, trying fallback:", constraintError);
+        // Fallback to basic video
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
       }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
-
-        // Debug: Log camera track settings
-        const videoTrack = stream.getVideoTracks()[0];
-        if (videoTrack) {
-          const settings = videoTrack.getSettings();
-          const cameraInfo = {
-            deviceId: settings.deviceId?.substring(0, 8),
-            facingMode: settings.facingMode,
-            width: settings.width,
-            height: settings.height,
-            label: videoTrack.label
-          };
-
-          console.log("📹 Active camera settings:", cameraInfo);
-          setCurrentCameraInfo(cameraInfo);
-        }
       }
 
-      // Start decoding from the video element
+      // Start decoding - same as QR scanner
       codeReader.decodeFromVideoDevice(
-        selectedDeviceId || undefined,
+        undefined,
         videoRef.current,
         (result, error) => {
           if (result) {
             const now = Date.now();
-            // Prevent duplicate scans within 2 seconds
             if (now - lastScanTime > 2000) {
               setLastScanTime(now);
               setScanCount(prev => prev + 1);
@@ -198,22 +125,9 @@ export function CameraBarcodeScanner({
       console.error("Error starting barcode scanner:", error);
       setHasPermission(false);
       setIsActive(false);
-
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError') {
-          onError("Camera access denied. Please allow camera permissions and try again.");
-        } else if (error.name === 'NotFoundError') {
-          onError("No camera found. Please ensure your device has a camera.");
-        } else if (error.name === 'NotReadableError') {
-          onError("Camera is already in use by another application.");
-        } else {
-          onError(`Camera error: ${error.message}`);
-        }
-      } else {
-        onError("Failed to start camera");
-      }
+      onError("Failed to start camera");
     }
-  }, [codeReader, selectedDeviceId, lastScanTime, onScan, onError, getDevices]);
+  }, [codeReader, isActive, lastScanTime, onScan, onError, getDevices]);
 
   // Stop scanning
   const stopScanning = useCallback(() => {
@@ -248,22 +162,7 @@ export function CameraBarcodeScanner({
     }
   }, [devices, selectedDeviceId, isActive, stopScanning, startScanning]);
 
-  // Force rear camera
-  const forceRearCamera = useCallback(async () => {
-    const wasActive = isActive;
-    if (wasActive) {
-      stopScanning();
-    }
 
-    // Clear selected device to force facingMode constraint
-    setSelectedDeviceId("");
-
-    if (wasActive) {
-      setTimeout(() => {
-        startScanning();
-      }, 500);
-    }
-  }, [isActive, stopScanning, startScanning]);
 
   // Handle scanning state changes
   useEffect(() => {
@@ -341,62 +240,35 @@ export function CameraBarcodeScanner({
         )}
       </div>
 
-      {/* Camera information */}
-      <div className="mt-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isActive ? (
-              <Camera className="h-4 w-4 text-green-500" />
+      {/* Camera information - SIMPLIFIED */}
+      <div className="mt-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {isActive ? (
+            <Camera className="h-4 w-4 text-green-500" />
+          ) : (
+            <CameraOff className="h-4 w-4 text-gray-400" />
+          )}
+          <span className="text-sm text-gray-600">
+            {devices.length > 0 ? (
+              devices.find(d => d.deviceId === selectedDeviceId)?.label ||
+              `Camera ${selectedDeviceId?.substring(0, 8) || 'default'}`
             ) : (
-              <CameraOff className="h-4 w-4 text-gray-400" />
+              "No camera detected"
             )}
-            <span className="text-sm text-gray-600">
-              {devices.length > 0 ? (
-                devices.find(d => d.deviceId === selectedDeviceId)?.label ||
-                `Camera ${selectedDeviceId.substring(0, 8)}`
-              ) : (
-                "No camera detected"
-              )}
-            </span>
-          </div>
-
-          <div className="flex gap-1">
-            {devices.length > 1 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={switchCamera}
-                disabled={!hasPermission}
-                className="text-xs"
-              >
-                <RotateCcw className="h-3 w-3 mr-1" />
-                Switch ({devices.length})
-              </Button>
-            )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={forceRearCamera}
-              disabled={!hasPermission}
-              className="text-xs"
-              title="Force rear camera using facingMode"
-            >
-              📷 Rear
-            </Button>
-          </div>
+          </span>
         </div>
 
-        {/* Real-time camera info */}
-        {currentCameraInfo && isActive && (
-          <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-            <div className="grid grid-cols-2 gap-1">
-              <span>Facing: {currentCameraInfo.facingMode || 'unknown'}</span>
-              <span>Resolution: {currentCameraInfo.width}x{currentCameraInfo.height}</span>
-              <span>Device: {currentCameraInfo.deviceId}</span>
-              <span>Scans: {scanCount}</span>
-            </div>
-          </div>
+        {devices.length > 1 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={switchCamera}
+            disabled={!hasPermission}
+            className="text-xs"
+          >
+            <RotateCcw className="h-3 w-3 mr-1" />
+            Switch ({devices.length})
+          </Button>
         )}
       </div>
 
