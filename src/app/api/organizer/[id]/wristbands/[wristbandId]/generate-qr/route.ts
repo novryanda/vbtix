@@ -6,8 +6,8 @@ import { z } from "zod";
 
 // Validation schema for route parameters
 const paramsSchema = z.object({
-  id: z.string().min(1),
-  wristbandId: z.string().min(1),
+  id: z.string().cuid({ message: "Invalid organizer ID format" }),
+  wristbandId: z.string().cuid({ message: "Invalid wristband ID format" }),
 });
 
 /**

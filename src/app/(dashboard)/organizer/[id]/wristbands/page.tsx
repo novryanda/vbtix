@@ -16,11 +16,15 @@ import {
 } from "~/components/ui/dialog";
 import { WristbandCreateForm } from "~/components/wristband/wristband-create-form";
 import { WristbandList } from "~/components/wristband/wristband-list";
+import { EnhancedWristbandList } from "~/components/wristband/enhanced-wristband-list";
+import { WristbandEditModal } from "~/components/wristband/wristband-edit-modal";
 import { WristbandQRModal } from "~/components/wristband/wristband-qr-modal";
 import { WristbandQRScanner } from "~/components/wristband/wristband-qr-scanner";
 import { WristbandBarcodeScanner } from "~/components/wristband/wristband-barcode-scanner";
 import { useOrganizerEvents } from "~/lib/api/hooks/organizer";
 import { useWristbandScanLogs } from "~/lib/api/hooks/qr-code";
+import { useEnhancedWristbands } from "~/lib/api/hooks/enhanced-crud";
+import { exportWristbandsToCSV } from "~/lib/utils/csv-export";
 import {
   ShieldIcon,
   PlusIcon,
@@ -42,10 +46,21 @@ export default function WristbandsPage() {
   const [selectedWristbandForScans, setSelectedWristbandForScans] = useState<string>("");
   const [activeTab, setActiveTab] = useState("list");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedWristbandForEdit, setSelectedWristbandForEdit] = useState<any>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Fetch organizer events for the create form
   const { data: eventsData, isLoading: isEventsLoading, error: eventsError } = useOrganizerEvents(organizerId);
   const events = eventsData?.data || [];
+
+  // Enhanced wristband management hooks
+  const {
+    updateWristband,
+    deleteWristband,
+    bulkOperationWristbands,
+    exportWristbands
+  } = useEnhancedWristbands(organizerId);
 
   const handleCreateSuccess = (wristband: any) => {
     setIsCreateDialogOpen(false);
@@ -62,8 +77,9 @@ export default function WristbandsPage() {
     setActiveTab("scans");
   };
 
-  const handleGenerateBarcode = async (wristbandId: string) => {
+  const handleGenerateBarcode = async (wristband: any) => {
     try {
+      const wristbandId = typeof wristband === 'string' ? wristband : wristband.id;
       const response = await fetch(`/api/organizer/${organizerId}/wristbands/${wristbandId}/barcode`, {
         method: 'POST',
         headers: {
@@ -75,7 +91,8 @@ export default function WristbandsPage() {
 
       if (result.success) {
         toast.success("Barcode generated successfully!");
-        // The list will refresh automatically due to SWR
+        // Trigger refresh by updating refresh trigger
+        setRefreshTrigger(prev => prev + 1);
       } else {
         toast.error(result.error || "Failed to generate barcode");
       }
@@ -92,6 +109,40 @@ export default function WristbandsPage() {
   const handleScanError = (error: string) => {
     console.error("Wristband scan error:", error);
     toast.error(error);
+  };
+
+  // Enhanced wristband handlers
+  const handleEditWristband = (wristband: any) => {
+    setSelectedWristbandForEdit(wristband);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSuccess = (updatedWristband: any) => {
+    setIsEditModalOpen(false);
+    setSelectedWristbandForEdit(null);
+    // The list will refresh automatically
+  };
+
+  const handleDeleteWristband = async (wristbandId: string, reason?: string) => {
+    try {
+      await deleteWristband(wristbandId, reason);
+      // The list will refresh automatically
+    } catch (error) {
+      console.error("Error deleting wristband:", error);
+    }
+  };
+
+  const handleBulkOperation = async (wristbandIds: string[], operation: string, reason?: string) => {
+    try {
+      await bulkOperationWristbands(wristbandIds, operation, reason);
+      // The list will refresh automatically
+    } catch (error) {
+      console.error("Error performing bulk operation:", error);
+    }
+  };
+
+  const handleExportWristbands = (wristbands: any[]) => {
+    exportWristbands(wristbands);
   };
 
   if (isEventsLoading) {
@@ -147,20 +198,22 @@ export default function WristbandsPage() {
                 Create Wristband
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Wristband</DialogTitle>
                 <DialogDescription>
                   Create a new wristband QR code for your event attendees
                 </DialogDescription>
               </DialogHeader>
-              <WristbandCreateForm
-                organizerId={organizerId}
-                events={events}
-                isEventsLoading={isEventsLoading}
-                onSuccess={handleCreateSuccess}
-                onCancel={() => setIsCreateDialogOpen(false)}
-              />
+              <div className="max-h-[calc(90vh-8rem)] overflow-y-auto">
+                <WristbandCreateForm
+                  organizerId={organizerId}
+                  events={events}
+                  isEventsLoading={isEventsLoading}
+                  onSuccess={handleCreateSuccess}
+                  onCancel={() => setIsCreateDialogOpen(false)}
+                />
+              </div>
             </DialogContent>
           </Dialog>
         </div>
@@ -182,14 +235,18 @@ export default function WristbandsPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Wristband List */}
+          {/* Enhanced Wristband List */}
           <TabsContent value="list" className="space-y-6">
-            <WristbandList
+            <EnhancedWristbandList
               organizerId={organizerId}
-              events={events}
+              onEdit={handleEditWristband}
+              onDelete={handleDeleteWristband}
+              onBulkOperation={handleBulkOperation}
+              onExport={handleExportWristbands}
               onViewScans={handleViewScans}
               onViewQR={handleViewQR}
               onGenerateBarcode={handleGenerateBarcode}
+              refreshTrigger={refreshTrigger}
             />
           </TabsContent>
 
@@ -219,6 +276,15 @@ export default function WristbandsPage() {
             setIsQRModalOpen(false);
             setSelectedWristband(null);
           }}
+        />
+
+        {/* Edit Wristband Modal */}
+        <WristbandEditModal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          wristband={selectedWristbandForEdit}
+          organizerId={organizerId}
+          onSuccess={handleEditSuccess}
         />
       </div>
     </OrganizerRoute>

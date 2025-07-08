@@ -142,12 +142,17 @@ model TicketType {
   saleEndDate       DateTime?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
+  deletedAt         DateTime?           // Soft delete timestamp
+  deletedBy         String?             // User ID who deleted the ticket type
+  deletionReason    String?             // Reason for deletion
   reserved          Int                 @default(0)
   orderItems        OrderItem[]
   tickets           Ticket[]
   reservations      TicketReservation[]
   allowedPaymentMethods TicketTypePaymentMethod[]
   event             Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([deletedAt])
 }
 
 model Transaction {
@@ -551,6 +556,9 @@ model WristbandQRCode {
   validUntil        DateTime?             // When wristband expires
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
+  deletedAt         DateTime?             // Soft delete timestamp
+  deletedBy         String?               // User ID who deleted the wristband
+  deletionReason    String?               // Reason for deletion
   createdBy         String                // User ID who created the wristband
 
   // Relations
@@ -561,6 +569,7 @@ model WristbandQRCode {
   @@index([eventId])
   @@index([organizerId])
   @@index([status])
+  @@index([deletedAt])
 }
 
 model WristbandScanLog {

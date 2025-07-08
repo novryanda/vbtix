@@ -48,6 +48,9 @@ import {
 import { ORGANIZER_ENDPOINTS } from "~/lib/api/endpoints";
 import { formatPrice } from "~/lib/utils";
 import { TicketLogoUpload } from "~/components/ui/ticket-logo-upload";
+import { EnhancedTicketTypeList } from "~/components/ticket/enhanced-ticket-type-list";
+import { TicketTypeEditModal } from "~/components/ticket/ticket-type-edit-modal";
+import { useEnhancedTicketTypes } from "~/lib/api/hooks/enhanced-crud";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,6 +98,9 @@ export default function EventTicketsPage({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedTicketTypeForEdit, setSelectedTicketTypeForEdit] = useState<any>(null);
+  const [showEnhancedView, setShowEnhancedView] = useState(false);
   const [formError, setFormError] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<string[]>([]);
@@ -120,6 +126,13 @@ export default function EventTicketsPage({
 
   // Type assertion for TypeScript
   const tickets = ticketsData?.data as any[] | undefined;
+
+  // Enhanced ticket type management hooks
+  const {
+    deleteTicketType,
+    bulkOperationTicketTypes,
+    exportTicketTypes
+  } = useEnhancedTicketTypes(id);
 
   // Fetch payment methods
   React.useEffect(() => {
@@ -468,6 +481,40 @@ export default function EventTicketsPage({
       );
     });
   }, [paymentMethods, selectedPaymentMethods]);
+
+  // Enhanced ticket type handlers
+  const handleEditTicketType = (ticketType: any) => {
+    setSelectedTicketTypeForEdit(ticketType);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSuccess = (updatedTicketType: any) => {
+    setIsEditModalOpen(false);
+    setSelectedTicketTypeForEdit(null);
+    mutateTickets(); // Refresh the ticket list
+  };
+
+  const handleDeleteTicketType = async (ticketTypeId: string, reason?: string) => {
+    try {
+      await deleteTicketType(ticketTypeId, reason);
+      mutateTickets(); // Refresh the ticket list
+    } catch (error) {
+      console.error("Error deleting ticket type:", error);
+    }
+  };
+
+  const handleBulkOperation = async (ticketTypeIds: string[], operation: string, reason?: string) => {
+    try {
+      await bulkOperationTicketTypes(ticketTypeIds, operation, reason);
+      mutateTickets(); // Refresh the ticket list
+    } catch (error) {
+      console.error("Error performing bulk operation:", error);
+    }
+  };
+
+  const handleExportTicketTypes = (ticketTypes: any[]) => {
+    exportTicketTypes(ticketTypes, { eventName: event?.title });
+  };
 
   // Loading state
   if (isEventLoading) {
@@ -1046,10 +1093,23 @@ export default function EventTicketsPage({
             <div className="px-4 lg:px-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Ticket Types</CardTitle>
-                  <CardDescription>
-                    Manage ticket types for {event?.title}
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Ticket Types</CardTitle>
+                      <CardDescription>
+                        Manage ticket types for {event?.title}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowEnhancedView(!showEnhancedView)}
+                      >
+                        {showEnhancedView ? "Table View" : "Enhanced View"}
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {isTicketsLoading ? (
@@ -1079,6 +1139,14 @@ export default function EventTicketsPage({
                         Create Your First Ticket Type
                       </Button>
                     </div>
+                  ) : showEnhancedView ? (
+                    <EnhancedTicketTypeList
+                      organizerId={id}
+                      onEdit={handleEditTicketType}
+                      onDelete={handleDeleteTicketType}
+                      onBulkOperation={handleBulkOperation}
+                      onExport={handleExportTicketTypes}
+                    />
                   ) : (
                     <div className="rounded-md border">
                       <Table>
@@ -1206,6 +1274,15 @@ export default function EventTicketsPage({
           </div>
         </div>
       </div>
+
+      {/* Edit Ticket Type Modal */}
+      <TicketTypeEditModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        ticketType={selectedTicketTypeForEdit}
+        organizerId={id}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 }

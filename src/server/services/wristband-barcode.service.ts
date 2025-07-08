@@ -40,6 +40,17 @@ export async function generateWristbandBarcode(params: {
   error?: string;
 }> {
   try {
+    console.log(`🎫 Starting barcode generation for wristband ${params.wristbandId} by organizer ${params.organizerId}`);
+
+    // Validate input parameters
+    if (!params.wristbandId || !params.organizerId) {
+      console.error("❌ Missing required parameters:", params);
+      return {
+        success: false,
+        error: "Missing required parameters: wristbandId and organizerId are required",
+      };
+    }
+
     // Get wristband details
     const wristband = await prisma.wristbandQRCode.findFirst({
       where: {
@@ -52,19 +63,26 @@ export async function generateWristbandBarcode(params: {
     });
 
     if (!wristband) {
+      console.error(`❌ Wristband not found: ${params.wristbandId} for organizer ${params.organizerId}`);
       return {
         success: false,
         error: "Wristband not found or access denied",
       };
     }
 
+    console.log(`✅ Found wristband: ${wristband.name} (${wristband.id})`);
+
+
     // Check if barcode already generated
     if (wristband.barcodeImageUrl && wristband.codeType === "BARCODE") {
+      console.log(`✅ Barcode already exists for wristband ${wristband.id}`);
       return {
         success: true,
         barcodeImageUrl: wristband.barcodeImageUrl,
       };
     }
+
+    console.log(`🔄 Generating new barcode for wristband ${wristband.id}`);
 
     // Generate barcode data
     const barcodeData = generateWristbandBarcodeData({
@@ -78,38 +96,58 @@ export async function generateWristbandBarcode(params: {
       maxScans: wristband.maxScans || undefined,
     });
 
+    console.log(`📊 Generated barcode data:`, {
+      wristbandId: barcodeData.wristbandId,
+      eventId: barcodeData.eventId,
+      name: barcodeData.name
+    });
+
     // Generate barcode value
     const barcodeValue = generateBarcodeValue(barcodeData);
+    console.log(`🔢 Generated barcode value: ${barcodeValue}`);
 
     // Generate barcode image (server-side)
+    console.log(`🖼️ Generating barcode image...`);
     const barcodeBuffer = await generateBarcodeImageServer(barcodeValue, PRINT_BARCODE_OPTIONS);
-    
+    console.log(`✅ Barcode image generated, buffer size: ${barcodeBuffer.length} bytes`);
+
     // Convert buffer to base64 data URL
     const barcodeImageUrl = `data:image/png;base64,${barcodeBuffer.toString('base64')}`;
+    console.log(`📸 Barcode image URL created, length: ${barcodeImageUrl.length} characters`);
 
     // Encrypt barcode data for storage
     const encryptedBarcodeData = encryptWristbandBarcodeData(barcodeData);
+    console.log(`🔐 Barcode data encrypted`);
+
 
     // Update wristband with barcode information
-    const updatedWristband = await prisma.wristbandQRCode.update({
-      where: { id: params.wristbandId },
-      data: {
-        barcodeType: "CODE128",
-        barcodeValue,
-        barcodeImageUrl,
-        barcodeData: encryptedBarcodeData,
-        barcodeGeneratedAt: new Date(),
-        codeType: "BARCODE",
-        status: WristbandQRCodeStatus.ACTIVE,
-      },
-    });
+    console.log(`💾 Updating wristband ${params.wristbandId} with barcode data...`);
+    try {
+      await prisma.wristbandQRCode.update({
+        where: { id: params.wristbandId },
+        data: {
+          barcodeType: "CODE128",
+          barcodeValue,
+          barcodeImageUrl,
+          barcodeData: encryptedBarcodeData,
+          barcodeGeneratedAt: new Date(),
+          codeType: "BARCODE",
+          status: WristbandQRCodeStatus.ACTIVE,
+        },
+      });
+      console.log(`✅ Wristband ${params.wristbandId} updated successfully`);
+    } catch (dbError) {
+      console.error(`❌ Database update failed for wristband ${params.wristbandId}:`, dbError);
+      throw dbError;
+    }
 
+    console.log(`🎉 Barcode generation completed successfully for wristband ${params.wristbandId}`);
     return {
       success: true,
-      barcodeImageUrl: updatedWristband.barcodeImageUrl || undefined,
+      barcodeImageUrl, // Menggunakan barcodeImageUrl yang sudah dibuat sebelumnya
     };
   } catch (error) {
-    console.error("Error generating wristband barcode:", error);
+    console.error(`❌ Error generating wristband barcode for ${params.wristbandId}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to generate barcode",

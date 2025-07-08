@@ -346,6 +346,36 @@ export function useWristbandQRGeneration() {
 }
 
 /**
+ * Hook to generate barcode for a wristband
+ */
+export function useWristbandBarcodeGeneration() {
+  const generateWristbandBarcode = async (organizerId: string, wristbandId: string) => {
+    try {
+      const response = await fetch(`/api/organizer/${organizerId}/wristbands/${wristbandId}/barcode`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Barcode generation failed");
+      }
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  return {
+    generateWristbandBarcode,
+  };
+}
+
+/**
  * Hook for wristband QR code validation and scanning
  */
 export function useWristbandQRScanner(organizerId: string) {

@@ -4,21 +4,19 @@ import { createWristbandQRCode } from "~/server/services/wristband-qr.service";
 import { createWristbandWithBarcode } from "~/server/services/wristband-barcode.service";
 import { prisma } from "~/server/db";
 import { z } from "zod";
+import {
+  createWristbandSchema,
+  wristbandFilterSchema,
+  bulkWristbandOperationSchema
+} from "~/lib/validations/wristband.schema";
+import { UserRole } from "@prisma/client";
 
-// Validation schema for creating wristband
-const createWristbandSchema = z.object({
-  eventId: z.string().min(1, "Event ID is required"),
-  name: z.string().min(1, "Wristband name is required"),
-  description: z.string().optional(),
-  validFrom: z.string().datetime().optional(),
-  validUntil: z.string().datetime().optional(),
-  maxScans: z.number().int().positive().optional(),
-  codeType: z.enum(["QR", "BARCODE"]).optional().default("BARCODE"), // Default to barcode
-});
+// Legacy validation schema - now using imported schema
+// Keeping for backward compatibility if needed
 
 // Validation schema for route parameters
 const paramsSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().cuid({ message: "Invalid organizer ID format" }),
 });
 
 /**
@@ -99,10 +97,15 @@ export async function GET(
       ];
     }
 
+    const offset = (page - 1) * limit;
+
     // Get wristbands with pagination
     const [wristbands, total] = await Promise.all([
       prisma.wristbandQRCode.findMany({
         where,
+        skip: offset,
+        take: limit,
+        orderBy: { createdAt: "desc" },
         include: {
           event: {
             select: {
@@ -118,11 +121,6 @@ export async function GET(
             },
           },
         },
-        orderBy: {
-          createdAt: "desc",
-        },
-        skip: (page - 1) * limit,
-        take: limit,
       }),
       prisma.wristbandQRCode.count({ where }),
     ]);
@@ -135,7 +133,18 @@ export async function GET(
           name: wristband.name,
           description: wristband.description,
           status: wristband.status,
+          // QR Code fields
           qrCodeImageUrl: wristband.qrCodeImageUrl,
+          qrCodeData: wristband.qrCodeData,
+          qrCodeGeneratedAt: wristband.qrCodeGeneratedAt,
+          // Barcode fields
+          barcodeType: wristband.barcodeType,
+          barcodeValue: wristband.barcodeValue,
+          barcodeImageUrl: wristband.barcodeImageUrl,
+          barcodeData: wristband.barcodeData,
+          barcodeGeneratedAt: wristband.barcodeGeneratedAt,
+          codeType: wristband.codeType,
+          // Other fields
           scanCount: wristband.scanCount,
           maxScans: wristband.maxScans,
           isReusable: wristband.isReusable,

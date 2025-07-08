@@ -288,13 +288,14 @@ export async function handleUpdateTicketType(params: {
 }
 
 /**
- * Delete a ticket type
+ * Soft delete a ticket type
  */
 export async function handleDeleteTicketType(params: {
   userId: string;
   ticketTypeId: string;
+  reason?: string;
 }) {
-  const { userId, ticketTypeId } = params;
+  const { userId, ticketTypeId, reason } = params;
 
   if (!ticketTypeId) throw new Error("Ticket Type ID is required");
 
@@ -304,37 +305,255 @@ export async function handleDeleteTicketType(params: {
     throw new Error("User is not an organizer");
   }
 
-  // Check if ticket type exists
+  // Check if ticket type exists and is not already deleted
   const ticketType = await prisma.ticketType.findUnique({
-    where: { id: ticketTypeId },
+    where: {
+      id: ticketTypeId,
+      deletedAt: null // Only find non-deleted ticket types
+    },
     include: { event: true },
   });
 
-  if (!ticketType) throw new Error("Ticket type not found");
+  if (!ticketType) throw new Error("Ticket type not found or already deleted");
 
   // Check if the event belongs to the organizer
   if (ticketType.event.organizerId !== organizer.id) {
     throw new Error("Ticket type does not belong to this organizer's event");
   }
 
-  // Check if tickets have been sold or are pending for this ticket type
-  const committedTicketsCount = await prisma.ticket.count({
-    where: {
-      ticketTypeId,
-      status: { in: ["ACTIVE", "USED", "PENDING"] }, // Include pending tickets
+  // Soft delete the ticket type (allow deletion even with sold tickets for soft delete)
+  const deletedTicketType = await prisma.ticketType.update({
+    where: { id: ticketTypeId },
+    data: {
+      deletedAt: new Date(),
+      deletedBy: userId,
+      deletionReason: reason,
+      isVisible: false, // Hide from public view
     },
   });
 
-  if (committedTicketsCount > 0) {
-    throw new Error("Cannot delete ticket type with sold or pending tickets");
+  return deletedTicketType;
+}
+
+/**
+ * Bulk operations on ticket types
+ */
+export async function handleBulkTicketTypeOperation(params: {
+  userId: string;
+  ticketTypeIds: string[];
+  operation: "delete" | "activate" | "deactivate" | "export";
+  reason?: string;
+}) {
+  const { userId, ticketTypeIds, operation, reason } = params;
+
+  if (!ticketTypeIds.length) throw new Error("At least one ticket type must be selected");
+
+  // Check if user is an organizer
+  const organizer = await organizerService.findByUserId(userId);
+  if (!organizer) {
+    throw new Error("User is not an organizer");
   }
 
-  // Delete ticket type
-  const deletedTicketType = await prisma.ticketType.delete({
-    where: { id: ticketTypeId },
+  // Verify all ticket types belong to the organizer's events
+  const ticketTypes = await prisma.ticketType.findMany({
+    where: {
+      id: { in: ticketTypeIds },
+      deletedAt: null,
+      event: {
+        organizerId: organizer.id,
+      },
+    },
+    include: { event: true },
   });
 
-  return deletedTicketType;
+  if (ticketTypes.length !== ticketTypeIds.length) {
+    throw new Error("Some ticket types not found or access denied");
+  }
+
+  let results: any[] = [];
+
+  switch (operation) {
+    case "delete":
+      results = await Promise.all(
+        ticketTypes.map(async (ticketType) => {
+          return await prisma.ticketType.update({
+            where: { id: ticketType.id },
+            data: {
+              deletedAt: new Date(),
+              deletedBy: userId,
+              deletionReason: reason,
+              isVisible: false,
+            },
+          });
+        })
+      );
+      break;
+
+    case "activate":
+      results = await prisma.ticketType.updateMany({
+        where: { id: { in: ticketTypeIds } },
+        data: { isVisible: true },
+      });
+      break;
+
+    case "deactivate":
+      results = await prisma.ticketType.updateMany({
+        where: { id: { in: ticketTypeIds } },
+        data: { isVisible: false },
+      });
+      break;
+
+    case "export":
+      // Return ticket types data for export
+      results = ticketTypes;
+      break;
+
+    default:
+      throw new Error("Invalid operation");
+  }
+
+  return {
+    operation,
+    affectedCount: results.length,
+    results,
+  };
+}
+
+/**
+ * Get ticket types with enhanced filtering and pagination
+ */
+export async function handleGetTicketTypesWithFilters(params: {
+  userId: string;
+  eventId?: string;
+  search?: string;
+  isVisible?: boolean;
+  priceMin?: number;
+  priceMax?: number;
+  status?: "active" | "inactive" | "deleted";
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+  includeDeleted?: boolean;
+}) {
+  const {
+    userId,
+    eventId,
+    search,
+    isVisible,
+    priceMin,
+    priceMax,
+    status,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+    page = 1,
+    limit = 20,
+    includeDeleted = false,
+  } = params;
+
+  // Check if user is an organizer
+  const organizer = await organizerService.findByUserId(userId);
+  if (!organizer) {
+    throw new Error("User is not an organizer");
+  }
+
+  const offset = (page - 1) * limit;
+
+  // Build where conditions
+  const whereConditions: any = {
+    event: {
+      organizerId: organizer.id,
+    },
+  };
+
+  // Include/exclude deleted items
+  if (!includeDeleted) {
+    whereConditions.deletedAt = null;
+  }
+
+  if (eventId) {
+    whereConditions.eventId = eventId;
+  }
+
+  if (search) {
+    whereConditions.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  if (isVisible !== undefined) {
+    whereConditions.isVisible = isVisible;
+  }
+
+  if (priceMin !== undefined || priceMax !== undefined) {
+    whereConditions.price = {};
+    if (priceMin !== undefined) whereConditions.price.gte = priceMin;
+    if (priceMax !== undefined) whereConditions.price.lte = priceMax;
+  }
+
+  if (status) {
+    switch (status) {
+      case "active":
+        whereConditions.isVisible = true;
+        whereConditions.deletedAt = null;
+        break;
+      case "inactive":
+        whereConditions.isVisible = false;
+        whereConditions.deletedAt = null;
+        break;
+      case "deleted":
+        whereConditions.deletedAt = { not: null };
+        break;
+    }
+  }
+
+  // Build order by
+  const orderBy: any = {};
+  orderBy[sortBy] = sortOrder;
+
+  // Execute query
+  const [ticketTypes, total] = await Promise.all([
+    prisma.ticketType.findMany({
+      where: whereConditions,
+      skip: offset,
+      take: limit,
+      orderBy,
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            startDate: true,
+            endDate: true,
+            status: true,
+          },
+        },
+        allowedPaymentMethods: {
+          include: {
+            paymentMethod: true,
+          },
+        },
+        _count: {
+          select: {
+            tickets: true,
+            orderItems: true,
+          },
+        },
+      },
+    }),
+    prisma.ticketType.count({ where: whereConditions }),
+  ]);
+
+  return {
+    ticketTypes,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
 
 /**

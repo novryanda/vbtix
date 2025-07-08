@@ -11,7 +11,7 @@ const validateQRSchema = z.object({
 
 // Validation schema for route parameters
 const paramsSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().cuid({ message: "Invalid organizer ID format" }),
 });
 
 /**

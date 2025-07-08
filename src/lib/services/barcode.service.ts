@@ -175,32 +175,55 @@ export async function generateBarcodeImageServer(
   value: string,
   options: BarcodeOptions = DEFAULT_BARCODE_OPTIONS
 ): Promise<Buffer> {
-  // For server-side, we'll use canvas package
-  const { createCanvas } = await import("canvas");
-  
-  const canvas = createCanvas(400, 200);
-  
-  JsBarcode(canvas, value, {
-    format: options.format || "CODE128",
-    width: options.width || 2,
-    height: options.height || 100,
-    displayValue: options.displayValue !== false,
-    fontSize: options.fontSize || 14,
-    textAlign: options.textAlign || "center",
-    textPosition: options.textPosition || "bottom",
-    textMargin: options.textMargin || 2,
-    fontOptions: options.fontOptions || "",
-    font: options.font || "monospace",
-    background: options.background || "#ffffff",
-    lineColor: options.lineColor || "#000000",
-    margin: options.margin || 10,
-    marginTop: options.marginTop,
-    marginBottom: options.marginBottom,
-    marginLeft: options.marginLeft,
-    marginRight: options.marginRight,
-  });
+  try {
+    console.log(`🖼️ Starting server-side barcode generation for value: ${value}`);
 
-  return canvas.toBuffer("image/png");
+    // Validate input
+    if (!value || typeof value !== 'string') {
+      throw new Error(`Invalid barcode value: ${value}`);
+    }
+
+    // For server-side, we'll use canvas package
+    console.log(`📦 Importing canvas package...`);
+    const { createCanvas } = await import("canvas");
+    console.log(`✅ Canvas package imported successfully`);
+
+    const canvas = createCanvas(400, 200);
+    console.log(`🎨 Canvas created: 400x200`);
+
+    const barcodeOptions = {
+      format: options.format || "CODE128",
+      width: options.width || 2,
+      height: options.height || 100,
+      displayValue: options.displayValue !== false,
+      fontSize: options.fontSize || 14,
+      textAlign: options.textAlign || "center",
+      textPosition: options.textPosition || "bottom",
+      textMargin: options.textMargin || 2,
+      fontOptions: options.fontOptions || "",
+      font: options.font || "monospace",
+      background: options.background || "#ffffff",
+      lineColor: options.lineColor || "#000000",
+      margin: options.margin || 10,
+      marginTop: options.marginTop,
+      marginBottom: options.marginBottom,
+      marginLeft: options.marginLeft,
+      marginRight: options.marginRight,
+    };
+
+    console.log(`⚙️ Barcode options:`, barcodeOptions);
+
+    JsBarcode(canvas, value, barcodeOptions);
+    console.log(`✅ Barcode rendered to canvas`);
+
+    const buffer = canvas.toBuffer("image/png");
+    console.log(`📸 Canvas converted to buffer, size: ${buffer.length} bytes`);
+
+    return buffer;
+  } catch (error) {
+    console.error(`❌ Error in generateBarcodeImageServer:`, error);
+    throw new Error(`Failed to generate barcode image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 /**

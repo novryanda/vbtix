@@ -5,8 +5,8 @@ import { z } from "zod";
 
 // Validation schema for route parameters
 const paramsSchema = z.object({
-  id: z.string().min(1),
-  wristbandId: z.string().min(1),
+  id: z.string().cuid({ message: "Invalid organizer ID format" }),
+  wristbandId: z.string().cuid({ message: "Invalid wristband ID format" }),
 });
 
 /**
@@ -15,9 +15,12 @@ const paramsSchema = z.object({
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; wristbandId: string } }
+  { params }: { params: Promise<{ id: string; wristbandId: string }> }
 ) {
   try {
+    // Await params to resolve the Promise (required in Next.js 15+)
+    const resolvedParams = await params;
+
     // Validate session
     const session = await auth();
     if (!session?.user) {
@@ -30,18 +33,23 @@ export async function POST(
       );
     }
 
-    // Validate route parameters
-    const validatedParams = paramsSchema.safeParse(params);
+    console.log(`🎫 Generating barcode for wristband via API`);
+
+
+    // Validate route parameters using resolved params
+    const validatedParams = paramsSchema.safeParse(resolvedParams);
     if (!validatedParams.success) {
+      console.error("❌ Parameter validation failed:", validatedParams.error.errors);
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid parameters",
+          error: "Invalid parameters: organizer ID and wristband ID must be valid CUID format",
           details: validatedParams.error.errors,
         },
         { status: 400 }
       );
     }
+
 
     const { id: organizerId, wristbandId } = validatedParams.data;
 
@@ -92,9 +100,12 @@ export async function POST(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; wristbandId: string } }
+  { params }: { params: Promise<{ id: string; wristbandId: string }> }
 ) {
   try {
+    // Await params to resolve the Promise (required in Next.js 15+)
+    const resolvedParams = await params;
+
     // Validate session
     const session = await auth();
     if (!session?.user) {
@@ -108,12 +119,13 @@ export async function GET(
     }
 
     // Validate route parameters
-    const validatedParams = paramsSchema.safeParse(params);
+    const validatedParams = paramsSchema.safeParse(resolvedParams);
     if (!validatedParams.success) {
+      console.error("❌ Parameter validation failed:", validatedParams.error.errors);
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid parameters",
+          error: "Invalid parameters: organizer ID and wristband ID must be valid CUID format",
           details: validatedParams.error.errors,
         },
         { status: 400 }

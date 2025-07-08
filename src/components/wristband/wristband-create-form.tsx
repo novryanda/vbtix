@@ -101,228 +101,230 @@ export function WristbandCreateForm({
   };
 
   return (
-    <MagicCard className="border-0 bg-background/50 backdrop-blur-sm">
-      <div className="p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <QrCode className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Create New Wristband</h3>
-        </div>
+    <div className="space-y-6">
+      <MagicCard className="border-0 bg-background/50 backdrop-blur-sm">
+        <div className="p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <QrCode className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold">Create New Wristband</h3>
+          </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Event Selection */}
-            <FormField
-              control={form.control}
-              name="eventId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Event</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isEventsLoading}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={isEventsLoading ? "Loading events..." : "Select an event"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isEventsLoading ? (
-                        <SelectItem value="" disabled>
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Loading events...
-                          </div>
-                        </SelectItem>
-                      ) : events.length > 0 ? (
-                        events.map((event) => (
-                          <SelectItem key={event.id} value={event.id}>
-                            {event.title}
-                          </SelectItem>
-                        ))
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Event Selection */}
+              <FormField
+                control={form.control}
+                name="eventId"
+                render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Event</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isEventsLoading}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={isEventsLoading ? "Loading events..." : "Select an event"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isEventsLoading ? (
+                            <SelectItem value="" disabled>
+                              <div className="flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Loading events...
+                              </div>
+                            </SelectItem>
+                          ) : events.length > 0 ? (
+                            events.map((event) => (
+                              <SelectItem key={event.id} value={event.id}>
+                                {event.title}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="" disabled>
+                              No events available
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Choose the event this wristband will be used for
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Wristband Name */}
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Wristband Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., VIP Access, Staff Pass, General Admission" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        A descriptive name for this wristband type
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Description */}
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Additional details about this wristband..."
+                          className="resize-none"
+                          rows={3}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Optional description for internal reference
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Validity Period */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    name="validFrom"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Valid From (Optional)</FormLabel>
+                        <FormControl>
+                          <Input type="datetime-local" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          When this wristband becomes valid
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="validUntil"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Valid Until (Optional)</FormLabel>
+                        <FormControl>
+                          <Input type="datetime-local" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          When this wristband expires
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Max Scans */}
+                <FormField
+                  control={form.control}
+                  name="maxScans"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Maximum Scans (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="Leave empty for unlimited scans"
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Limit the number of times this wristband can be scanned
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Code Type */}
+                <FormField
+                  control={form.control}
+                  name="codeType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Code Type</FormLabel>
+                        <FormControl>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select code type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="BARCODE">
+                                <div className="flex items-center gap-2">
+                                  <QrCode className="h-4 w-4" />
+                                  Barcode (Recommended)
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="QR">
+                                <div className="flex items-center gap-2">
+                                  <QrCode className="h-4 w-4" />
+                                  QR Code (Legacy)
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormDescription>
+                          Barcode is recommended for better scanning reliability
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-1"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
                       ) : (
-                        <SelectItem value="" disabled>
-                          No events available
-                        </SelectItem>
+                        <>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create Wristband
+                        </>
                       )}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Choose the event this wristband will be used for
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    </Button>
 
-            {/* Wristband Name */}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Wristband Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., VIP Access, Staff Pass, General Admission" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    A descriptive name for this wristband type
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Additional details about this wristband..."
-                      className="resize-none"
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Optional description for internal reference
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Validity Period */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="validFrom"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Valid From (Optional)</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      When this wristband becomes valid
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="validUntil"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Valid Until (Optional)</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      When this wristband expires
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    {onCancel && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onCancel}
+                        disabled={isSubmitting}
+                        className="sm:w-auto"
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              </Form>
             </div>
-
-            {/* Max Scans */}
-            <FormField
-              control={form.control}
-              name="maxScans"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Maximum Scans (Optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Leave empty for unlimited scans"
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Limit the number of times this wristband can be scanned
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Code Type */}
-            <FormField
-              control={form.control}
-              name="codeType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Code Type</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select code type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BARCODE">
-                          <div className="flex items-center gap-2">
-                            <QrCode className="h-4 w-4" />
-                            Barcode (Recommended)
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="QR">
-                          <div className="flex items-center gap-2">
-                            <QrCode className="h-4 w-4" />
-                            QR Code (Legacy)
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormDescription>
-                    Barcode is recommended for better scanning reliability
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Wristband
-                  </>
-                )}
-              </Button>
-              
-              {onCancel && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onCancel}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-              )}
-            </div>
-          </form>
-        </Form>
-      </div>
-    </MagicCard>
-  );
+          </MagicCard>
+        </div>
+      );
 }

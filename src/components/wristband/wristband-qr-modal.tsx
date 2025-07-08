@@ -14,6 +14,7 @@ import { Separator } from "~/components/ui/separator";
 import {
   Download,
   QrCode,
+  BarChart3,
   Calendar,
   Clock,
   Users,
@@ -33,6 +34,10 @@ interface WristbandQRModalProps {
     description?: string;
     status: string;
     qrCodeImageUrl?: string;
+    barcodeImageUrl?: string;
+    codeType?: string;
+    barcodeType?: string;
+    barcodeValue?: string;
     scanCount: number;
     maxScans?: number;
     isReusable: boolean;
@@ -95,27 +100,31 @@ export function WristbandQRModal({ wristband, isOpen, onClose }: WristbandQRModa
     }
   };
 
+  const isBarcode = wristband.codeType === "BARCODE";
+  const codeImageUrl = isBarcode ? wristband.barcodeImageUrl : wristband.qrCodeImageUrl;
+  const codeType = isBarcode ? "Barcode" : "QR Code";
+
   const handleDownload = async () => {
-    if (!wristband.qrCodeImageUrl) return;
+    if (!codeImageUrl) return;
 
     setIsDownloading(true);
     try {
-      const response = await fetch(wristband.qrCodeImageUrl);
+      const response = await fetch(codeImageUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      
+
       const link = document.createElement("a");
       link.href = url;
-      link.download = `wristband-${wristband.name.replace(/\s+/g, "-").toLowerCase()}-qr.png`;
+      link.download = `wristband-${wristband.name.replace(/\s+/g, "-").toLowerCase()}-${isBarcode ? 'barcode' : 'qr'}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       window.URL.revokeObjectURL(url);
-      
-      toast.success("QR code image has been downloaded successfully.");
+
+      toast.success(`${codeType} image has been downloaded successfully.`);
     } catch (error) {
-      toast.error("Failed to download QR code image.");
+      toast.error(`Failed to download ${codeType.toLowerCase()} image.`);
     } finally {
       setIsDownloading(false);
     }
@@ -137,11 +146,11 @@ export function WristbandQRModal({ wristband, isOpen, onClose }: WristbandQRModa
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <QrCode className="h-5 w-5" />
-            Wristband QR Code
+            {isBarcode ? <BarChart3 className="h-5 w-5" /> : <QrCode className="h-5 w-5" />}
+            Wristband {codeType}
           </DialogTitle>
           <DialogDescription>
-            View and download the QR code for this wristband
+            View and download the {codeType.toLowerCase()} for this wristband
           </DialogDescription>
         </DialogHeader>
 
@@ -170,18 +179,27 @@ export function WristbandQRModal({ wristband, isOpen, onClose }: WristbandQRModa
 
           <Separator />
 
-          {/* QR Code Display */}
-          {wristband.qrCodeImageUrl ? (
+          {/* Code Display (QR or Barcode) */}
+          {codeImageUrl ? (
             <div className="text-center space-y-4">
               <div className="inline-block p-4 bg-white rounded-lg border-2 border-gray-200">
                 <Image
-                  src={wristband.qrCodeImageUrl}
-                  alt="Wristband QR Code"
+                  src={codeImageUrl}
+                  alt={`Wristband ${codeType}`}
                   width={200}
-                  height={200}
+                  height={isBarcode ? 150 : 200}
                   className="rounded-lg"
                 />
               </div>
+
+              {isBarcode && wristband.barcodeValue && (
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-1">Barcode Value:</p>
+                  <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                    {wristband.barcodeValue}
+                  </code>
+                </div>
+              )}
 
               <Button
                 onClick={handleDownload}
@@ -189,13 +207,17 @@ export function WristbandQRModal({ wristband, isOpen, onClose }: WristbandQRModa
                 className="w-full"
               >
                 <Download className="mr-2 h-4 w-4" />
-                {isDownloading ? "Downloading..." : "Download QR Code"}
+                {isDownloading ? "Downloading..." : `Download ${codeType}`}
               </Button>
             </div>
           ) : (
             <div className="text-center py-8">
-              <QrCode className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">QR code not generated yet</p>
+              {isBarcode ? (
+                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              ) : (
+                <QrCode className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              )}
+              <p className="text-muted-foreground">{codeType} not generated yet</p>
             </div>
           )}
 

@@ -6,7 +6,7 @@ import {
 } from "~/server/api/tickets";
 import { auth } from "~/server/auth";
 import { UserRole } from "@prisma/client";
-import { updateTicketTypeSchema } from "~/lib/validations/ticket.schema";
+import { updateTicketTypeSchema, deleteTicketTypeSchema } from "~/lib/validations/ticket.schema";
 
 /**
  * GET /api/organizer/[organizerId]/tickets/[ticketsId]
@@ -176,10 +176,10 @@ export async function PUT(
 
 /**
  * DELETE /api/organizer/[organizerId]/tickets/[ticketsId]
- * Delete a ticket type for the authenticated organizer
+ * Soft delete a ticket type for the authenticated organizer
  */
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ organizerId: string; ticketsId: string }> },
 ) {
   try {
@@ -205,24 +205,36 @@ export async function DELETE(
 
     const { ticketsId } = await params;
 
-    // Call business logic
-    await handleDeleteTicketType({
+    // Parse request body for deletion reason
+    let reason: string | undefined;
+    try {
+      const body = await req.json();
+      const validatedData = deleteTicketTypeSchema.parse({ id: ticketsId, ...body });
+      reason = validatedData.reason;
+    } catch {
+      // If no body or invalid body, proceed without reason
+    }
+
+    // Call business logic for soft delete
+    const deletedTicketType = await handleDeleteTicketType({
       userId: session.user.id,
       ticketTypeId: ticketsId,
+      reason,
     });
 
     return NextResponse.json({
       success: true,
       message: "Ticket type deleted successfully",
+      data: deletedTicketType,
     });
   } catch (error: any) {
     const { ticketsId } = await params;
     console.error(`Error deleting ticket type with ID ${ticketsId}:`, error);
 
     // Handle specific errors
-    if (error.message === "Ticket type not found") {
+    if (error.message === "Ticket type not found or already deleted") {
       return NextResponse.json(
-        { success: false, error: "Ticket type not found" },
+        { success: false, error: "Ticket type not found or already deleted" },
         { status: 404 },
       );
     }
@@ -236,16 +248,6 @@ export async function DELETE(
           error: "You don't have permission to delete this ticket type",
         },
         { status: 403 },
-      );
-    }
-
-    if (error.message === "Cannot delete ticket type with sold tickets") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Cannot delete ticket type with sold tickets",
-        },
-        { status: 400 },
       );
     }
 

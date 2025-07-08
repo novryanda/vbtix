@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { useWristbandQRGeneration } from "~/lib/api/hooks/qr-code";
+import { useWristbandQRGeneration, useWristbandBarcodeGeneration } from "~/lib/api/hooks/qr-code";
 import { toast } from "sonner";
 import {
   QrCode,
@@ -70,7 +70,9 @@ export function WristbandCard({
   onGenerateBarcode,
 }: WristbandCardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const { generateWristbandQR } = useWristbandQRGeneration();
+  const { generateWristbandBarcode } = useWristbandBarcodeGeneration();
 
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -125,11 +127,35 @@ export function WristbandCard({
     }
   };
 
+  const handleGenerateBarcode = async () => {
+    setIsGenerating(true);
+    try {
+      await generateWristbandBarcode(organizerId, wristband.id);
+      toast.success("Wristband barcode has been generated successfully.");
+      onQRGenerated?.(); // Reuse the same callback to refresh data
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate barcode");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleDownloadQR = () => {
     if (wristband.qrCodeImageUrl) {
       const link = document.createElement("a");
       link.href = wristband.qrCodeImageUrl;
       link.download = `wristband-${wristband.name}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleDownloadBarcode = () => {
+    if (wristband.barcodeImageUrl) {
+      const link = document.createElement("a");
+      link.href = wristband.barcodeImageUrl;
+      link.download = `wristband-${wristband.name}-barcode.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -198,13 +224,15 @@ export function WristbandCard({
         {/* Code Display (QR or Barcode) */}
         <div className="flex items-center gap-4 mb-4">
           <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-            {(wristband.codeType === "BARCODE" ? wristband.barcodeImageUrl : wristband.qrCodeImageUrl) ? (
+            {(wristband.codeType === "BARCODE" ? wristband.barcodeImageUrl : wristband.qrCodeImageUrl) && !imageError ? (
               <Image
                 src={wristband.codeType === "BARCODE" ? wristband.barcodeImageUrl! : wristband.qrCodeImageUrl!}
                 alt={`Wristband ${wristband.codeType === "BARCODE" ? "Barcode" : "QR Code"}`}
                 width={80}
                 height={80}
                 className="rounded-lg"
+                onError={() => setImageError(true)}
+                onLoad={() => setImageError(false)}
               />
             ) : (
               <QrCode className="h-8 w-8 text-gray-400" />
@@ -216,7 +244,7 @@ export function WristbandCard({
               <div className="space-y-2">
                 {wristband.codeType === "BARCODE" ? (
                   <Button
-                    onClick={() => onGenerateBarcode?.(wristband.id)}
+                    onClick={handleGenerateBarcode}
                     disabled={isGenerating}
                     size="sm"
                     className="w-full"

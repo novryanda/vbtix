@@ -380,8 +380,40 @@ export const updateTicketTypeSchema = z.object({
 });
 
 /**
- * Schema for deleting a ticket type
+ * Schema for deleting a ticket type (soft delete)
  */
 export const deleteTicketTypeSchema = z.object({
-  id: z.string(),
+  id: z.string().cuid({ message: "Invalid ticket type ID format" }),
+  reason: z.string().min(1, { message: "Deletion reason is required" }).max(500, { message: "Reason cannot exceed 500 characters" }).optional(),
 });
+
+/**
+ * Schema for bulk operations on ticket types
+ */
+export const bulkTicketTypeOperationSchema = z.object({
+  ticketTypeIds: z.array(z.string().cuid({ message: "Invalid ticket type ID format" })).min(1, { message: "At least one ticket type must be selected" }),
+  operation: z.enum(["delete", "activate", "deactivate", "export"], { message: "Invalid operation type" }),
+  reason: z.string().max(500, { message: "Reason cannot exceed 500 characters" }).optional(),
+});
+
+/**
+ * Schema for ticket type filtering and search
+ */
+export const ticketTypeFilterSchema = z.object({
+  search: z.string().optional(),
+  eventId: z.string().cuid().optional(),
+  isVisible: z.boolean().optional(),
+  priceMin: z.number().min(0).optional(),
+  priceMax: z.number().min(0).optional(),
+  status: z.enum(["active", "inactive", "deleted"]).optional(),
+  sortBy: z.enum(["name", "price", "quantity", "sold", "createdAt", "updatedAt"]).optional().default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+  page: z.number().int().min(1).optional().default(1),
+  limit: z.number().int().min(1).max(100).optional().default(20),
+});
+
+/**
+ * Export TypeScript types from the schemas
+ */
+export type BulkTicketTypeOperationSchema = z.infer<typeof bulkTicketTypeOperationSchema>;
+export type TicketTypeFilterSchema = z.infer<typeof ticketTypeFilterSchema>;
