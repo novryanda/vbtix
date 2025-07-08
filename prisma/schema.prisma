@@ -534,6 +534,15 @@ model WristbandQRCode {
   qrCodeImageUrl    String?               // URL to the generated QR code image
   qrCodeData        String?               // Encrypted QR code data for validation
   qrCodeGeneratedAt DateTime?             // When QR code was generated
+
+  // New Barcode fields (optional for backward compatibility)
+  barcodeType       String?               // CODE128, CODE39, etc.
+  barcodeValue      String?               // Unique barcode value/identifier
+  barcodeImageUrl   String?               // URL to the generated barcode image
+  barcodeData       String?               // Encrypted barcode data for validation
+  barcodeGeneratedAt DateTime?            // When barcode was generated
+  codeType          String?               // "QR" or "BARCODE"
+
   status            WristbandQRCodeStatus @default(PENDING)
   isReusable        Boolean               @default(true) // Wristbands are reusable by default
   maxScans          Int?                  // Optional limit on number of scans

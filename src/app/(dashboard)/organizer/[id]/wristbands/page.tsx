@@ -18,6 +18,7 @@ import { WristbandCreateForm } from "~/components/wristband/wristband-create-for
 import { WristbandList } from "~/components/wristband/wristband-list";
 import { WristbandQRModal } from "~/components/wristband/wristband-qr-modal";
 import { WristbandQRScanner } from "~/components/wristband/wristband-qr-scanner";
+import { WristbandBarcodeScanner } from "~/components/wristband/wristband-barcode-scanner";
 import { useOrganizerEvents } from "~/lib/api/hooks/organizer";
 import { useWristbandScanLogs } from "~/lib/api/hooks/qr-code";
 import {
@@ -29,6 +30,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function WristbandsPage() {
   const params = useParams();
@@ -39,6 +41,7 @@ export default function WristbandsPage() {
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [selectedWristbandForScans, setSelectedWristbandForScans] = useState<string>("");
   const [activeTab, setActiveTab] = useState("list");
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Fetch organizer events for the create form
   const { data: eventsData, isLoading: isEventsLoading, error: eventsError } = useOrganizerEvents(organizerId);
@@ -59,12 +62,36 @@ export default function WristbandsPage() {
     setActiveTab("scans");
   };
 
+  const handleGenerateBarcode = async (wristbandId: string) => {
+    try {
+      const response = await fetch(`/api/organizer/${organizerId}/wristbands/${wristbandId}/barcode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success("Barcode generated successfully!");
+        // The list will refresh automatically due to SWR
+      } else {
+        toast.error(result.error || "Failed to generate barcode");
+      }
+    } catch (error) {
+      console.error("Error generating barcode:", error);
+      toast.error("Failed to generate barcode");
+    }
+  };
+
   const handleScanSuccess = (result: any) => {
-    console.log("Wristband scan successful:", result);
+    toast.success(`Wristband "${result.wristband?.name}" scanned successfully!`);
   };
 
   const handleScanError = (error: string) => {
     console.error("Wristband scan error:", error);
+    toast.error(error);
   };
 
   if (isEventsLoading) {
@@ -162,12 +189,13 @@ export default function WristbandsPage() {
               events={events}
               onViewScans={handleViewScans}
               onViewQR={handleViewQR}
+              onGenerateBarcode={handleGenerateBarcode}
             />
           </TabsContent>
 
-          {/* QR Scanner */}
+          {/* Barcode Scanner */}
           <TabsContent value="scanner" className="space-y-6">
-            <WristbandQRScanner
+            <WristbandBarcodeScanner
               organizerId={organizerId}
               onScanSuccess={handleScanSuccess}
               onScanError={handleScanError}

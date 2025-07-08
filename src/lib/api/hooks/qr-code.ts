@@ -1,4 +1,5 @@
 import useSWR from "swr";
+import { useCallback } from "react";
 import { PUBLIC_ENDPOINTS, ORGANIZER_ENDPOINTS, ADMIN_ENDPOINTS } from "~/lib/api/endpoints";
 
 /**
@@ -510,4 +511,60 @@ export interface QRCodeGenerationResult {
 export interface TicketQRCode {
   ticketId: string;
   qrCodeImageUrl: string;
+}
+
+/**
+ * Hook for wristband barcode scanning operations
+ */
+export function useWristbandBarcodeScanner() {
+  const validateBarcode = useCallback(async (organizerId: string, data: {
+    barcodeData?: string;
+    codeData?: string;
+    codeType?: "QR" | "BARCODE";
+    scan?: boolean;
+    scanLocation?: string;
+    scanDevice?: string;
+  }) => {
+    const response = await fetcher(`/api/organizer/${organizerId}/wristbands/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...data,
+        codeData: data.codeData || data.barcodeData,
+        codeType: data.codeType || "BARCODE",
+      }),
+    });
+
+    return response;
+  }, []);
+
+  const scanBarcode = useCallback(async (organizerId: string, data: {
+    barcodeData?: string;
+    codeData?: string;
+    codeType?: "QR" | "BARCODE";
+    scan: true;
+    scanLocation?: string;
+    scanDevice?: string;
+  }) => {
+    const response = await fetcher(`/api/organizer/${organizerId}/wristbands/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...data,
+        codeData: data.codeData || data.barcodeData,
+        codeType: data.codeType || "BARCODE",
+      }),
+    });
+
+    return response;
+  }, []);
+
+  return {
+    validateBarcode,
+    scanBarcode,
+  };
 }

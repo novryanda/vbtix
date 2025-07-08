@@ -36,6 +36,7 @@ const wristbandSchema = z.object({
   validFrom: z.string().optional(),
   validUntil: z.string().optional(),
   maxScans: z.number().int().positive().optional(),
+  codeType: z.enum(["QR", "BARCODE"]).optional().default("BARCODE"),
 });
 
 type WristbandFormData = z.infer<typeof wristbandSchema>;
@@ -71,6 +72,8 @@ export function WristbandCreateForm({
       description: "",
       validFrom: "",
       validUntil: "",
+      maxScans: undefined,
+      codeType: "BARCODE",
     },
   });
 
@@ -235,8 +238,8 @@ export function WristbandCreateForm({
                 <FormItem>
                   <FormLabel>Maximum Scans (Optional)</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
                       placeholder="Leave empty for unlimited scans"
                       {...field}
                       onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
@@ -244,6 +247,42 @@ export function WristbandCreateForm({
                   </FormControl>
                   <FormDescription>
                     Limit the number of times this wristband can be scanned
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Code Type */}
+            <FormField
+              control={form.control}
+              name="codeType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Code Type</FormLabel>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select code type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BARCODE">
+                          <div className="flex items-center gap-2">
+                            <QrCode className="h-4 w-4" />
+                            Barcode (Recommended)
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="QR">
+                          <div className="flex items-center gap-2">
+                            <QrCode className="h-4 w-4" />
+                            QR Code (Legacy)
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormDescription>
+                    Barcode is recommended for better scanning reliability
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

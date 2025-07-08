@@ -36,6 +36,10 @@ interface WristbandCardProps {
     description?: string;
     status: string;
     qrCodeImageUrl?: string;
+    barcodeImageUrl?: string;
+    codeType?: string;
+    barcodeType?: string;
+    barcodeValue?: string;
     scanCount: number;
     maxScans?: number;
     isReusable: boolean;
@@ -54,6 +58,7 @@ interface WristbandCardProps {
   onQRGenerated?: () => void;
   onViewScans?: (wristbandId: string) => void;
   onViewQR?: (wristband: any) => void;
+  onGenerateBarcode?: (wristbandId: string) => void;
 }
 
 export function WristbandCard({
@@ -62,6 +67,7 @@ export function WristbandCard({
   onQRGenerated,
   onViewScans,
   onViewQR,
+  onGenerateBarcode,
 }: WristbandCardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const { generateWristbandQR } = useWristbandQRGeneration();
@@ -189,13 +195,13 @@ export function WristbandCard({
           </DropdownMenu>
         </div>
 
-        {/* QR Code Display */}
+        {/* Code Display (QR or Barcode) */}
         <div className="flex items-center gap-4 mb-4">
           <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-            {wristband.qrCodeImageUrl ? (
+            {(wristband.codeType === "BARCODE" ? wristband.barcodeImageUrl : wristband.qrCodeImageUrl) ? (
               <Image
-                src={wristband.qrCodeImageUrl}
-                alt="Wristband QR Code"
+                src={wristband.codeType === "BARCODE" ? wristband.barcodeImageUrl! : wristband.qrCodeImageUrl!}
+                alt={`Wristband ${wristband.codeType === "BARCODE" ? "Barcode" : "QR Code"}`}
                 width={80}
                 height={80}
                 className="rounded-lg"
@@ -206,25 +212,48 @@ export function WristbandCard({
           </div>
 
           <div className="flex-1">
-            {!wristband.qrCodeImageUrl ? (
-              <Button
-                onClick={handleGenerateQR}
-                disabled={isGenerating}
-                size="sm"
-                className="w-full"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
+            {!(wristband.codeType === "BARCODE" ? wristband.barcodeImageUrl : wristband.qrCodeImageUrl) ? (
+              <div className="space-y-2">
+                {wristband.codeType === "BARCODE" ? (
+                  <Button
+                    onClick={() => onGenerateBarcode?.(wristband.id)}
+                    disabled={isGenerating}
+                    size="sm"
+                    className="w-full"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <QrCode className="mr-2 h-4 w-4" />
+                        Generate Barcode
+                      </>
+                    )}
+                  </Button>
                 ) : (
-                  <>
-                    <QrCode className="mr-2 h-4 w-4" />
-                    Generate QR Code
-                  </>
+                  <Button
+                    onClick={handleGenerateQR}
+                    disabled={isGenerating}
+                    size="sm"
+                    className="w-full"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <QrCode className="mr-2 h-4 w-4" />
+                        Generate QR Code
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
@@ -234,11 +263,17 @@ export function WristbandCard({
                     {wristband.maxScans && ` / ${wristband.maxScans}`}
                   </span>
                 </div>
-                
+
                 {wristband.isReusable && (
                   <Badge variant="outline" className="text-xs">
                     Reusable
                   </Badge>
+                )}
+
+                {wristband.codeType === "BARCODE" && wristband.barcodeValue && (
+                  <p className="text-xs text-gray-500 font-mono">
+                    {wristband.barcodeValue}
+                  </p>
                 )}
               </div>
             )}

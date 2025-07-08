@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { createWristbandQRCode } from "~/server/services/wristband-qr.service";
+import { createWristbandWithBarcode } from "~/server/services/wristband-barcode.service";
 import { prisma } from "~/server/db";
 import { z } from "zod";
 
@@ -12,6 +13,7 @@ const createWristbandSchema = z.object({
   validFrom: z.string().datetime().optional(),
   validUntil: z.string().datetime().optional(),
   maxScans: z.number().int().positive().optional(),
+  codeType: z.enum(["QR", "BARCODE"]).optional().default("BARCODE"), // Default to barcode
 });
 
 // Validation schema for route parameters
@@ -233,19 +235,30 @@ export async function POST(
       );
     }
 
-    const { eventId, name, description, validFrom, validUntil, maxScans } = validatedData.data;
+    const { eventId, name, description, validFrom, validUntil, maxScans, codeType } = validatedData.data;
 
-    // Create wristband
-    const result = await createWristbandQRCode({
-      eventId,
-      organizerId,
-      name,
-      description,
-      validFrom: validFrom ? new Date(validFrom) : undefined,
-      validUntil: validUntil ? new Date(validUntil) : undefined,
-      maxScans,
-      createdBy: session.user.id,
-    });
+    // Create wristband based on code type
+    const result = codeType === "BARCODE"
+      ? await createWristbandWithBarcode({
+          eventId,
+          organizerId,
+          name,
+          description,
+          validFrom: validFrom ? new Date(validFrom) : undefined,
+          validUntil: validUntil ? new Date(validUntil) : undefined,
+          maxScans,
+          createdBy: session.user.id,
+        })
+      : await createWristbandQRCode({
+          eventId,
+          organizerId,
+          name,
+          description,
+          validFrom: validFrom ? new Date(validFrom) : undefined,
+          validUntil: validUntil ? new Date(validUntil) : undefined,
+          maxScans,
+          createdBy: session.user.id,
+        });
 
     if (!result.success) {
       return NextResponse.json(

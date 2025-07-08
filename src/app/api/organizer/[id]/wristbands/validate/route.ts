@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { validateWristbandQRCode, scanWristbandQRCode } from "~/server/services/wristband-qr.service";
+import { validateWristbandBarcode, scanWristbandBarcode } from "~/server/services/wristband-barcode.service";
 import { prisma } from "~/server/db";
 import { z } from "zod";
 
 // Validation schema for request body
 const validateWristbandSchema = z.object({
-  qrCodeData: z.string().min(1, "QR code data is required"),
+  qrCodeData: z.string().optional(), // QR code data (legacy)
+  barcodeData: z.string().optional(), // Barcode data (new)
+  codeData: z.string().min(1, "Code data is required"), // Generic code data
+  codeType: z.enum(["QR", "BARCODE"]).optional().default("BARCODE"), // Code type
   scan: z.boolean().optional().default(false), // Whether to log the scan
   scanLocation: z.string().optional(),
   scanDevice: z.string().optional(),
-});
+}).refine(
+  (data) => data.qrCodeData || data.barcodeData || data.codeData,
+  {
+    message: "Either qrCodeData, barcodeData, or codeData is required",
+  }
+);
 
 // Validation schema for route parameters
 const paramsSchema = z.object({
@@ -87,17 +96,31 @@ export async function POST(
       );
     }
 
-    const { qrCodeData, scan, scanLocation, scanDevice } = validatedData.data;
+    const { qrCodeData, barcodeData, codeData, codeType, scan, scanLocation, scanDevice } = validatedData.data;
+
+    // Determine the actual code data and type
+    const actualCodeData = codeData || barcodeData || qrCodeData!;
+    const actualCodeType = codeType || (qrCodeData ? "QR" : "BARCODE");
+
+    console.log(`🎫 ${scan ? 'Scanning' : 'Validating'} wristband (${actualCodeType}) by organizer ${organizerId}`);
 
     if (scan) {
-      // Scan the wristband (validate and log)
-      const result = await scanWristbandQRCode(
-        qrCodeData,
-        organizerId,
-        session.user.id,
-        scanLocation,
-        scanDevice
-      );
+      // Scan the wristband (validate and log) based on code type
+      const result = actualCodeType === "BARCODE"
+        ? await scanWristbandBarcode(
+            actualCodeData,
+            organizerId,
+            session.user.id,
+            scanLocation,
+            scanDevice
+          )
+        : await scanWristbandQRCode(
+            actualCodeData,
+            organizerId,
+            session.user.id,
+            scanLocation,
+            scanDevice
+          );
 
       if (!result.success) {
         console.warn(`❌ Failed wristband scan attempt by organizer ${organizerId}: ${result.error}`);
@@ -122,8 +145,10 @@ export async function POST(
         },
       });
     } else {
-      // Just validate the wristband
-      const result = await validateWristbandQRCode(qrCodeData, organizerId);
+      // Just validate the wristband based on code type
+      const result = actualCodeType === "BARCODE"
+        ? await validateWristbandBarcode(actualCodeData, organizerId)
+        : await validateWristbandQRCode(actualCodeData, organizerId);
 
       if (!result.success) {
         console.warn(`❌ Failed wristband validation by organizer ${organizerId}: ${result.error}`);

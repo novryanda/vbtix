@@ -32,6 +32,7 @@ interface WristbandListProps {
   }>;
   onViewScans?: (wristbandId: string) => void;
   onViewQR?: (wristband: any) => void;
+  onGenerateBarcode?: (wristbandId: string) => void;
 }
 
 export function WristbandList({
@@ -39,6 +40,7 @@ export function WristbandList({
   events,
   onViewScans,
   onViewQR,
+  onGenerateBarcode,
 }: WristbandListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string>("");
@@ -175,6 +177,7 @@ export function WristbandList({
                 onQRGenerated={refresh}
                 onViewScans={onViewScans}
                 onViewQR={onViewQR}
+                onGenerateBarcode={onGenerateBarcode}
               />
             ))}
           </div>
