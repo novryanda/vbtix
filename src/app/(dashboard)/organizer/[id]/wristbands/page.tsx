@@ -21,6 +21,7 @@ import { WristbandEditModal } from "~/components/wristband/wristband-edit-modal"
 import { WristbandQRModal } from "~/components/wristband/wristband-qr-modal";
 import { WristbandQRScanner } from "~/components/wristband/wristband-qr-scanner";
 import { WristbandBarcodeScanner } from "~/components/wristband/wristband-barcode-scanner";
+import { CameraDebug } from "~/components/debug/camera-debug";
 import { useOrganizerEvents } from "~/lib/api/hooks/organizer";
 import { useWristbandScanLogs } from "~/lib/api/hooks/qr-code";
 import { useEnhancedWristbands } from "~/lib/api/hooks/enhanced-crud";
@@ -220,7 +221,7 @@ export default function WristbandsPage() {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="list" className="flex items-center gap-2">
               <ListIcon className="h-4 w-4" />
               Wristbands
@@ -232,6 +233,10 @@ export default function WristbandsPage() {
             <TabsTrigger value="scans" className="flex items-center gap-2">
               <BarChart3Icon className="h-4 w-4" />
               Scan Logs
+            </TabsTrigger>
+            <TabsTrigger value="debug" className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Debug
             </TabsTrigger>
           </TabsList>
 
@@ -265,6 +270,19 @@ export default function WristbandsPage() {
               organizerId={organizerId}
               wristbandId={selectedWristbandForScans}
             />
+          </TabsContent>
+
+          {/* Camera Debug */}
+          <TabsContent value="debug" className="space-y-6">
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold mb-2">Camera Troubleshooting</h2>
+                <p className="text-muted-foreground">
+                  Use this debug panel to diagnose camera access issues and test different camera configurations.
+                </p>
+              </div>
+              <CameraDebug />
+            </div>
           </TabsContent>
         </Tabs>
 

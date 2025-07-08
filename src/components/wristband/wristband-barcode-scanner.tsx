@@ -260,23 +260,38 @@ export function WristbandBarcodeScanner({
               isScanning={cameraEnabled}
             />
 
-            <Button
-              onClick={() => setCameraEnabled(!cameraEnabled)}
-              variant={cameraEnabled ? "destructive" : "default"}
-              className="w-full"
-            >
-              {cameraEnabled ? (
-                <>
-                  <CameraOff className="mr-2 h-4 w-4" />
-                  Stop Camera
-                </>
-              ) : (
-                <>
-                  <Camera className="mr-2 h-4 w-4" />
-                  Start Camera
-                </>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setCameraEnabled(!cameraEnabled)}
+                variant={cameraEnabled ? "destructive" : "default"}
+                className="flex-1"
+              >
+                {cameraEnabled ? (
+                  <>
+                    <CameraOff className="mr-2 h-4 w-4" />
+                    Stop Camera
+                  </>
+                ) : (
+                  <>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Start Camera
+                  </>
+                )}
+              </Button>
+
+              {cameraEnabled && (
+                <Button
+                  onClick={() => {
+                    setCameraEnabled(false);
+                    setTimeout(() => setCameraEnabled(true), 500);
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
               )}
-            </Button>
+            </div>
           </div>
         </MagicCard>
       )}
