@@ -10,6 +10,7 @@ import {
   AlertCircle,
   CheckCircle,
   RefreshCw,
+  RotateCcw,
   Zap,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
@@ -190,6 +191,31 @@ export function CameraQRScanner({
     }
   }, [codeReader]);
 
+  // Switch camera
+  const switchCamera = useCallback(async () => {
+    if (devices.length <= 1) return;
+
+    const currentIndex = devices.findIndex(device => device.deviceId === selectedDeviceId);
+    const nextIndex = (currentIndex + 1) % devices.length;
+    const nextDevice = devices[nextIndex];
+
+    if (nextDevice) {
+      const wasActive = isActive;
+      if (wasActive) {
+        stopScanning();
+      }
+
+      setSelectedDeviceId(nextDevice.deviceId);
+
+      if (wasActive) {
+        // Small delay to ensure camera is released
+        setTimeout(() => {
+          startScanning();
+        }, 500);
+      }
+    }
+  }, [devices, selectedDeviceId, isActive, stopScanning, startScanning]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -234,6 +260,18 @@ export function CameraQRScanner({
               Stop Camera
             </Button>
           )}
+
+          {devices.length > 1 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={switchCamera}
+              disabled={!hasPermission}
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Switch Camera
+            </Button>
+          )}
         </div>
       </div>
 
@@ -270,6 +308,20 @@ export function CameraQRScanner({
           </div>
         )}
 
+        {/* Camera switch button overlay */}
+        {isActive && devices.length > 1 && (
+          <div className="absolute top-2 right-2 pointer-events-auto">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={switchCamera}
+              className="bg-black/50 hover:bg-black/70 text-white border-white/20"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
         {/* Permission/Error States */}
         {!isActive && (
           <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
@@ -296,11 +348,36 @@ export function CameraQRScanner({
         )}
       </div>
 
+      {/* Camera information */}
+      <div className="mt-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {isActive ? (
+            <Camera className="h-4 w-4 text-green-500" />
+          ) : (
+            <CameraOff className="h-4 w-4 text-gray-400" />
+          )}
+          <span className="text-sm text-gray-600">
+            {devices.length > 0 ? (
+              devices.find(d => d.deviceId === selectedDeviceId)?.label ||
+              `Camera ${selectedDeviceId.substring(0, 8)}`
+            ) : (
+              "No camera detected"
+            )}
+          </span>
+        </div>
+
+        {scanCount > 0 && (
+          <span className="text-xs text-gray-500">
+            Scans: {scanCount}
+          </span>
+        )}
+      </div>
+
       {/* Instructions */}
       {isActive && (
-        <div className="text-center text-sm text-gray-600">
+        <div className="text-center text-sm text-gray-600 mt-2">
           <p>Position the QR code within the blue frame</p>
-          <p className="text-xs mt-1">The scanner will automatically detect and validate tickets</p>
+          <p className="text-xs mt-1">The scanner will automatically detect and validate codes</p>
         </div>
       )}
     </div>

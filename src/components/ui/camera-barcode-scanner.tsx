@@ -2,6 +2,8 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library";
+import { Button } from "~/components/ui/button";
+import { RotateCcw, Camera, CameraOff } from "lucide-react";
 
 interface CameraBarcodeScannerProps {
   onScan: (result: string) => void;
@@ -35,38 +37,79 @@ export function CameraBarcodeScanner({
     };
   }, []);
 
+
+
   // Get available video devices
-  useEffect(() => {
-    if (codeReader) {
-      codeReader
-        .listVideoInputDevices()
-        .then((videoInputDevices) => {
-          setDevices(videoInputDevices);
-          if (videoInputDevices.length > 0) {
-            // Prefer back camera for barcode scanning
-            const backCamera = videoInputDevices.find(device => 
-              device.label.toLowerCase().includes('back') || 
-              device.label.toLowerCase().includes('rear')
-            );
-            setSelectedDeviceId(backCamera?.deviceId || videoInputDevices[0].deviceId);
-          }
-        })
-        .catch((err) => {
-          console.error("Error getting video devices:", err);
-          onError("Failed to get camera devices");
-        });
+  const getDevices = useCallback(async () => {
+    try {
+      // Request permission first to get device labels
+      await navigator.mediaDevices.getUserMedia({ video: true });
+
+      const allDevices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = allDevices.filter(device => device.kind === 'videoinput');
+
+      setDevices(videoDevices);
+
+      if (videoDevices.length > 0 && !selectedDeviceId) {
+        // Prefer back camera if available
+        const backCamera = videoDevices.find(device =>
+          device.label.toLowerCase().includes('back') ||
+          device.label.toLowerCase().includes('rear') ||
+          device.label.toLowerCase().includes('environment')
+        );
+        setSelectedDeviceId(backCamera?.deviceId || videoDevices[0].deviceId);
+      }
+    } catch (error) {
+      console.error("Error getting video devices:", error);
+      onError("Failed to access camera devices. Please ensure camera permissions are granted.");
     }
-  }, [codeReader, onError]);
+  }, [selectedDeviceId, onError]);
 
   // Start scanning
   const startScanning = useCallback(async () => {
-    if (!codeReader || !videoRef.current || isActive) return;
+    if (!codeReader || !videoRef.current) return;
 
     try {
-      // Request camera permission
-      await navigator.mediaDevices.getUserMedia({ video: true });
-      setHasPermission(true);
       setIsActive(true);
+      setHasPermission(null);
+
+      // First get devices to ensure we have camera access
+      await getDevices();
+
+      // Request camera permission and start streaming
+      let constraints: MediaStreamConstraints;
+
+      if (selectedDeviceId) {
+        constraints = {
+          video: { deviceId: { exact: selectedDeviceId } }
+        };
+      } else {
+        // Fallback constraints - try back camera first, then any camera
+        constraints = {
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        };
+      }
+
+      let stream: MediaStream;
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (constraintError) {
+        console.warn("Failed with specific constraints, trying fallback:", constraintError);
+        // Fallback to basic video constraints
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true
+        });
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
 
       // Start decoding from the video element
       codeReader.decodeFromVideoDevice(
@@ -88,12 +131,28 @@ export function CameraBarcodeScanner({
           }
         }
       );
+
+      setHasPermission(true);
     } catch (error) {
       console.error("Error starting barcode scanner:", error);
       setHasPermission(false);
-      onError("Failed to start camera");
+      setIsActive(false);
+
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          onError("Camera access denied. Please allow camera permissions and try again.");
+        } else if (error.name === 'NotFoundError') {
+          onError("No camera found. Please ensure your device has a camera.");
+        } else if (error.name === 'NotReadableError') {
+          onError("Camera is already in use by another application.");
+        } else {
+          onError(`Camera error: ${error.message}`);
+        }
+      } else {
+        onError("Failed to start camera");
+      }
     }
-  }, [codeReader, selectedDeviceId, isActive, lastScanTime, onScan, onError]);
+  }, [codeReader, selectedDeviceId, lastScanTime, onScan, onError, getDevices]);
 
   // Stop scanning
   const stopScanning = useCallback(() => {
@@ -102,6 +161,31 @@ export function CameraBarcodeScanner({
       setIsActive(false);
     }
   }, [codeReader, isActive]);
+
+  // Switch camera
+  const switchCamera = useCallback(async () => {
+    if (devices.length <= 1) return;
+
+    const currentIndex = devices.findIndex(device => device.deviceId === selectedDeviceId);
+    const nextIndex = (currentIndex + 1) % devices.length;
+    const nextDevice = devices[nextIndex];
+
+    if (nextDevice) {
+      const wasActive = isActive;
+      if (wasActive) {
+        stopScanning();
+      }
+
+      setSelectedDeviceId(nextDevice.deviceId);
+
+      if (wasActive) {
+        // Small delay to ensure camera is released
+        setTimeout(() => {
+          startScanning();
+        }, 500);
+      }
+    }
+  }, [devices, selectedDeviceId, isActive, stopScanning, startScanning]);
 
   // Handle scanning state changes
   useEffect(() => {
@@ -162,27 +246,76 @@ export function CameraBarcodeScanner({
             </div>
           </div>
         )}
+
+        {/* Camera switch button */}
+        {devices.length > 1 && (
+          <div className="absolute top-2 right-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={switchCamera}
+              disabled={!hasPermission}
+              className="bg-black/50 hover:bg-black/70 text-white border-white/20"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Camera selection */}
-      {devices.length > 1 && (
-        <div className="mt-4">
-          <label className="block text-sm font-medium mb-2">
-            Select Camera:
-          </label>
-          <select
-            value={selectedDeviceId}
-            onChange={(e) => setSelectedDeviceId(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md"
-            disabled={isActive}
-          >
-            {devices.map((device) => (
-              <option key={device.deviceId} value={device.deviceId}>
-                {device.label || `Camera ${device.deviceId.substring(0, 8)}`}
-              </option>
-            ))}
-          </select>
+      {/* Camera information */}
+      <div className="mt-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {isActive ? (
+            <Camera className="h-4 w-4 text-green-500" />
+          ) : (
+            <CameraOff className="h-4 w-4 text-gray-400" />
+          )}
+          <span className="text-sm text-gray-600">
+            {devices.length > 0 ? (
+              devices.find(d => d.deviceId === selectedDeviceId)?.label ||
+              `Camera ${selectedDeviceId.substring(0, 8)}`
+            ) : (
+              "No camera detected"
+            )}
+          </span>
         </div>
+
+        {devices.length > 1 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={switchCamera}
+            disabled={!hasPermission}
+            className="text-xs"
+          >
+            <RotateCcw className="h-3 w-3 mr-1" />
+            Switch ({devices.length})
+          </Button>
+        )}
+      </div>
+
+      {/* Camera selection dropdown (for advanced users) */}
+      {devices.length > 1 && (
+        <details className="mt-2">
+          <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700">
+            Advanced camera selection
+          </summary>
+          <div className="mt-2">
+            <select
+              value={selectedDeviceId}
+              onChange={(e) => setSelectedDeviceId(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              disabled={isActive}
+            >
+              {devices.map((device) => (
+                <option key={device.deviceId} value={device.deviceId}>
+                  {device.label || `Camera ${device.deviceId.substring(0, 8)}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        </details>
       )}
 
       {/* Scan statistics */}
